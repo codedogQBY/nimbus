@@ -24,6 +24,7 @@ import {
   ShareIcon, 
   HardDriveIcon,
   UsersIcon,
+  ShieldIcon,
   SettingsIcon,
   LogOutIcon,
   ChevronRightIcon,
@@ -142,6 +143,13 @@ export default function DashboardLayout({
       label: '用户', 
       icon: UsersIcon, 
       href: '/users',
+      show: user?.isOwner 
+    },
+    { 
+      key: 'rbac', 
+      label: '权限管理', 
+      icon: ShieldIcon, 
+      href: '/rbac',
       show: user?.isOwner 
     },
   ];
@@ -441,6 +449,7 @@ function SidebarContent({
             <Progress 
               value={storageStats.totalCapacity > 0 ? (storageStats.totalUsed / storageStats.totalCapacity) * 100 : 0} 
               color="primary"
+              aria-label="存储空间使用情况"
               size="sm"
               className="mb-1"
             />

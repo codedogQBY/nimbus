@@ -3,6 +3,10 @@
 import { useState } from 'react';
 import { Card, CardBody, Tabs, Tab, Chip } from '@heroui/react';
 import { ShieldIcon, UsersIcon, KeyIcon, ActivityIcon } from 'lucide-react';
+import { RolesTab } from '@/components/rbac/roles-tab';
+import { PermissionsTab } from '@/components/rbac/permissions-tab';
+import { AssignmentsTab } from '@/components/rbac/assignments-tab';
+import { LogsTab } from '@/components/rbac/logs-tab';
 
 export default function RBACPage() {
   const [selectedTab, setSelectedTab] = useState('roles');
@@ -140,53 +144,10 @@ export default function RBACPage() {
 
             {/* Tab 内容区域 */}
             <div className="p-4 lg:p-6">
-              {selectedTab === 'roles' && (
-                <div className="text-center py-12">
-                  <ShieldIcon className="w-16 h-16 text-default-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-dark-olive-800 mb-2">
-                    角色管理
-                  </h3>
-                  <p className="text-sm text-default-500">
-                    正在开发中...
-                  </p>
-                </div>
-              )}
-
-              {selectedTab === 'permissions' && (
-                <div className="text-center py-12">
-                  <KeyIcon className="w-16 h-16 text-default-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-dark-olive-800 mb-2">
-                    权限管理
-                  </h3>
-                  <p className="text-sm text-default-500">
-                    正在开发中...
-                  </p>
-                </div>
-              )}
-
-              {selectedTab === 'assignments' && (
-                <div className="text-center py-12">
-                  <UsersIcon className="w-16 h-16 text-default-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-dark-olive-800 mb-2">
-                    用户分配
-                  </h3>
-                  <p className="text-sm text-default-500">
-                    正在开发中...
-                  </p>
-                </div>
-              )}
-
-              {selectedTab === 'logs' && (
-                <div className="text-center py-12">
-                  <ActivityIcon className="w-16 h-16 text-default-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-dark-olive-800 mb-2">
-                    权限日志
-                  </h3>
-                  <p className="text-sm text-default-500">
-                    正在开发中...
-                  </p>
-                </div>
-              )}
+              {selectedTab === 'roles' && <RolesTab />}
+              {selectedTab === 'permissions' && <PermissionsTab />}
+              {selectedTab === 'assignments' && <AssignmentsTab />}
+              {selectedTab === 'logs' && <LogsTab />}
             </div>
           </CardBody>
         </Card>

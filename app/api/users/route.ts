@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // 获取所有用户
+    // 获取所有用户及其角色
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -29,6 +29,16 @@ export async function GET(request: NextRequest) {
         lastLoginAt: true,
         createdAt: true,
         updatedAt: true,
+        userRoles: {
+          include: {
+            role: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
       orderBy: [
         { isOwner: 'desc' },
@@ -36,16 +46,14 @@ export async function GET(request: NextRequest) {
       ],
     });
 
-    // 获取每个用户的角色
-    const usersWithRoles = await Promise.all(
-      users.map(async (user: any) => {
-        const roles = await permissionService.getUserRoles(user.id);
-        return {
-          ...user,
-          roles: roles.map((r: any) => r.displayName),
-        };
-      })
-    );
+    // 格式化用户数据（兼容旧格式）
+    const usersWithRoles = users.map((user: any) => ({
+      ...user,
+      avatar_url: user.avatarUrl,
+      is_owner: user.isOwner,
+      is_active: user.isActive,
+      roles: user.userRoles.map((ur: any) => ur.role.name),
+    }));
 
     // 统计数据
     const stats = {
