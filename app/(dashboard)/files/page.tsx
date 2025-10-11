@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { 
   Card, 
   CardBody,
-  CardHeader,
   Button,
   Input,
   Chip,
@@ -22,7 +21,6 @@ import {
   VideoIcon,
   MusicIcon,
   ArchiveIcon,
-  UploadIcon,
   SearchIcon,
   MoreVerticalIcon,
   DownloadIcon,
@@ -36,6 +34,11 @@ import {
   ChevronLeftIcon
 } from 'lucide-react';
 import ky from 'ky';
+import { UploadButton } from '@/components/upload-button';
+import { CreateFolderModal } from '@/components/create-folder-modal';
+import { RenameModal } from '@/components/rename-modal';
+import { DeleteConfirmModal } from '@/components/delete-confirm-modal';
+import { CreateShareModal } from '@/components/create-share-modal';
 
 export default function FilesPage() {
   const [files, setFiles] = useState<any[]>([]);
@@ -43,6 +46,13 @@ export default function FilesPage() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [currentFolderId, setCurrentFolderId] = useState<number | null>(null);
+  
+  // Modal states
+  const [showCreateFolder, setShowCreateFolder] = useState(false);
+  const [showRename, setShowRename] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
 
   useEffect(() => {
     loadFiles();
@@ -85,6 +95,21 @@ export default function FilesPage() {
     return <FileTextIcon className="w-8 h-8 lg:w-10 lg:h-10 text-default-500" />;
   };
 
+  const handleRename = (item: any, type: 'file' | 'folder') => {
+    setSelectedItem({ ...item, type });
+    setShowRename(true);
+  };
+
+  const handleDelete = (item: any, type: 'file' | 'folder') => {
+    setSelectedItem({ ...item, type });
+    setShowDelete(true);
+  };
+
+  const handleShare = (item: any, type: 'file' | 'folder') => {
+    setSelectedItem({ ...item, type });
+    setShowShare(true);
+  };
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -122,13 +147,12 @@ export default function FilesPage() {
           {/* 工具按钮 */}
           <div className="flex items-center gap-2">
             {/* 上传按钮 */}
-            <Button
-              size="sm"
-              startContent={<UploadIcon className="w-4 h-4" />}
+            <UploadButton 
+              folderId={currentFolderId}
+              onSuccess={loadFiles}
               className="flex-1 sm:flex-none bg-amber-brown-500 hover:bg-amber-brown-600 text-white"
-            >
-              <span className="sm:inline">上传</span>
-            </Button>
+              size="sm"
+            />
 
             {/* 新建文件夹 */}
             <Button
@@ -136,6 +160,7 @@ export default function FilesPage() {
               variant="flat"
               isIconOnly
               className="bg-secondary-100"
+              onPress={() => setShowCreateFolder(true)}
             >
               <FolderPlusIcon className="w-4 h-4" />
             </Button>
@@ -200,13 +225,12 @@ export default function FilesPage() {
                 <p className="text-sm text-default-500 mb-6">
                   上传您的第一个文件，开始使用 Nimbus
                 </p>
-                <Button
-                  size="lg"
-                  startContent={<UploadIcon className="w-5 h-5" />}
+                <UploadButton 
+                  folderId={currentFolderId}
+                  onSuccess={loadFiles}
                   className="bg-amber-brown-500 hover:bg-amber-brown-600 text-white"
-                >
-                  上传文件
-                </Button>
+                  size="lg"
+                />
               </CardBody>
             </Card>
           ) : (
@@ -225,12 +249,10 @@ export default function FilesPage() {
                       >
                         <CardBody className={viewMode === 'grid' ? 'p-3 lg:p-4' : 'p-3 lg:p-4'}>
                           <div className={`flex ${viewMode === 'grid' ? 'flex-col' : 'flex-row'} items-start gap-3`}>
-                            {/* 文件夹图标 */}
                             <div className={`${viewMode === 'grid' ? 'w-full' : ''} flex items-center justify-center bg-primary-100 rounded-lg ${viewMode === 'grid' ? 'h-20 lg:h-24' : 'w-12 h-12 flex-shrink-0'}`}>
                               <FolderIcon className={`${viewMode === 'grid' ? 'w-10 h-10 lg:w-12 lg:h-12' : 'w-6 h-6'} text-amber-brown-500`} />
                             </div>
                             
-                            {/* 文件夹信息 */}
                             <div className={`flex-1 min-w-0 ${viewMode === 'grid' ? 'w-full' : ''}`}>
                               <div className="flex items-start justify-between gap-2 mb-1">
                                 <h4 className="text-xs lg:text-sm font-semibold text-dark-olive-800 truncate flex-1">
@@ -249,13 +271,32 @@ export default function FilesPage() {
                                     </Button>
                                   </DropdownTrigger>
                                   <DropdownMenu>
-                                    <DropdownItem key="rename" startContent={<EditIcon className="w-4 h-4" />}>
+                                    <DropdownItem 
+                                      key="rename" 
+                                      startContent={<EditIcon className="w-4 h-4" />}
+                                      onPress={() => {
+                                        handleRename(folder, 'folder');
+                                      }}
+                                    >
                                       重命名
                                     </DropdownItem>
-                                    <DropdownItem key="share" startContent={<Share2Icon className="w-4 h-4" />}>
+                                    <DropdownItem 
+                                      key="share" 
+                                      startContent={<Share2Icon className="w-4 h-4" />}
+                                      onPress={() => {
+                                        handleShare(folder, 'folder');
+                                      }}
+                                    >
                                       分享
                                     </DropdownItem>
-                                    <DropdownItem key="delete" color="danger" startContent={<TrashIcon className="w-4 h-4" />}>
+                                    <DropdownItem 
+                                      key="delete" 
+                                      color="danger" 
+                                      startContent={<TrashIcon className="w-4 h-4" />}
+                                      onPress={() => {
+                                        handleDelete(folder, 'folder');
+                                      }}
+                                    >
                                       删除
                                     </DropdownItem>
                                   </DropdownMenu>
@@ -288,12 +329,10 @@ export default function FilesPage() {
                       >
                         <CardBody className={viewMode === 'grid' ? 'p-3 lg:p-4' : 'p-3 lg:p-4'}>
                           <div className={`flex ${viewMode === 'grid' ? 'flex-col' : 'flex-row'} items-start gap-3`}>
-                            {/* 文件图标 */}
                             <div className={`${viewMode === 'grid' ? 'w-full' : ''} flex items-center justify-center bg-secondary-100 rounded-lg ${viewMode === 'grid' ? 'h-20 lg:h-24' : 'w-12 h-12 flex-shrink-0'}`}>
                               {getFileIcon(file.mimeType)}
                             </div>
                             
-                            {/* 文件信息 */}
                             <div className={`flex-1 min-w-0 ${viewMode === 'grid' ? 'w-full' : ''}`}>
                               <div className="flex items-start justify-between gap-2 mb-1">
                                 <h4 className="text-xs lg:text-sm font-semibold text-dark-olive-800 truncate flex-1" title={file.name}>
@@ -311,16 +350,32 @@ export default function FilesPage() {
                                     </Button>
                                   </DropdownTrigger>
                                   <DropdownMenu>
-                                    <DropdownItem key="download" startContent={<DownloadIcon className="w-4 h-4" />}>
+                                    <DropdownItem 
+                                      key="download" 
+                                      startContent={<DownloadIcon className="w-4 h-4" />}
+                                    >
                                       下载
                                     </DropdownItem>
-                                    <DropdownItem key="share" startContent={<Share2Icon className="w-4 h-4" />}>
+                                    <DropdownItem 
+                                      key="share" 
+                                      startContent={<Share2Icon className="w-4 h-4" />}
+                                      onPress={() => handleShare(file, 'file')}
+                                    >
                                       分享
                                     </DropdownItem>
-                                    <DropdownItem key="rename" startContent={<EditIcon className="w-4 h-4" />}>
+                                    <DropdownItem 
+                                      key="rename" 
+                                      startContent={<EditIcon className="w-4 h-4" />}
+                                      onPress={() => handleRename(file, 'file')}
+                                    >
                                       重命名
                                     </DropdownItem>
-                                    <DropdownItem key="delete" color="danger" startContent={<TrashIcon className="w-4 h-4" />}>
+                                    <DropdownItem 
+                                      key="delete" 
+                                      color="danger" 
+                                      startContent={<TrashIcon className="w-4 h-4" />}
+                                      onPress={() => handleDelete(file, 'file')}
+                                    >
                                       删除
                                     </DropdownItem>
                                   </DropdownMenu>
@@ -348,6 +403,54 @@ export default function FilesPage() {
           )}
         </div>
       </div>
+
+      {/* Modals */}
+      <CreateFolderModal
+        isOpen={showCreateFolder}
+        onClose={() => setShowCreateFolder(false)}
+        parentId={currentFolderId}
+        onSuccess={loadFiles}
+      />
+
+      {selectedItem && (
+        <>
+          <RenameModal
+            isOpen={showRename}
+            onClose={() => {
+              setShowRename(false);
+              setSelectedItem(null);
+            }}
+            fileId={selectedItem.id}
+            currentName={selectedItem.type === 'file' ? selectedItem.name : selectedItem.name}
+            type={selectedItem.type}
+            onSuccess={loadFiles}
+          />
+
+          <DeleteConfirmModal
+            isOpen={showDelete}
+            onClose={() => {
+              setShowDelete(false);
+              setSelectedItem(null);
+            }}
+            itemId={selectedItem.id}
+            itemName={selectedItem.type === 'file' ? selectedItem.name : selectedItem.name}
+            type={selectedItem.type}
+            onSuccess={loadFiles}
+          />
+
+          <CreateShareModal
+            isOpen={showShare}
+            onClose={() => {
+              setShowShare(false);
+              setSelectedItem(null);
+            }}
+            itemId={selectedItem.id}
+            itemName={selectedItem.type === 'file' ? selectedItem.name : selectedItem.name}
+            type={selectedItem.type}
+            onSuccess={loadFiles}
+          />
+        </>
+      )}
     </div>
   );
 }

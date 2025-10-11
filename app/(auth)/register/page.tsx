@@ -22,7 +22,7 @@ export default function RegisterPage() {
     uppercase: /[A-Z]/.test(password),
     lowercase: /[a-z]/.test(password),
     number: /[0-9]/.test(password),
-    match: password && password === confirmPassword,
+    match: Boolean(password && password === confirmPassword),
   };
 
   const allChecksPassed = Object.values(passwordChecks).every(Boolean);

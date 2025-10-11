@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Card, CardBody, CardHeader, Button } from '@heroui/react';
+import { Card, CardBody, CardHeader, Button, Divider, Link } from '@heroui/react';
 import { MailIcon, TimerIcon } from 'lucide-react';
 import ky from 'ky';
 

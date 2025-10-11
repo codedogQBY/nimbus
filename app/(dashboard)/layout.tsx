@@ -50,6 +50,16 @@ export default function DashboardLayout({
   useEffect(() => {
     checkAuth();
     loadStorageStats();
+
+    // 监听存储更新事件
+    const handleStorageUpdate = () => {
+      loadStorageStats();
+    };
+    window.addEventListener('storageUpdated', handleStorageUpdate);
+
+    return () => {
+      window.removeEventListener('storageUpdated', handleStorageUpdate);
+    };
   }, []);
 
   const checkAuth = async () => {
@@ -171,24 +181,11 @@ export default function DashboardLayout({
         onOpenChange={setMobileMenuOpen}
         placement="left"
         size="xs"
+        hideCloseButton
       >
         <DrawerContent>
           {(onClose) => (
             <>
-              <DrawerHeader className="flex items-center justify-between p-4 border-b border-divider">
-                <div className="flex items-center gap-2">
-                  <CloudIcon className="w-6 h-6 text-amber-brown-500" />
-                  <span className="text-lg font-bold text-dark-olive-800">Nimbus</span>
-                </div>
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="light"
-                  onPress={onClose}
-                >
-                  <XIcon className="w-5 h-5" />
-                </Button>
-              </DrawerHeader>
               <DrawerBody className="p-0">
                 <SidebarContent 
                   collapsed={false}
@@ -199,6 +196,7 @@ export default function DashboardLayout({
                   storageStats={storageStats}
                   formatBytes={formatBytes}
                   onItemClick={onClose}
+                  hideLogo={true}
                 />
               </DrawerBody>
             </>
@@ -360,21 +358,42 @@ function SidebarContent({
   onToggle,
   onItemClick,
   storageStats,
-  formatBytes 
+  formatBytes,
+  hideLogo = false
 }: any) {
   return (
     <>
-      {/* Logo区域 */}
-      <div className="h-16 flex items-center px-4 border-b border-divider">
-        {collapsed ? (
-          <CloudIcon className="w-8 h-8 text-amber-brown-500" />
-        ) : (
+      {/* 移动端关闭按钮 */}
+      {hideLogo && (
+        <div className="h-16 flex items-center justify-between px-4 border-b border-divider">
           <div className="flex items-center gap-2">
-            <CloudIcon className="w-8 h-8 text-amber-brown-500" />
-            <span className="text-xl font-bold text-dark-olive-800">Nimbus</span>
+            <CloudIcon className="w-6 h-6 text-amber-brown-500" />
+            <span className="text-lg font-bold text-dark-olive-800">Nimbus</span>
           </div>
-        )}
-      </div>
+          <Button
+            isIconOnly
+            size="sm"
+            variant="light"
+            onPress={onItemClick}
+          >
+            <XIcon className="w-5 h-5" />
+          </Button>
+        </div>
+      )}
+      
+      {/* Logo区域（桌面端） */}
+      {!hideLogo && (
+        <div className="h-16 flex items-center px-4 border-b border-divider">
+          {collapsed ? (
+            <CloudIcon className="w-8 h-8 text-amber-brown-500" />
+          ) : (
+            <div className="flex items-center gap-2">
+              <CloudIcon className="w-8 h-8 text-amber-brown-500" />
+              <span className="text-xl font-bold text-dark-olive-800">Nimbus</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 导航菜单 */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">

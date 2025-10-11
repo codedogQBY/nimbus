@@ -8,24 +8,48 @@ import {
   Button, 
   Chip,
   Divider,
-  Spinner
+  Spinner,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  useDisclosure
 } from '@heroui/react';
 import { 
-  CloudIcon, 
-  PlusIcon, 
-  CheckCircle2Icon,
-  AlertCircleIcon,
-  HardDriveIcon,
-  TrendingUpIcon,
-  DatabaseIcon
+  Cloud as CloudIcon, 
+  Plus as PlusIcon, 
+  CheckCircle2 as CheckCircle2Icon,
+  AlertCircle as AlertCircleIcon,
+  HardDrive as HardDriveIcon,
+  TrendingUp as TrendingUpIcon,
+  Database as DatabaseIcon,
+  Edit as EditIcon,
+  Trash as TrashIcon,
+  MoreVertical as MoreVerticalIcon,
+  Send as SendIcon,
+  Github as GithubIcon,
+  Image as ImageIcon,
+  Code as CodeIcon
 } from 'lucide-react';
 import ky from 'ky';
+import { AddStorageModal } from '@/components/add-storage-modal';
+import { EditStorageModal } from '@/components/edit-storage-modal';
 
 export default function StoragePage() {
   const [storageSources, setStorageSources] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingSource, setEditingSource] = useState<any>(null);
+  const [deletingSource, setDeletingSource] = useState<any>(null);
+  const {isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose} = useDisclosure();
 
   useEffect(() => {
     loadStorageSources();
@@ -62,8 +86,73 @@ export default function StoragePage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
+  const notifyStorageUpdate = () => {
+    // 触发存储更新事件，通知 layout 刷新
+    window.dispatchEvent(new Event('storageUpdated'));
+  };
+
+  const handleAddSuccess = () => {
+    setShowAddModal(false);
+    loadStorageSources();
+    notifyStorageUpdate();
+  };
+
+  const handleEdit = (source: any) => {
+    setEditingSource(source);
+    setShowEditModal(true);
+  };
+
+  const handleEditSuccess = () => {
+    setShowEditModal(false);
+    setEditingSource(null);
+    loadStorageSources();
+    notifyStorageUpdate();
+  };
+
+  const handleDelete = (source: any) => {
+    setDeletingSource(source);
+    onDeleteOpen();
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingSource) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      await ky.delete(`/api/storage-sources/${deletingSource.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      onDeleteClose();
+      setDeletingSource(null);
+      loadStorageSources();
+      notifyStorageUpdate();
+    } catch (error: any) {
+      setError(error.response?.json?.()?.error || '删除存储源失败');
+    }
+  };
+
   const getStorageIcon = (type: string): JSX.Element => {
-    return <CloudIcon className="w-8 h-8 text-amber-brown-500" />;
+    const iconClass = "w-6 h-6 lg:w-8 lg:h-8 text-amber-brown-500";
+    
+    switch (type) {
+      case 'r2':
+      case 'qiniu':
+      case 'upyun':
+        return <CloudIcon className={iconClass} />;
+      case 'minio':
+        return <DatabaseIcon className={iconClass} />;
+      case 'telegram':
+        return <SendIcon className={iconClass} />;
+      case 'github':
+        return <GithubIcon className={iconClass} />;
+      case 'cloudinary':
+        return <ImageIcon className={iconClass} />;
+      case 'custom':
+        return <CodeIcon className={iconClass} />;
+      default:
+        return <HardDriveIcon className={iconClass} />;
+    }
   };
 
   if (loading) {
@@ -87,6 +176,7 @@ export default function StoragePage() {
             size="sm"
             isIconOnly
             className="lg:hidden bg-amber-brown-500 hover:bg-amber-brown-600 text-white"
+            onPress={() => setShowAddModal(true)}
           >
             <PlusIcon className="w-5 h-5" />
           </Button>
@@ -94,6 +184,7 @@ export default function StoragePage() {
             size="lg"
             startContent={<PlusIcon className="w-5 h-5" />}
             className="hidden lg:flex bg-amber-brown-500 hover:bg-amber-brown-600 text-white"
+            onPress={() => setShowAddModal(true)}
           >
             添加存储源
           </Button>
@@ -219,6 +310,7 @@ export default function StoragePage() {
                   size="lg"
                   startContent={<PlusIcon className="w-5 h-5" />}
                   className="bg-amber-brown-500 hover:bg-amber-brown-600 text-white"
+                  onPress={() => setShowAddModal(true)}
                 >
                   添加存储源
                 </Button>
@@ -295,20 +387,35 @@ export default function StoragePage() {
                       >
                         测试连接
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="flat"
-                        className="flex-1 bg-secondary-100 text-dark-olive-700"
-                      >
-                        配置
-                      </Button>
-                      <Button
-                        size="sm"
-                        color="danger"
-                        variant="flat"
-                      >
-                        删除
-                      </Button>
+                      <Dropdown>
+                        <DropdownTrigger>
+                          <Button
+                            size="sm"
+                            variant="flat"
+                            isIconOnly
+                            className="bg-secondary-100 text-dark-olive-700"
+                          >
+                            <MoreVerticalIcon className="w-4 h-4" />
+                          </Button>
+                        </DropdownTrigger>
+                        <DropdownMenu aria-label="存储源操作">
+                          <DropdownItem
+                            key="edit"
+                            startContent={<EditIcon className="w-4 h-4" />}
+                            onPress={() => handleEdit(source)}
+                          >
+                            编辑配置
+                          </DropdownItem>
+                          <DropdownItem
+                            key="delete"
+                            color="danger"
+                            startContent={<TrashIcon className="w-4 h-4" />}
+                            onPress={() => handleDelete(source)}
+                          >
+                            删除存储源
+                          </DropdownItem>
+                        </DropdownMenu>
+                      </Dropdown>
                     </div>
                   </CardBody>
                 </Card>
@@ -318,6 +425,7 @@ export default function StoragePage() {
               <Card 
                 isPressable
                 className="bg-white border-2 border-dashed border-default-300 hover:border-amber-brown-500 hover:bg-amber-brown-50/30 transition-all cursor-pointer"
+                onPress={() => setShowAddModal(true)}
               >
                 <CardBody className="p-6 lg:p-8 flex flex-col items-center justify-center text-center min-h-[280px] lg:min-h-[300px]">
                   <div className="w-14 h-14 lg:w-16 lg:h-16 bg-primary-100 rounded-full flex items-center justify-center mb-4">
@@ -326,21 +434,60 @@ export default function StoragePage() {
                   <h3 className="text-sm lg:text-base font-semibold text-dark-olive-800 mb-2">
                     添加新存储源
                   </h3>
-                  <p className="text-xs lg:text-sm text-default-500 mb-4">
+                  <p className="text-xs lg:text-sm text-default-500">
                     支持 Cloudflare R2、七牛云、<br />Telegram、GitHub 等多种存储
                   </p>
-                  <Button
-                    size="sm"
-                    className="bg-amber-brown-500 hover:bg-amber-brown-600 text-white"
-                  >
-                    开始配置
-                  </Button>
                 </CardBody>
               </Card>
             </div>
           )}
         </div>
       </div>
+
+      {/* 添加存储源 Modal */}
+      <AddStorageModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={loadStorageSources}
+      />
+
+      {/* 编辑存储源 Modal */}
+      {editingSource && (
+        <EditStorageModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingSource(null);
+          }}
+          onSuccess={handleEditSuccess}
+          storageSource={editingSource}
+        />
+      )}
+
+      {/* 删除确认 Modal */}
+      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose}>
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">删除存储源</ModalHeader>
+              <ModalBody>
+                <p>确定要删除存储源 <strong>{deletingSource?.name}</strong> 吗？</p>
+                <p className="text-danger text-sm">
+                  此操作不可撤销，如果该存储源中有文件，将无法删除。
+                </p>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="light" onPress={onClose}>
+                  取消
+                </Button>
+                <Button color="danger" onPress={confirmDelete}>
+                  删除
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

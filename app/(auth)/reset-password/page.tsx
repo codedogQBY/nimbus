@@ -24,7 +24,7 @@ export default function ResetPasswordPage() {
     uppercase: /[A-Z]/.test(newPassword),
     lowercase: /[a-z]/.test(newPassword),
     number: /[0-9]/.test(newPassword),
-    match: newPassword && newPassword === confirmPassword,
+    match: Boolean(newPassword && newPassword === confirmPassword),
   };
 
   const allChecksPassed = Object.values(passwordChecks).every(Boolean) && code.join('').length === 6;

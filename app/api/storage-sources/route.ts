@@ -66,11 +66,68 @@ export async function GET(request: NextRequest) {
 // POST /api/storage-sources - 创建存储源
 const createStorageSourceSchema = z.object({
   name: z.string().min(1).max(100),
-  type: z.enum(['r2', 'qiniu', 'telegram', 'github']),
+  type: z.enum(['r2', 'qiniu', 'minio', 'upyun', 'telegram', 'cloudinary', 'github', 'custom']),
   config: z.any(),
   priority: z.number().int().min(0).max(100).optional(),
   quotaLimit: z.number().int().min(0).optional(),
 });
+
+// PUT /api/storage-sources - 修改存储源
+export async function PUT(request: NextRequest) {
+  try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // 检查权限
+    await requirePermissions(request, ['storage.manage']);
+
+    const body = await request.json();
+    const { id, ...updateData } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: '存储源ID是必需的' }, { status: 400 });
+    }
+
+    const updateSchema = z.object({
+      name: z.string().min(1).max(100).optional(),
+      type: z.enum(['r2', 'qiniu', 'minio', 'upyun', 'telegram', 'cloudinary', 'github', 'custom']).optional(),
+      config: z.any().optional(),
+      priority: z.number().int().min(0).max(100).optional(),
+      quotaLimit: z.number().int().min(0).optional(),
+      isActive: z.boolean().optional(),
+    });
+
+    const validatedData = updateSchema.parse(updateData);
+
+    const updatedSource = await prisma.storageSource.update({
+      where: { id: parseInt(id) },
+      data: validatedData,
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: updatedSource,
+      message: '存储源更新成功'
+    });
+
+  } catch (error) {
+    console.error('Update storage source error:', error);
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ 
+        error: '数据验证失败', 
+        details: error.errors 
+      }, { status: 400 });
+    }
+
+    return NextResponse.json(
+      { error: '更新存储源失败' },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -108,8 +165,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // 转换 BigInt 为 Number
+    const sourceData = {
+      ...source,
+      quotaUsed: Number(source.quotaUsed),
+      quotaLimit: Number(source.quotaLimit),
+    };
+
     return NextResponse.json(
-      { success: true, source },
+      { success: true, source: sourceData },
       { status: 201 }
     );
   } catch (error) {
