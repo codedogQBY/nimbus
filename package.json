@@ -66,6 +66,7 @@
     "@react-aria/visually-hidden": "3.8.28",
     "@uppy/core": "^5.1.0",
     "@uppy/react": "^5.1.0",
+    "archiver": "^7.0.1",
     "bcryptjs": "^3.0.2",
     "clsx": "2.1.1",
     "framer-motion": "11.18.2",

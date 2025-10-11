@@ -24,9 +24,53 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const folderId = formData.get('folderId') as string | null;
+    const relativePath = formData.get('relativePath') as string | null;
 
     if (!file) {
       return NextResponse.json({ error: '没有文件' }, { status: 400 });
+    }
+
+    // 如果有relativePath，需要创建对应的文件夹结构
+    let targetFolderId = folderId ? parseInt(folderId) : null;
+    
+    if (relativePath) {
+      // 解析路径并创建文件夹结构
+      const pathParts = relativePath.split('/').filter(p => p);
+      pathParts.pop(); // 移除文件名，只保留文件夹路径
+      
+      let currentFolderId = targetFolderId;
+      let currentPath = targetFolderId ? 
+        (await prisma.folder.findUnique({ where: { id: targetFolderId } }))?.path || '/' : 
+        '/';
+      
+      for (const folderName of pathParts) {
+        const folderPath = currentPath === '/' ? `/${folderName}` : `${currentPath}/${folderName}`;
+        
+        // 检查文件夹是否存在
+        let folder = await prisma.folder.findFirst({
+          where: {
+            name: folderName,
+            parentId: currentFolderId,
+          },
+        });
+        
+        // 不存在则创建
+        if (!folder) {
+          folder = await prisma.folder.create({
+            data: {
+              name: folderName,
+              path: folderPath,
+              parentId: currentFolderId,
+              createdBy: user.id,
+            },
+          });
+        }
+        
+        currentFolderId = folder.id;
+        currentPath = folderPath;
+      }
+      
+      targetFolderId = currentFolderId;
     }
 
     // 获取默认存储源（优先级最高的活跃存储源）
@@ -78,7 +122,7 @@ export async function POST(request: NextRequest) {
         md5Hash: md5Hash,
         storagePath: `/uploads/${uniqueName}`,
         storageSourceId: storageSource.id,
-        folderId: folderId ? parseInt(folderId) : null,
+        folderId: targetFolderId,
         uploadedBy: user.id,
       },
     });
