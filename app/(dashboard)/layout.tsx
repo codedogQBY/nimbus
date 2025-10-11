@@ -45,9 +45,11 @@ export default function DashboardLayout({
   const [loading, setLoading] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [storageStats, setStorageStats] = useState<any>({ totalUsed: 0, totalCapacity: 0 });
 
   useEffect(() => {
     checkAuth();
+    loadStorageStats();
   }, []);
 
   const checkAuth = async () => {
@@ -72,6 +74,30 @@ export default function DashboardLayout({
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadStorageStats = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const response = await ky.get('/api/storage-sources', {
+        headers: { Authorization: `Bearer ${token}` },
+      }).json<any>();
+
+      setStorageStats({
+        totalUsed: response.usedQuota || 0,
+        totalCapacity: response.totalQuota || 0,
+      });
+    } catch (error) {
+      console.error('Failed to load storage stats:', error);
+    }
+  };
+
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 GB';
+    const gb = bytes / (1024 * 1024 * 1024);
+    return gb.toFixed(1) + ' GB';
   };
 
   const handleLogout = () => {
@@ -134,6 +160,8 @@ export default function DashboardLayout({
           pathname={pathname}
           router={router}
           onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+          storageStats={storageStats}
+          formatBytes={formatBytes}
         />
       </aside>
 
@@ -168,6 +196,8 @@ export default function DashboardLayout({
                   pathname={pathname}
                   router={router}
                   onToggle={() => {}}
+                  storageStats={storageStats}
+                  formatBytes={formatBytes}
                   onItemClick={onClose}
                 />
               </DrawerBody>
@@ -328,7 +358,9 @@ function SidebarContent({
   pathname, 
   router,
   onToggle,
-  onItemClick 
+  onItemClick,
+  storageStats,
+  formatBytes 
 }: any) {
   return (
     <>
@@ -383,16 +415,18 @@ function SidebarContent({
           <div className="bg-secondary-50 rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-dark-olive-700">存储空间</span>
-              <span className="text-xs text-dark-olive-600">0 GB / 10 GB</span>
+              <span className="text-xs text-dark-olive-600">
+                {formatBytes(storageStats.totalUsed)} / {formatBytes(storageStats.totalCapacity)}
+              </span>
             </div>
             <Progress 
-              value={0} 
+              value={storageStats.totalCapacity > 0 ? (storageStats.totalUsed / storageStats.totalCapacity) * 100 : 0} 
               color="primary"
               size="sm"
               className="mb-1"
             />
             <p className="text-xs text-default-500">
-              还有 10 GB 可用
+              还有 {formatBytes(storageStats.totalCapacity - storageStats.totalUsed)} 可用
             </p>
           </div>
         </div>
