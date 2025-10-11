@@ -1,3 +1,52 @@
 @import "tailwindcss";
+@config "../tailwind.config.js";
 
-@config "../tailwind.config.js"
+@theme {
+  /* 品牌色 - 奶油绿 */
+  --color-cream-green-50: #f4f8f4;
+  --color-cream-green-100: #e8f0e8;
+  --color-cream-green-200: #D4E2D4;
+  --color-cream-green-300: #c0d4c0;
+  --color-cream-green-400: #acc6ac;
+  --color-cream-green-500: #98b898;
+  --color-cream-green-600: #7a9e7a;
+  --color-cream-green-700: #5c7e5c;
+  --color-cream-green-800: #3e5e3e;
+  --color-cream-green-900: #203e20;
+
+  /* 品牌色 - 浅卡其 */
+  --color-khaki-50: #faf8f4;
+  --color-khaki-100: #f5f1e9;
+  --color-khaki-200: #E8E1D0;
+  --color-khaki-300: #ddd2b7;
+  --color-khaki-400: #d2c39e;
+  --color-khaki-500: #c7b485;
+  --color-khaki-600: #a3956c;
+  --color-khaki-700: #7f7653;
+  --color-khaki-800: #5b573a;
+  --color-khaki-900: #373821;
+
+  /* 品牌色 - 琥珀棕 */
+  --color-amber-brown-50: #fef7ed;
+  --color-amber-brown-100: #fdefd5;
+  --color-amber-brown-200: #f9daa6;
+  --color-amber-brown-300: #f5c276;
+  --color-amber-brown-400: #eda147;
+  --color-amber-brown-500: #B5651D;
+  --color-amber-brown-600: #9a5418;
+  --color-amber-brown-700: #7f4313;
+  --color-amber-brown-800: #64320e;
+  --color-amber-brown-900: #492109;
+
+  /* 品牌色 - 深橄榄绿 */
+  --color-dark-olive-50: #f4f5f0;
+  --color-dark-olive-100: #e9ebe1;
+  --color-dark-olive-200: #d3d7c3;
+  --color-dark-olive-300: #bdc3a5;
+  --color-dark-olive-400: #a7af87;
+  --color-dark-olive-500: #919b69;
+  --color-dark-olive-600: #7a8554;
+  --color-dark-olive-700: #636f3f;
+  --color-dark-olive-800: #556B2F;
+  --color-dark-olive-900: #3a4a1f;
+}

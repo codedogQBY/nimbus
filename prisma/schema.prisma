@@ -1,0 +1,310 @@
+// Nimbus 多源聚合网盘 - Prisma Schema
+// 数据库: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============== 用户认证与权限系统 ==============
+
+/// 用户表
+model User {
+  id            Int       @id @default(autoincrement())
+  username      String    @unique @db.VarChar(50)
+  email         String    @unique @db.VarChar(100)
+  passwordHash  String    @map("password_hash") @db.VarChar(255)
+  avatarUrl     String?   @map("avatar_url") @db.VarChar(500)
+  isOwner       Boolean   @default(false) @map("is_owner")
+  isActive      Boolean   @default(true) @map("is_active")
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // 关系
+  userRoles         UserRole[]
+  filesUploaded     File[]              @relation("FileUploader")
+  foldersCreated    Folder[]            @relation("FolderCreator")
+  sharesCreated     Share[]             @relation("ShareCreator")
+  permissionLogs    PermissionLog[]
+  loginHistory      LoginHistory[]
+  emailVerifications EmailVerification[]
+  grantedRoles      UserRole[]          @relation("RoleGranter")
+
+  @@index([email])
+  @@index([username])
+  @@index([isOwner])
+  @@map("users")
+}
+
+/// 角色表
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(50)
+  displayName String   @map("display_name") @db.VarChar(100)
+  description String?  @db.Text
+  isSystem    Boolean  @default(false) @map("is_system")
+  priority    Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // 关系
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@index([name])
+  @@map("roles")
+}
+
+/// 权限表
+model Permission {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(100)
+  resource    String   @db.VarChar(50)
+  action      String   @db.VarChar(50)
+  displayName String   @map("display_name") @db.VarChar(100)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // 关系
+  rolePermissions RolePermission[]
+
+  @@index([name])
+  @@index([resource])
+  @@map("permissions")
+}
+
+/// 角色权限关联表
+model RolePermission {
+  id           Int        @id @default(autoincrement())
+  roleId       Int        @map("role_id")
+  permissionId Int        @map("permission_id")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  // 关系
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+/// 用户角色关联表
+model UserRole {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  roleId    Int       @map("role_id")
+  grantedBy Int?      @map("granted_by")
+  expiresAt DateTime? @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  // 关系
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role    Role  @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  granter User? @relation("RoleGranter", fields: [grantedBy], references: [id])
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@index([expiresAt])
+  @@map("user_roles")
+}
+
+/// 权限审计日志表
+model PermissionLog {
+  id                 Int      @id @default(autoincrement())
+  userId             Int      @map("user_id")
+  action             String   @db.VarChar(100)
+  resourceType       String   @map("resource_type") @db.VarChar(50)
+  resourceId         Int?     @map("resource_id")
+  permissionRequired String?  @map("permission_required") @db.VarChar(100)
+  granted            Boolean
+  ipAddress          String?  @map("ip_address") @db.VarChar(45)
+  userAgent          String?  @map("user_agent") @db.Text
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  // 关系
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([granted])
+  @@map("permission_logs")
+}
+
+// ============== 邮箱验证系统 ==============
+
+/// 邮箱验证码表
+model EmailVerification {
+  id          Int       @id @default(autoincrement())
+  email       String    @db.VarChar(100)
+  code        String    @db.VarChar(6)
+  type        String    @db.VarChar(20) // register, reset_password, change_email
+  userId      Int?      @map("user_id")
+  isVerified  Boolean   @default(false) @map("is_verified")
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5) @map("max_attempts")
+  expiresAt   DateTime  @map("expires_at")
+  verifiedAt  DateTime? @map("verified_at")
+  ipAddress   String?   @map("ip_address") @db.VarChar(45)
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // 关系
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([code])
+  @@index([expiresAt])
+  @@index([userId])
+  @@map("email_verifications")
+}
+
+/// 邮件发送日志表
+model EmailLog {
+  id           Int       @id @default(autoincrement())
+  email        String    @db.VarChar(100)
+  subject      String    @db.VarChar(255)
+  type         String    @db.VarChar(50)
+  status       String    @db.VarChar(20) // pending, sent, failed, bounced
+  errorMessage String?   @map("error_message") @db.Text
+  sentAt       DateTime? @map("sent_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([email])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("email_logs")
+}
+
+/// 登录历史表
+model LoginHistory {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  loginMethod   String   @map("login_method") @db.VarChar(20) // username, email
+  ipAddress     String?  @map("ip_address") @db.VarChar(45)
+  userAgent     String?  @map("user_agent") @db.Text
+  status        String   @db.VarChar(20) // success, failed, blocked
+  failureReason String?  @map("failure_reason") @db.VarChar(100)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // 关系
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([ipAddress])
+  @@map("login_history")
+}
+
+// ============== 存储系统 ==============
+
+/// 存储源配置表 - 全局配置，不与用户关联
+model StorageSource {
+  id         Int      @id @default(autoincrement())
+  name       String   @db.VarChar(100)
+  type       String   @db.VarChar(50) // r2, qiniu, telegram, github
+  config     Json // 加密存储的配置信息
+  isActive   Boolean  @default(true) @map("is_active")
+  priority   Int      @default(0)
+  quotaUsed  BigInt   @default(0) @map("quota_used")
+  quotaLimit BigInt   @default(0) @map("quota_limit")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // 关系
+  files File[]
+
+  @@index([type])
+  @@index([isActive])
+  @@map("storage_sources")
+}
+
+/// 文件夹表 - 统一存储，不做用户隔离
+model Folder {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(255)
+  parentId  Int?     @map("parent_id")
+  path      String   @db.VarChar(1000)
+  createdBy Int      @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // 关系
+  creator      User     @relation("FolderCreator", fields: [createdBy], references: [id])
+  parent       Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children     Folder[] @relation("FolderHierarchy")
+  files        File[]
+  sharesFolder Share[]  @relation("ShareFolder")
+
+  @@index([parentId])
+  @@index([path])
+  @@index([createdBy])
+  @@map("folders")
+}
+
+/// 文件表 - 统一存储，不做用户隔离
+model File {
+  id              Int      @id @default(autoincrement())
+  folderId        Int?     @map("folder_id")
+  name            String   @db.VarChar(255)
+  originalName    String   @map("original_name") @db.VarChar(255)
+  size            BigInt
+  mimeType        String?  @map("mime_type") @db.VarChar(100)
+  md5Hash         String   @map("md5_hash") @db.VarChar(32)
+  sha256Hash      String?  @map("sha256_hash") @db.VarChar(64)
+  storageSourceId Int      @map("storage_source_id")
+  storagePath     String   @map("storage_path") @db.VarChar(500)
+  isPublic        Boolean  @default(false) @map("is_public")
+  downloadCount   Int      @default(0) @map("download_count")
+  uploadedBy      Int      @map("uploaded_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // 关系
+  uploader      User          @relation("FileUploader", fields: [uploadedBy], references: [id])
+  folder        Folder?       @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  storageSource StorageSource @relation(fields: [storageSourceId], references: [id])
+  sharesFile    Share[]       @relation("ShareFile")
+
+  @@index([folderId])
+  @@index([md5Hash])
+  @@index([storageSourceId])
+  @@index([uploadedBy])
+  @@index([mimeType])
+  @@map("files")
+}
+
+/// 分享链接表
+model Share {
+  id            Int       @id @default(autoincrement())
+  fileId        Int?      @map("file_id")
+  folderId      Int?      @map("folder_id")
+  shareToken    String    @unique @map("share_token") @db.VarChar(50)
+  passwordHash  String?   @map("password_hash") @db.VarChar(255)
+  expiresAt     DateTime? @map("expires_at")
+  downloadLimit Int?      @map("download_limit")
+  downloadCount Int       @default(0) @map("download_count")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdBy     Int       @map("created_by")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  // 关系
+  creator User    @relation("ShareCreator", fields: [createdBy], references: [id])
+  file    File?   @relation("ShareFile", fields: [fileId], references: [id], onDelete: Cascade)
+  folder  Folder? @relation("ShareFolder", fields: [folderId], references: [id], onDelete: Cascade)
+
+  @@index([shareToken])
+  @@index([createdBy])
+  @@index([expiresAt])
+  @@index([fileId])
+  @@index([folderId])
+  @@map("shares")
+}
+

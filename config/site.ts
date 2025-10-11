@@ -1,69 +1,50 @@
 export type SiteConfig = typeof siteConfig;
 
 export const siteConfig = {
-  name: "Next.js + HeroUI",
-  description: "Make beautiful websites regardless of your design experience.",
+  name: "Nimbus",
+  description: "个人多源聚合网盘 - 开源、安全、高效的云存储解决方案",
   navItems: [
     {
-      label: "Home",
-      href: "/",
+      label: "文件",
+      href: "/files",
     },
     {
-      label: "Docs",
-      href: "/docs",
+      label: "分享",
+      href: "/shares",
     },
     {
-      label: "Pricing",
-      href: "/pricing",
+      label: "存储源",
+      href: "/storage",
     },
     {
-      label: "Blog",
-      href: "/blog",
-    },
-    {
-      label: "About",
-      href: "/about",
+      label: "用户",
+      href: "/users",
     },
   ],
   navMenuItems: [
     {
-      label: "Profile",
-      href: "/profile",
+      label: "文件管理",
+      href: "/files",
     },
     {
-      label: "Dashboard",
-      href: "/dashboard",
+      label: "我的分享",
+      href: "/shares",
     },
     {
-      label: "Projects",
-      href: "/projects",
+      label: "存储源",
+      href: "/storage",
     },
     {
-      label: "Team",
-      href: "/team",
+      label: "用户管理",
+      href: "/users",
     },
     {
-      label: "Calendar",
-      href: "/calendar",
-    },
-    {
-      label: "Settings",
+      label: "系统设置",
       href: "/settings",
-    },
-    {
-      label: "Help & Feedback",
-      href: "/help-feedback",
-    },
-    {
-      label: "Logout",
-      href: "/logout",
     },
   ],
   links: {
-    github: "https://github.com/heroui-inc/heroui",
-    twitter: "https://twitter.com/hero_ui",
-    docs: "https://heroui.com",
-    discord: "https://discord.gg/9b6yyZKmH4",
-    sponsor: "https://patreon.com/jrgarciadev",
+    github: "https://github.com/yourusername/nimbus",
+    docs: "/docs",
   },
 };
