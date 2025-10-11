@@ -1,21 +1,37 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { 
-  Navbar, 
-  NavbarBrand, 
-  NavbarContent, 
-  NavbarItem,
   Avatar,
   Dropdown,
   DropdownTrigger,
   DropdownMenu,
   DropdownItem,
-  Link,
-  Spinner
+  Button,
+  Progress,
+  Divider,
+  Spinner,
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerBody,
+  DrawerFooter,
 } from '@heroui/react';
-import { CloudIcon, FilesIcon, ShareIcon, SettingsIcon, UsersIcon, HardDriveIcon, LogOutIcon } from 'lucide-react';
+import { 
+  CloudIcon, 
+  FilesIcon, 
+  ShareIcon, 
+  HardDriveIcon,
+  UsersIcon,
+  SettingsIcon,
+  LogOutIcon,
+  ChevronRightIcon,
+  BellIcon,
+  SearchIcon,
+  MenuIcon,
+  XIcon
+} from 'lucide-react';
 import ky from 'ky';
 
 export default function DashboardLayout({
@@ -24,8 +40,11 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -60,6 +79,37 @@ export default function DashboardLayout({
     router.push('/login');
   };
 
+  const menuItems = [
+    { 
+      key: 'files', 
+      label: '文件', 
+      icon: FilesIcon, 
+      href: '/files',
+      show: true 
+    },
+    { 
+      key: 'shares', 
+      label: '分享', 
+      icon: ShareIcon, 
+      href: '/shares',
+      show: true 
+    },
+    { 
+      key: 'storage', 
+      label: '存储源', 
+      icon: HardDriveIcon, 
+      href: '/storage',
+      show: true 
+    },
+    { 
+      key: 'users', 
+      label: '用户', 
+      icon: UsersIcon, 
+      href: '/users',
+      show: user?.isOwner 
+    },
+  ];
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-cream-green-50">
@@ -69,101 +119,298 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-cream-green-50">
-      {/* 顶部导航栏 */}
-      <Navbar 
-        isBordered 
-        maxWidth="full"
-        className="bg-white/80 backdrop-blur-md border-b border-dark-olive-800/10"
+    <div className="h-screen flex overflow-hidden bg-cream-green-50">
+      {/* 桌面端侧边栏 */}
+      <aside 
+        className={`
+          ${sidebarCollapsed ? 'w-16' : 'w-64'} 
+          bg-white border-r border-divider transition-all duration-300 flex-col
+          hidden lg:flex
+        `}
       >
-        <NavbarBrand>
-          <CloudIcon className="w-6 h-6 text-amber-brown-500 mr-2" />
-          <p className="font-bold text-xl text-dark-olive-800">Nimbus</p>
-        </NavbarBrand>
+        <SidebarContent 
+          collapsed={sidebarCollapsed}
+          menuItems={menuItems}
+          pathname={pathname}
+          router={router}
+          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
+      </aside>
 
-        <NavbarContent className="hidden sm:flex gap-6" justify="center">
-          <NavbarItem>
-            <Link 
-              href="/files" 
-              className="flex items-center gap-2 text-dark-olive-700 hover:text-amber-brown-500"
-            >
-              <FilesIcon className="w-4 h-4" />
-              文件
-            </Link>
-          </NavbarItem>
-          <NavbarItem>
-            <Link 
-              href="/shares" 
-              className="flex items-center gap-2 text-dark-olive-700 hover:text-amber-brown-500"
-            >
-              <ShareIcon className="w-4 h-4" />
-              分享
-            </Link>
-          </NavbarItem>
-          <NavbarItem>
-            <Link 
-              href="/storage" 
-              className="flex items-center gap-2 text-dark-olive-700 hover:text-amber-brown-500"
-            >
-              <HardDriveIcon className="w-4 h-4" />
-              存储源
-            </Link>
-          </NavbarItem>
-          {user?.isOwner && (
-            <NavbarItem>
-              <Link 
-                href="/users" 
-                className="flex items-center gap-2 text-dark-olive-700 hover:text-amber-brown-500"
-              >
-                <UsersIcon className="w-4 h-4" />
-                用户
-              </Link>
-            </NavbarItem>
+      {/* 移动端抽屉菜单 */}
+      <Drawer
+        isOpen={mobileMenuOpen}
+        onOpenChange={setMobileMenuOpen}
+        placement="left"
+        size="xs"
+      >
+        <DrawerContent>
+          {(onClose) => (
+            <>
+              <DrawerHeader className="flex items-center justify-between p-4 border-b border-divider">
+                <div className="flex items-center gap-2">
+                  <CloudIcon className="w-6 h-6 text-amber-brown-500" />
+                  <span className="text-lg font-bold text-dark-olive-800">Nimbus</span>
+                </div>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  onPress={onClose}
+                >
+                  <XIcon className="w-5 h-5" />
+                </Button>
+              </DrawerHeader>
+              <DrawerBody className="p-0">
+                <SidebarContent 
+                  collapsed={false}
+                  menuItems={menuItems}
+                  pathname={pathname}
+                  router={router}
+                  onToggle={() => {}}
+                  onItemClick={onClose}
+                />
+              </DrawerBody>
+            </>
           )}
-        </NavbarContent>
-
-        <NavbarContent justify="end">
-          <Dropdown placement="bottom-end">
-            <DropdownTrigger>
-              <Avatar
-                isBordered
-                as="button"
-                className="transition-transform"
-                src={user?.avatarUrl}
-                name={user?.username}
-                size="sm"
-                color="primary"
-              />
-            </DropdownTrigger>
-            <DropdownMenu aria-label="用户菜单">
-              <DropdownItem key="profile" className="h-14 gap-2">
-                <p className="font-semibold">{user?.username}</p>
-                <p className="text-xs text-default-500">{user?.email}</p>
-              </DropdownItem>
-              <DropdownItem 
-                key="settings" 
-                startContent={<SettingsIcon className="w-4 h-4" />}
-              >
-                设置
-              </DropdownItem>
-              <DropdownItem
-                key="logout"
-                color="danger"
-                startContent={<LogOutIcon className="w-4 h-4" />}
-                onClick={handleLogout}
-              >
-                退出登录
-              </DropdownItem>
-            </DropdownMenu>
-          </Dropdown>
-        </NavbarContent>
-      </Navbar>
+        </DrawerContent>
+      </Drawer>
 
       {/* 主内容区域 */}
-      <main className="container mx-auto p-6">
-        {children}
-      </main>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* 顶部栏 */}
+        <header className="h-14 lg:h-16 bg-white border-b border-divider flex items-center justify-between px-4 lg:px-6">
+          {/* 移动端：菜单按钮 + Logo */}
+          <div className="flex items-center gap-3">
+            <Button
+              isIconOnly
+              size="sm"
+              variant="light"
+              className="lg:hidden"
+              onPress={() => setMobileMenuOpen(true)}
+            >
+              <MenuIcon className="w-5 h-5" />
+            </Button>
+            
+            <div className="flex items-center gap-2 lg:hidden">
+              <CloudIcon className="w-5 h-5 text-amber-brown-500" />
+              <span className="font-bold text-dark-olive-800">Nimbus</span>
+            </div>
+          </div>
+
+          {/* 桌面端：搜索框 */}
+          <div className="hidden lg:block flex-1 max-w-xl">
+            <div className="relative">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-default-400" />
+              <input
+                type="text"
+                placeholder="搜索文件..."
+                className="w-full pl-10 pr-4 py-2 bg-secondary-50 border border-transparent rounded-lg text-sm 
+                  focus:outline-none focus:border-amber-brown-500 focus:bg-white transition-colors"
+              />
+            </div>
+          </div>
+
+          {/* 右侧操作区 */}
+          <div className="flex items-center gap-2 lg:gap-4">
+            {/* 移动端：搜索按钮 */}
+            <Button
+              isIconOnly
+              size="sm"
+              variant="light"
+              className="lg:hidden"
+            >
+              <SearchIcon className="w-5 h-5 text-dark-olive-700" />
+            </Button>
+
+            {/* 通知 */}
+            <Button
+              isIconOnly
+              size="sm"
+              variant="light"
+              className="relative"
+            >
+              <BellIcon className="w-5 h-5 text-dark-olive-700" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full"></span>
+            </Button>
+
+            <Divider orientation="vertical" className="h-6 hidden lg:block" />
+
+            {/* 用户菜单 */}
+            <Dropdown placement="bottom-end">
+              <DropdownTrigger>
+                <div className="flex items-center gap-2 lg:gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+                  <Avatar
+                    src={user?.avatarUrl}
+                    name={user?.username}
+                    size="sm"
+                    className="bg-primary-200 text-dark-olive-800"
+                  />
+                  <div className="text-left hidden lg:block">
+                    <p className="text-sm font-medium text-dark-olive-800">
+                      {user?.username}
+                    </p>
+                    <p className="text-xs text-default-500">
+                      {user?.isOwner ? 'Owner' : 'User'}
+                    </p>
+                  </div>
+                </div>
+              </DropdownTrigger>
+              <DropdownMenu aria-label="用户菜单" className="w-56">
+                <DropdownItem key="profile" className="h-14 gap-2">
+                  <p className="font-semibold">{user?.username}</p>
+                  <p className="text-xs text-default-500">{user?.email}</p>
+                </DropdownItem>
+                <DropdownItem 
+                  key="settings" 
+                  startContent={<SettingsIcon className="w-4 h-4" />}
+                >
+                  个人设置
+                </DropdownItem>
+                <DropdownItem
+                  key="logout"
+                  color="danger"
+                  startContent={<LogOutIcon className="w-4 h-4" />}
+                  onClick={handleLogout}
+                >
+                  退出登录
+                </DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
+          </div>
+        </header>
+
+        {/* 主内容区 */}
+        <main className="flex-1 overflow-y-auto bg-cream-green-50 pb-16 lg:pb-0">
+          <div className="h-full">
+            {children}
+          </div>
+        </main>
+
+        {/* 移动端底部导航栏 */}
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-divider z-50">
+          <div className="grid grid-cols-4 h-16">
+            {menuItems.filter(item => item.show).slice(0, 4).map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+              
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => router.push(item.href)}
+                  className={`
+                    flex flex-col items-center justify-center gap-1 transition-colors
+                    ${isActive 
+                      ? 'text-amber-brown-500' 
+                      : 'text-dark-olive-600'
+                    }
+                  `}
+                >
+                  <Icon className={`w-5 h-5 ${isActive ? 'scale-110' : ''} transition-transform`} />
+                  <span className="text-xs font-medium">{item.label}</span>
+                  {isActive && (
+                    <div className="absolute bottom-0 w-12 h-0.5 bg-amber-brown-500 rounded-t-full"></div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
     </div>
   );
 }
 
+// 侧边栏内容组件（桌面端和移动端共用）
+function SidebarContent({ 
+  collapsed, 
+  menuItems, 
+  pathname, 
+  router,
+  onToggle,
+  onItemClick 
+}: any) {
+  return (
+    <>
+      {/* Logo区域 */}
+      <div className="h-16 flex items-center px-4 border-b border-divider">
+        {collapsed ? (
+          <CloudIcon className="w-8 h-8 text-amber-brown-500" />
+        ) : (
+          <div className="flex items-center gap-2">
+            <CloudIcon className="w-8 h-8 text-amber-brown-500" />
+            <span className="text-xl font-bold text-dark-olive-800">Nimbus</span>
+          </div>
+        )}
+      </div>
+
+      {/* 导航菜单 */}
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        {menuItems.filter((item: any) => item.show).map((item: any) => {
+          const Icon = item.icon;
+          const isActive = pathname === item.href;
+          
+          return (
+            <button
+              key={item.key}
+              onClick={() => {
+                router.push(item.href);
+                onItemClick?.();
+              }}
+              className={`
+                w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all
+                ${isActive 
+                  ? 'bg-amber-brown-500 text-white shadow-md' 
+                  : 'text-dark-olive-700 hover:bg-secondary-100'
+                }
+              `}
+            >
+              <Icon className="w-5 h-5 flex-shrink-0" />
+              {!collapsed && (
+                <span className="font-medium">{item.label}</span>
+              )}
+              {isActive && !collapsed && (
+                <ChevronRightIcon className="w-4 h-4 ml-auto" />
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* 存储空间指示器 */}
+      {!collapsed && (
+        <div className="p-4 border-t border-divider">
+          <div className="bg-secondary-50 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-dark-olive-700">存储空间</span>
+              <span className="text-xs text-dark-olive-600">0 GB / 10 GB</span>
+            </div>
+            <Progress 
+              value={0} 
+              color="primary"
+              size="sm"
+              className="mb-1"
+            />
+            <p className="text-xs text-default-500">
+              还有 10 GB 可用
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 折叠按钮（仅桌面端显示） */}
+      <div className="p-3 border-t border-divider hidden lg:block">
+        <Button
+          isIconOnly={collapsed}
+          size="sm"
+          variant="light"
+          onClick={onToggle}
+          className="w-full"
+        >
+          <MenuIcon className="w-4 h-4" />
+          {!collapsed && <span className="ml-2">收起</span>}
+        </Button>
+      </div>
+    </>
+  );
+}
