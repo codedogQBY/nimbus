@@ -474,7 +474,7 @@ export default function SharePage({ params }: SharePageProps) {
                   <Breadcrumbs separator={<ChevronRightIcon className="w-4 h-4" />}>
                     {folderContents.breadcrumbs.map((crumb: any, index: number) => (
                       <BreadcrumbItem
-                        key={crumb.id}
+                        key={`${crumb.id}-${index}`}
                         onClick={() => index < folderContents.breadcrumbs.length - 1 && handleFolderNavigate(crumb.id)}
                         className={index < folderContents.breadcrumbs.length - 1 ? "cursor-pointer hover:text-primary" : ""}
                       >

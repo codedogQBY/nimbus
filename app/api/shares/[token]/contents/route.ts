@@ -151,11 +151,7 @@ function buildBreadcrumbs(targetFolderId: number, snapshotData: any): any[] {
   function findPath(folderId: number, contents: any, path: any[]): boolean {
     // 检查是否是根文件夹
     if (snapshotData.id === folderId) {
-      breadcrumbs.push(...path, {
-        id: snapshotData.id,
-        name: snapshotData.name,
-        path: snapshotData.path,
-      });
+      breadcrumbs.push(...path);
       return true;
     }
 
