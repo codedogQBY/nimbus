@@ -1,23 +1,23 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Modal, 
-  ModalContent, 
-  ModalHeader, 
-  ModalBody, 
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
   Button,
   Progress,
   Spinner,
   Chip,
   Tooltip
 } from '@heroui/react';
-import { 
-  DownloadIcon, 
-  ExternalLinkIcon, 
-  XIcon, 
-  RotateCwIcon, 
-  ZoomInIcon, 
+import {
+  DownloadIcon,
+  ExternalLinkIcon,
+  XIcon,
+  RotateCwIcon,
+  ZoomInIcon,
   ZoomOutIcon,
   MaximizeIcon,
   MinimizeIcon,
@@ -33,6 +33,7 @@ import {
   CopyIcon,
   ShareIcon
 } from 'lucide-react';
+import { AuthenticatedImage } from '@/components/authenticated-image';
 
 export interface PreviewComponentProps {
   file: {
@@ -124,6 +125,7 @@ export function ImagePreview({ file, onClose }: PreviewComponentProps) {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number; distance: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleZoomIn = () => setScale(prev => Math.min(prev + 0.25, 5));
@@ -165,21 +167,24 @@ export function ImagePreview({ file, onClose }: PreviewComponentProps) {
   };
 
   return (
-    <Modal 
-      isOpen={true} 
+    <Modal
+      isOpen={true}
       onClose={onClose}
       size="full"
       classNames={{
-        base: isFullscreen ? "m-0 max-w-none" : "max-w-7xl",
-        body: "p-0"
+        base: isFullscreen ? "m-0 max-w-none h-screen" : "max-w-7xl mx-2 lg:mx-auto",
+        body: "p-0",
+        wrapper: "p-2 lg:p-4"
       }}
       hideCloseButton
+      isDismissable={!isDragging}
+      scrollBehavior="inside"
     >
       <ModalContent>
         <FileInfoHeader file={file} />
         
         <Toolbar>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 lg:gap-2 overflow-x-auto">
             <Tooltip content="缩小">
               <Button
                 isIconOnly
@@ -187,15 +192,16 @@ export function ImagePreview({ file, onClose }: PreviewComponentProps) {
                 variant="light"
                 onPress={handleZoomOut}
                 isDisabled={scale <= 0.25}
+                className="flex-shrink-0"
               >
-                <ZoomOutIcon className="w-4 h-4" />
+                <ZoomOutIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
               </Button>
             </Tooltip>
-            
-            <span className="text-sm text-default-500 min-w-[60px] text-center">
+
+            <span className="text-xs lg:text-sm text-default-500 min-w-[50px] lg:min-w-[60px] text-center">
               {Math.round(scale * 100)}%
             </span>
-            
+
             <Tooltip content="放大">
               <Button
                 isIconOnly
@@ -203,83 +209,93 @@ export function ImagePreview({ file, onClose }: PreviewComponentProps) {
                 variant="light"
                 onPress={handleZoomIn}
                 isDisabled={scale >= 5}
+                className="flex-shrink-0"
               >
-                <ZoomInIcon className="w-4 h-4" />
+                <ZoomInIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
               </Button>
             </Tooltip>
-            
-            <div className="w-px h-6 bg-divider mx-2" />
-            
+
+            <div className="w-px h-4 lg:h-6 bg-divider mx-1 lg:mx-2 flex-shrink-0" />
+
             <Tooltip content="旋转">
               <Button
                 isIconOnly
                 size="sm"
                 variant="light"
                 onPress={handleRotate}
+                className="flex-shrink-0"
               >
-                <RotateCwIcon className="w-4 h-4" />
+                <RotateCwIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
               </Button>
             </Tooltip>
-            
+
             <Tooltip content="重置">
               <Button
                 isIconOnly
                 size="sm"
                 variant="light"
                 onPress={handleReset}
+                className="flex-shrink-0"
               >
-                <RefreshCwIcon className="w-4 h-4" />
+                <RefreshCwIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
               </Button>
             </Tooltip>
           </div>
-          
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-1 lg:gap-2">
             <Tooltip content={isFullscreen ? "退出全屏" : "全屏"}>
               <Button
                 isIconOnly
                 size="sm"
                 variant="light"
                 onPress={() => setIsFullscreen(!isFullscreen)}
+                className="hidden lg:flex flex-shrink-0"
               >
                 {isFullscreen ? <MinimizeIcon className="w-4 h-4" /> : <MaximizeIcon className="w-4 h-4" />}
               </Button>
             </Tooltip>
-            
+
             <Tooltip content="在新窗口打开">
               <Button
                 isIconOnly
                 size="sm"
                 variant="light"
-                onPress={() => window.open(file.storagePath, '_blank')}
+                onPress={() => {
+                  const token = localStorage.getItem('token');
+                  const openUrl = `${file.storagePath}${token ? `${file.storagePath.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : ''}`;
+                  window.open(openUrl, '_blank');
+                }}
+                className="hidden sm:flex flex-shrink-0"
               >
-                <ExternalLinkIcon className="w-4 h-4" />
+                <ExternalLinkIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
               </Button>
             </Tooltip>
-            
+
             <Tooltip content="下载">
               <Button
                 isIconOnly
                 size="sm"
                 variant="light"
                 onPress={() => {
-                  const link = document.createElement('a');
-                  link.href = file.storagePath;
-                  link.download = file.originalName;
-                  link.click();
+                  // 通过添加token到URL参数来下载
+                  const token = localStorage.getItem('token');
+                  const downloadUrl = `${file.storagePath}${file.storagePath.includes('?') ? '&' : '?'}download=1${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+                  window.open(downloadUrl, '_blank');
                 }}
+                className="flex-shrink-0"
               >
-                <DownloadIcon className="w-4 h-4" />
+                <DownloadIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
               </Button>
             </Tooltip>
-            
+
             <Button
               isIconOnly
               size="sm"
               variant="light"
               onPress={onClose}
-              className="ml-2"
+              className="ml-1 lg:ml-2 flex-shrink-0"
             >
-              <XIcon className="w-4 h-4" />
+              <XIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
             </Button>
           </div>
         </Toolbar>
@@ -320,18 +336,18 @@ export function ImagePreview({ file, onClose }: PreviewComponentProps) {
                 </Button>
               </div>
             ) : (
-              <img
+              <AuthenticatedImage
                 src={file.storagePath}
                 alt={file.originalName}
                 className="max-w-full max-h-full object-contain transition-all duration-200 select-none"
-                style={{
-                  transform: `scale(${scale}) rotate(${rotation}deg) translate(${position.x}px, ${position.y}px)`,
-                  cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'pointer'
-                }}
                 onLoad={() => setLoading(false)}
                 onError={() => {
                   setLoading(false);
                   setError(true);
+                }}
+                style={{
+                  transform: `scale(${scale}) rotate(${rotation}deg) translate(${position.x}px, ${position.y}px)`,
+                  cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'pointer'
                 }}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
@@ -356,67 +372,115 @@ export function ImagePreview({ file, onClose }: PreviewComponentProps) {
 export function VideoPreview({ file, onClose }: PreviewComponentProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [videoSrc, setVideoSrc] = useState<string>('');
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  useEffect(() => {
+    const loadVideo = async () => {
+      try {
+        setLoading(true);
+        setError(false);
+
+        const token = localStorage.getItem('token');
+        const response = await fetch(file.storagePath, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const videoUrl = URL.createObjectURL(blob);
+        setVideoSrc(videoUrl);
+        setLoading(false);
+      } catch (err) {
+        console.error('Failed to load authenticated video:', err);
+        setError(true);
+        setLoading(false);
+      }
+    };
+
+    if (file.storagePath) {
+      loadVideo();
+    }
+
+    // 清理函数
+    return () => {
+      if (videoSrc) {
+        URL.revokeObjectURL(videoSrc);
+      }
+    };
+  }, [file.storagePath]);
+
   return (
-    <Modal 
-      isOpen={true} 
+    <Modal
+      isOpen={true}
       onClose={onClose}
-      size="5xl"
+      size="full"
       classNames={{
-        base: "max-w-6xl"
+        base: "max-w-6xl mx-2 lg:mx-auto",
+        body: "p-0",
+        wrapper: "p-2 lg:p-4"
       }}
       hideCloseButton
+      scrollBehavior="inside"
     >
       <ModalContent>
         <FileInfoHeader file={file} />
-        
+
         <Toolbar>
-          <div className="flex items-center gap-2">
-            <VideoIcon className="w-5 h-5 text-primary-500" />
-            <span className="text-sm font-medium text-dark-olive-800">视频播放器</span>
+          <div className="flex items-center gap-1 lg:gap-2">
+            <VideoIcon className="w-4 h-4 lg:w-5 lg:h-5 text-primary-500" />
+            <span className="text-xs lg:text-sm font-medium text-dark-olive-800">视频播放器</span>
           </div>
-          
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-1 lg:gap-2">
             <Tooltip content="在新窗口打开">
               <Button
                 isIconOnly
                 size="sm"
                 variant="light"
-                onPress={() => window.open(file.storagePath, '_blank')}
+                onPress={() => {
+                  const token = localStorage.getItem('token');
+                  const openUrl = `${file.storagePath}${token ? `${file.storagePath.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : ''}`;
+                  window.open(openUrl, '_blank');
+                }}
+                className="hidden sm:flex flex-shrink-0"
               >
-                <ExternalLinkIcon className="w-4 h-4" />
+                <ExternalLinkIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
               </Button>
             </Tooltip>
-            
+
             <Tooltip content="下载">
               <Button
                 isIconOnly
                 size="sm"
                 variant="light"
                 onPress={() => {
-                  const link = document.createElement('a');
-                  link.href = file.storagePath;
-                  link.download = file.originalName;
-                  link.click();
+                  // 通过添加token到URL参数来下载
+                  const token = localStorage.getItem('token');
+                  const downloadUrl = `${file.storagePath}${file.storagePath.includes('?') ? '&' : '?'}download=1${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+                  window.open(downloadUrl, '_blank');
                 }}
+                className="flex-shrink-0"
               >
-                <DownloadIcon className="w-4 h-4" />
+                <DownloadIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
               </Button>
             </Tooltip>
-            
+
             <Button
               isIconOnly
               size="sm"
               variant="light"
               onPress={onClose}
-              className="ml-2"
+              className="ml-1 lg:ml-2 flex-shrink-0"
             >
-              <XIcon className="w-4 h-4" />
+              <XIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
             </Button>
           </div>
         </Toolbar>
-        
+
         <ModalBody className="p-0">
           <div className="w-full bg-black relative">
             {loading && (
@@ -427,9 +491,9 @@ export function VideoPreview({ file, onClose }: PreviewComponentProps) {
                 </div>
               </div>
             )}
-            
+
             {error ? (
-              <div className="aspect-video bg-danger-50 flex items-center justify-center">
+              <div className="aspect-video bg-danger-50 flex items-center justify-center min-h-[300px] lg:min-h-[400px]">
                 <div className="text-center">
                   <VideoIcon className="w-12 h-12 text-danger-500 mx-auto mb-3" />
                   <h3 className="text-lg font-semibold text-danger-700">视频加载失败</h3>
@@ -446,12 +510,13 @@ export function VideoPreview({ file, onClose }: PreviewComponentProps) {
                   </Button>
                 </div>
               </div>
-            ) : (
+            ) : videoSrc ? (
               <video
                 ref={videoRef}
-                src={file.storagePath}
+                src={videoSrc}
                 controls
-                className="w-full aspect-video"
+                className="w-full h-auto max-h-[70vh] lg:max-h-[80vh]"
+                style={{ aspectRatio: 'auto' }}
                 preload="metadata"
                 onLoadStart={() => setLoading(true)}
                 onCanPlay={() => setLoading(false)}
@@ -462,7 +527,7 @@ export function VideoPreview({ file, onClose }: PreviewComponentProps) {
               >
                 您的浏览器不支持视频播放
               </video>
-            )}
+            ) : null}
           </div>
         </ModalBody>
       </ModalContent>
@@ -474,68 +539,115 @@ export function VideoPreview({ file, onClose }: PreviewComponentProps) {
 export function PDFPreview({ file, onClose }: PreviewComponentProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [pdfSrc, setPdfSrc] = useState<string>('');
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  useEffect(() => {
+    const loadPDF = async () => {
+      try {
+        setLoading(true);
+        setError(false);
+
+        const token = localStorage.getItem('token');
+        const response = await fetch(file.storagePath, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const pdfUrl = URL.createObjectURL(blob);
+        setPdfSrc(pdfUrl);
+        setLoading(false);
+      } catch (err) {
+        console.error('Failed to load authenticated PDF:', err);
+        setError(true);
+        setLoading(false);
+      }
+    };
+
+    if (file.storagePath) {
+      loadPDF();
+    }
+
+    // 清理函数
+    return () => {
+      if (pdfSrc) {
+        URL.revokeObjectURL(pdfSrc);
+      }
+    };
+  }, [file.storagePath]);
+
   return (
-    <Modal 
-      isOpen={true} 
+    <Modal
+      isOpen={true}
       onClose={onClose}
       size="full"
       classNames={{
-        base: "max-w-7xl",
-        body: "p-0"
+        base: "max-w-7xl mx-2 lg:mx-auto",
+        body: "p-0",
+        wrapper: "p-2 lg:p-4"
       }}
       hideCloseButton
+      scrollBehavior="inside"
     >
       <ModalContent>
         <FileInfoHeader file={file} />
-        
+
         <Toolbar>
-          <div className="flex items-center gap-2">
-            <FileTextIcon className="w-5 h-5 text-primary-500" />
-            <span className="text-sm font-medium text-dark-olive-800">PDF 查看器</span>
+          <div className="flex items-center gap-1 lg:gap-2">
+            <FileTextIcon className="w-4 h-4 lg:w-5 lg:h-5 text-primary-500" />
+            <span className="text-xs lg:text-sm font-medium text-dark-olive-800">PDF 查看器</span>
           </div>
-          
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-1 lg:gap-2">
             <Tooltip content="在新窗口打开">
               <Button
                 isIconOnly
                 size="sm"
                 variant="light"
-                onPress={() => window.open(file.storagePath, '_blank')}
+                onPress={() => {
+                  if (pdfSrc) {
+                    window.open(pdfSrc, '_blank');
+                  }
+                }}
+                className="hidden sm:flex flex-shrink-0"
               >
-                <ExternalLinkIcon className="w-4 h-4" />
+                <ExternalLinkIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
               </Button>
             </Tooltip>
-            
+
             <Tooltip content="下载">
               <Button
                 isIconOnly
                 size="sm"
                 variant="light"
                 onPress={() => {
-                  const link = document.createElement('a');
-                  link.href = file.storagePath;
-                  link.download = file.originalName;
-                  link.click();
+                  // 通过添加token到URL参数来下载
+                  const token = localStorage.getItem('token');
+                  const downloadUrl = `${file.storagePath}${file.storagePath.includes('?') ? '&' : '?'}download=1${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+                  window.open(downloadUrl, '_blank');
                 }}
+                className="flex-shrink-0"
               >
-                <DownloadIcon className="w-4 h-4" />
+                <DownloadIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
               </Button>
             </Tooltip>
-            
+
             <Button
               isIconOnly
               size="sm"
               variant="light"
               onPress={onClose}
-              className="ml-2"
+              className="ml-1 lg:ml-2 flex-shrink-0"
             >
-              <XIcon className="w-4 h-4" />
+              <XIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
             </Button>
           </div>
         </Toolbar>
-        
+
         <ModalBody className="flex-1 overflow-hidden">
           <div className="w-full h-full relative">
             {loading && (
@@ -546,37 +658,75 @@ export function PDFPreview({ file, onClose }: PreviewComponentProps) {
                 </div>
               </div>
             )}
-            
+
             {error ? (
-              <div className="h-full flex items-center justify-center bg-danger-50">
+              <div className="h-full flex items-center justify-center bg-danger-50 min-h-[400px]">
                 <div className="text-center">
                   <FileTextIcon className="w-12 h-12 text-danger-500 mx-auto mb-3" />
                   <h3 className="text-lg font-semibold text-danger-700">PDF 加载失败</h3>
                   <p className="text-sm text-danger-500 mb-4">无法显示此 PDF 文件</p>
+                  <div className="space-y-2">
+                    <Button
+                      color="danger"
+                      variant="flat"
+                      onPress={() => {
+                        setError(false);
+                        setLoading(true);
+                      }}
+                    >
+                      重新加载
+                    </Button>
+                    <p className="text-xs text-default-400">
+                      提示：您可以下载文件后使用本地PDF阅读器查看
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : pdfSrc ? (
+              <div className="w-full h-full bg-gray-100">
+                <iframe
+                  ref={iframeRef}
+                  src={pdfSrc}
+                  className="w-full h-full border-0 min-h-[500px] lg:min-h-[600px]"
+                  title={file.originalName}
+                  onLoad={() => {
+                    setLoading(false);
+                    console.log('PDF loaded in iframe using blob URL');
+                  }}
+                  onError={() => {
+                    console.error('PDF failed to load in iframe');
+                    setLoading(false);
+                    setError(true);
+                  }}
+                  // 确保iframe可以正确显示PDF
+                  allow="fullscreen"
+                />
+
+                {/* 如果浏览器不支持PDF预览，提供下载选项 */}
+                <div className="absolute bottom-4 right-4">
                   <Button
-                    color="danger"
-                    variant="flat"
+                    size="sm"
+                    color="primary"
+                    variant="solid"
                     onPress={() => {
-                      setError(false);
-                      setLoading(true);
+                      const token = localStorage.getItem('token');
+                      const downloadUrl = `${file.storagePath}${file.storagePath.includes('?') ? '&' : '?'}download=1${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+                      window.open(downloadUrl, '_blank');
                     }}
+                    className="shadow-lg"
                   >
-                    重新加载
+                    <DownloadIcon className="w-4 h-4 mr-1" />
+                    下载 PDF
                   </Button>
                 </div>
               </div>
             ) : (
-              <iframe
-                ref={iframeRef}
-                src={file.storagePath}
-                className="w-full h-full border-0"
-                title={file.originalName}
-                onLoad={() => setLoading(false)}
-                onError={() => {
-                  setLoading(false);
-                  setError(true);
-                }}
-              />
+              <div className="h-full flex items-center justify-center bg-gray-50 min-h-[400px]">
+                <div className="text-center">
+                  <FileTextIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-sm text-gray-500">正在准备PDF查看器...</p>
+                </div>
+              </div>
             )}
           </div>
         </ModalBody>
@@ -589,68 +739,115 @@ export function PDFPreview({ file, onClose }: PreviewComponentProps) {
 export function AudioPreview({ file, onClose }: PreviewComponentProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [audioSrc, setAudioSrc] = useState<string>('');
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  useEffect(() => {
+    const loadAudio = async () => {
+      try {
+        setLoading(true);
+        setError(false);
+
+        const token = localStorage.getItem('token');
+        const response = await fetch(file.storagePath, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        setAudioSrc(audioUrl);
+        setLoading(false);
+      } catch (err) {
+        console.error('Failed to load authenticated audio:', err);
+        setError(true);
+        setLoading(false);
+      }
+    };
+
+    if (file.storagePath) {
+      loadAudio();
+    }
+
+    // 清理函数
+    return () => {
+      if (audioSrc) {
+        URL.revokeObjectURL(audioSrc);
+      }
+    };
+  }, [file.storagePath]);
+
   return (
-    <Modal 
-      isOpen={true} 
+    <Modal
+      isOpen={true}
       onClose={onClose}
       size="lg"
       classNames={{
-        base: "max-w-2xl"
+        base: "max-w-2xl mx-2 lg:mx-auto",
+        wrapper: "p-2 lg:p-4"
       }}
       hideCloseButton
+      scrollBehavior="inside"
     >
       <ModalContent>
         <FileInfoHeader file={file} />
-        
+
         <Toolbar>
-          <div className="flex items-center gap-2">
-            <MusicIcon className="w-5 h-5 text-primary-500" />
-            <span className="text-sm font-medium text-dark-olive-800">音频播放器</span>
+          <div className="flex items-center gap-1 lg:gap-2">
+            <MusicIcon className="w-4 h-4 lg:w-5 lg:h-5 text-primary-500" />
+            <span className="text-xs lg:text-sm font-medium text-dark-olive-800">音频播放器</span>
           </div>
-          
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-1 lg:gap-2">
             <Tooltip content="在新窗口打开">
               <Button
                 isIconOnly
                 size="sm"
                 variant="light"
-                onPress={() => window.open(file.storagePath, '_blank')}
+                onPress={() => {
+                  const token = localStorage.getItem('token');
+                  const openUrl = `${file.storagePath}${token ? `${file.storagePath.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : ''}`;
+                  window.open(openUrl, '_blank');
+                }}
+                className="hidden sm:flex flex-shrink-0"
               >
-                <ExternalLinkIcon className="w-4 h-4" />
+                <ExternalLinkIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
               </Button>
             </Tooltip>
-            
+
             <Tooltip content="下载">
               <Button
                 isIconOnly
                 size="sm"
                 variant="light"
                 onPress={() => {
-                  const link = document.createElement('a');
-                  link.href = file.storagePath;
-                  link.download = file.originalName;
-                  link.click();
+                  // 通过添加token到URL参数来下载
+                  const token = localStorage.getItem('token');
+                  const downloadUrl = `${file.storagePath}${file.storagePath.includes('?') ? '&' : '?'}download=1${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+                  window.open(downloadUrl, '_blank');
                 }}
+                className="flex-shrink-0"
               >
-                <DownloadIcon className="w-4 h-4" />
+                <DownloadIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
               </Button>
             </Tooltip>
-            
+
             <Button
               isIconOnly
               size="sm"
               variant="light"
               onPress={onClose}
-              className="ml-2"
+              className="ml-1 lg:ml-2 flex-shrink-0"
             >
-              <XIcon className="w-4 h-4" />
+              <XIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
             </Button>
           </div>
         </Toolbar>
-        
-        <ModalBody className="p-8">
+
+        <ModalBody className="p-4 lg:p-8">
           <div className="text-center">
             {loading && (
               <div className="flex flex-col items-center gap-4">
@@ -658,7 +855,7 @@ export function AudioPreview({ file, onClose }: PreviewComponentProps) {
                 <p className="text-sm text-default-500">加载音频中...</p>
               </div>
             )}
-            
+
             {error ? (
               <div className="flex flex-col items-center gap-4">
                 <div className="w-16 h-16 bg-danger-100 rounded-full flex items-center justify-center">
@@ -679,24 +876,24 @@ export function AudioPreview({ file, onClose }: PreviewComponentProps) {
                   重新加载
                 </Button>
               </div>
-            ) : (
+            ) : audioSrc ? (
               <div className="flex flex-col items-center gap-6">
-                <div className="w-24 h-24 bg-gradient-to-br from-primary-100 to-primary-200 rounded-full flex items-center justify-center">
-                  <MusicIcon className="w-12 h-12 text-primary-600" />
+                <div className="w-20 h-20 lg:w-24 lg:h-24 bg-gradient-to-br from-primary-100 to-primary-200 rounded-full flex items-center justify-center">
+                  <MusicIcon className="w-10 h-10 lg:w-12 lg:h-12 text-primary-600" />
                 </div>
-                
+
                 <div>
-                  <h3 className="text-lg font-semibold text-dark-olive-800 mb-1">
+                  <h3 className="text-base lg:text-lg font-semibold text-dark-olive-800 mb-1">
                     {file.originalName}
                   </h3>
-                  <p className="text-sm text-default-500">
+                  <p className="text-xs lg:text-sm text-default-500">
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 </div>
-                
+
                 <audio
                   ref={audioRef}
-                  src={file.storagePath}
+                  src={audioSrc}
                   controls
                   className="w-full max-w-md"
                   preload="metadata"
@@ -710,7 +907,7 @@ export function AudioPreview({ file, onClose }: PreviewComponentProps) {
                   您的浏览器不支持音频播放
                 </audio>
               </div>
-            )}
+            ) : null}
           </div>
         </ModalBody>
       </ModalContent>

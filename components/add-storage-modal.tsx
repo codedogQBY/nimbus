@@ -36,6 +36,7 @@ interface AddStorageModalProps {
 }
 
 const storageTypes = [
+  { key: 'local', label: '本地存储', Icon: HardDriveIcon },
   { key: 'r2', label: 'Cloudflare R2', Icon: CloudIcon },
   { key: 'qiniu', label: '七牛云', Icon: DatabaseIcon },
   { key: 'minio', label: 'MinIO', Icon: HardDriveIcon },
@@ -48,8 +49,10 @@ const storageTypes = [
 
 export function AddStorageModal({ isOpen, onClose, onSuccess }: AddStorageModalProps) {
   const [loading, setLoading] = useState(false);
+  const [testLoading, setTestLoading] = useState(false);
   const [error, setError] = useState('');
-  const [storageType, setStorageType] = useState('r2');
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [storageType, setStorageType] = useState('local');
   
   // 通用字段
   const [name, setName] = useState('');
@@ -105,8 +108,17 @@ export function AddStorageModal({ isOpen, onClose, onSuccess }: AddStorageModalP
   const [customBody, setCustomBody] = useState('');
   const [customResponsePath, setCustomResponsePath] = useState('');
 
+  // 本地存储配置
+  const [localBasePath, setLocalBasePath] = useState('./storage');
+  const [localMaxFileSize, setLocalMaxFileSize] = useState('100');
+
   const buildConfig = () => {
     switch (storageType) {
+      case 'local':
+        return {
+          basePath: localBasePath,
+          maxFileSize: parseInt(localMaxFileSize) * 1024 * 1024, // MB to Bytes
+        };
       case 'r2':
         return {
           accountId: r2AccountId,
@@ -176,6 +188,16 @@ export function AddStorageModal({ isOpen, onClose, onSuccess }: AddStorageModalP
     }
 
     switch (storageType) {
+      case 'local':
+        if (!localBasePath.trim()) {
+          setError('请输入本地存储路径');
+          return false;
+        }
+        if (!localMaxFileSize || parseInt(localMaxFileSize) <= 0) {
+          setError('请输入有效的文件大小限制');
+          return false;
+        }
+        break;
       case 'r2':
         if (!r2AccountId || !r2AccessKeyId || !r2SecretAccessKey || !r2BucketName) {
           setError('请填写完整的 R2 配置信息');
@@ -229,6 +251,44 @@ export function AddStorageModal({ isOpen, onClose, onSuccess }: AddStorageModalP
     return true;
   };
 
+  const handleTestConnection = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setTestLoading(true);
+    setTestResult(null);
+    setError('');
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await ky.post('/api/storage-sources/test', {
+        headers: { Authorization: `Bearer ${token}` },
+        json: {
+          type: storageType,
+          config: buildConfig(),
+        },
+      }).json<{ success: boolean; connected: boolean; message: string; error?: string }>();
+
+      setTestResult({
+        success: response.connected,
+        message: response.message,
+      });
+
+      if (!response.connected && response.error) {
+        setError(`测试失败: ${response.error}`);
+      }
+    } catch (err: any) {
+      setTestResult({
+        success: false,
+        message: '测试连接失败',
+      });
+      setError(err.message || '测试连接失败');
+    } finally {
+      setTestLoading(false);
+    }
+  };
+
   const handleCreate = async () => {
     if (!validateForm()) {
       return;
@@ -253,6 +313,9 @@ export function AddStorageModal({ isOpen, onClose, onSuccess }: AddStorageModalP
       resetForm();
       onSuccess?.();
       onClose();
+
+      // 触发存储更新事件，通知侧边栏刷新
+      window.dispatchEvent(new CustomEvent('storageUpdated'));
     } catch (err: any) {
       setError(err.message || '添加存储源失败');
     } finally {
@@ -297,7 +360,10 @@ export function AddStorageModal({ isOpen, onClose, onSuccess }: AddStorageModalP
     setCustomHeaders('');
     setCustomBody('');
     setCustomResponsePath('');
+    setLocalBasePath('./storage');
+    setLocalMaxFileSize('100');
     setError('');
+    setTestResult(null);
   };
 
   const handleClose = () => {
@@ -387,6 +453,45 @@ export function AddStorageModal({ isOpen, onClose, onSuccess }: AddStorageModalP
 
           {/* 特定存储源配置 */}
           <div className="space-y-3">
+            {storageType === 'local' && (
+              <>
+                <h4 className="text-sm font-semibold text-dark-olive-800">本地存储配置</h4>
+                <Input
+                  label="存储路径"
+                  placeholder="./storage"
+                  value={localBasePath}
+                  onChange={(e) => setLocalBasePath(e.target.value)}
+                  isRequired
+                  size="sm"
+                  description="本地文件系统中存储文件的目录路径"
+                />
+                <Input
+                  label="单文件大小限制 (MB)"
+                  placeholder="100"
+                  type="number"
+                  value={localMaxFileSize}
+                  onChange={(e) => setLocalMaxFileSize(e.target.value)}
+                  isRequired
+                  size="sm"
+                  min="1"
+                  description="单个文件的最大大小限制"
+                />
+                <div className="bg-info-50 rounded-lg p-3">
+                  <div className="flex gap-2">
+                    <AlertCircleIcon className="w-4 h-4 text-info-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-xs text-info-700">
+                      <p className="font-semibold mb-1">注意事项：</p>
+                      <div className="space-y-1">
+                        <p>• 确保指定的路径具有读写权限</p>
+                        <p>• 建议使用绝对路径，避免相对路径</p>
+                        <p>• 存储路径将自动创建（如果不存在）</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
             {storageType === 'r2' && (
               <>
                 <h4 className="text-sm font-semibold text-dark-olive-800">Cloudflare R2 配置</h4>
@@ -778,19 +883,37 @@ export function AddStorageModal({ isOpen, onClose, onSuccess }: AddStorageModalP
               <p className="text-xs text-danger">{error}</p>
             </div>
           )}
+
+          {testResult && (
+            <div className={`rounded-lg p-3 ${testResult.success ? 'bg-success-50' : 'bg-danger-50'}`}>
+              <p className={`text-xs ${testResult.success ? 'text-success' : 'text-danger'}`}>
+                {testResult.message}
+              </p>
+            </div>
+          )}
         </ModalBody>
         <ModalFooter>
-          <Button 
-            variant="flat" 
+          <Button
+            variant="flat"
             onPress={handleClose}
-            isDisabled={loading}
+            isDisabled={loading || testLoading}
           >
             取消
           </Button>
-          <Button 
-            color="primary" 
+          <Button
+            variant="flat"
+            color="secondary"
+            onPress={handleTestConnection}
+            isLoading={testLoading}
+            isDisabled={loading}
+          >
+            测试连接
+          </Button>
+          <Button
+            color="primary"
             onPress={handleCreate}
             isLoading={loading}
+            isDisabled={testLoading}
             className="bg-amber-brown-500"
           >
             添加

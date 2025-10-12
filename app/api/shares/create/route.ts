@@ -67,24 +67,155 @@ export async function POST(request: NextRequest) {
     const share = await prisma.share.create({
       data: {
         shareToken,
-        fileId: fileId || null,
-        folderId: folderId || null,
         passwordHash,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         downloadLimit: downloadLimit || null,
         createdBy: user.id,
       },
-      include: {
-        file: {
-          select: {
-            name: true,
-          },
+    });
+
+    // 创建快照
+    let snapshotData: any = {};
+    let originalFileId: number | null = null;
+    let originalFolderId: number | null = null;
+    let shareType = '';
+    let shareName = '';
+
+    if (fileId) {
+      // 文件分享：保存文件信息快照
+      const file = await prisma.file.findUnique({
+        where: { id: fileId },
+        include: {
+          storageSource: true,
         },
-        folder: {
-          select: {
-            name: true,
-          },
-        },
+      });
+
+      if (!file) {
+        // 删除已创建的分享记录
+        await prisma.share.delete({ where: { id: share.id } });
+        return NextResponse.json({ error: '文件不存在' }, { status: 404 });
+      }
+
+      originalFileId = file.id;
+      shareType = 'file';
+      shareName = file.originalName;
+
+      snapshotData = {
+        id: file.id,
+        name: file.name,
+        originalName: file.originalName,
+        size: Number(file.size), // Convert BigInt to Number
+        mimeType: file.mimeType,
+        md5Hash: file.md5Hash,
+        storagePath: file.storagePath,
+        storageSourceId: file.storageSourceId,
+        createdAt: file.createdAt.toISOString(),
+        updatedAt: file.updatedAt.toISOString(),
+      };
+    }
+
+    if (folderId) {
+      // 文件夹分享：保存完整的文件夹结构快照
+      const folder = await prisma.folder.findUnique({
+        where: { id: folderId },
+      });
+
+      if (!folder) {
+        // 删除已创建的分享记录
+        await prisma.share.delete({ where: { id: share.id } });
+        return NextResponse.json({ error: '文件夹不存在' }, { status: 404 });
+      }
+
+      originalFolderId = folder.id;
+      shareType = 'folder';
+      shareName = folder.name;
+
+      // 递归获取文件夹的完整结构
+      async function getFolderSnapshot(folderId: number): Promise<any> {
+        const subFolders = await prisma.folder.findMany({
+          where: { parentId: folderId },
+          orderBy: { name: 'asc' },
+        });
+
+        const files = await prisma.file.findMany({
+          where: { folderId },
+          orderBy: { name: 'asc' },
+        });
+
+        const folderSnapshots = await Promise.all(
+          subFolders.map(async (subfolder) => ({
+            id: subfolder.id,
+            name: subfolder.name,
+            path: subfolder.path,
+            createdAt: subfolder.createdAt.toISOString(),
+            updatedAt: subfolder.updatedAt.toISOString(),
+            children: await getFolderSnapshot(subfolder.id),
+          }))
+        );
+
+        const fileSnapshots = files.map(file => ({
+          id: file.id,
+          name: file.name,
+          originalName: file.originalName,
+          size: Number(file.size), // Convert BigInt to Number
+          mimeType: file.mimeType,
+          md5Hash: file.md5Hash,
+          storagePath: file.storagePath,
+          storageSourceId: file.storageSourceId,
+          createdAt: file.createdAt.toISOString(),
+          updatedAt: file.updatedAt.toISOString(),
+        }));
+
+        return {
+          folders: folderSnapshots,
+          files: fileSnapshots,
+        };
+      }
+
+      const folderContents = await getFolderSnapshot(folder.id);
+
+      snapshotData = {
+        id: folder.id,
+        name: folder.name,
+        path: folder.path,
+        createdAt: folder.createdAt.toISOString(),
+        updatedAt: folder.updatedAt.toISOString(),
+        totalFiles: 0, // Will be calculated
+        totalFolders: 0, // Will be calculated
+        totalSize: 0, // Will be calculated
+        contents: folderContents,
+      };
+
+      // 计算统计信息
+      function calculateStats(contents: any): { files: number, folders: number, size: number } {
+        let files = contents.files.length;
+        let folders = contents.folders.length;
+        let size = contents.files.reduce((sum: number, file: any) => sum + file.size, 0);
+
+        for (const subfolder of contents.folders) {
+          const subStats = calculateStats(subfolder.children);
+          files += subStats.files;
+          folders += subStats.folders;
+          size += subStats.size;
+        }
+
+        return { files, folders, size };
+      }
+
+      const stats = calculateStats(folderContents);
+      snapshotData.totalFiles = stats.files;
+      snapshotData.totalFolders = stats.folders;
+      snapshotData.totalSize = stats.size;
+    }
+
+    // 创建分享快照记录
+    await prisma.shareSnapshot.create({
+      data: {
+        shareId: share.id,
+        type: shareType,
+        originalFileId,
+        originalFolderId,
+        snapshotData,
       },
     });
 
@@ -93,8 +224,8 @@ export async function POST(request: NextRequest) {
       share: {
         id: share.id,
         shareToken: share.shareToken,
-        name: share.file?.name || share.folder?.name || '未知',
-        type: share.file ? 'file' : 'folder',
+        name: shareName,
+        type: shareType,
         hasPassword: !!passwordHash,
         expiresAt: share.expiresAt,
         shareUrl: `${request.nextUrl.origin}/s/${share.shareToken}`,

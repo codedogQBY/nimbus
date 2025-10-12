@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useToast } from '@/components/toast-provider';
 import { 
   Card, 
   CardBody, 
@@ -41,14 +42,15 @@ import { AddStorageModal } from '@/components/add-storage-modal';
 import { EditStorageModal } from '@/components/edit-storage-modal';
 
 export default function StoragePage() {
+  const { showError, showSuccess } = useToast();
   const [storageSources, setStorageSources] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingSource, setEditingSource] = useState<any>(null);
   const [deletingSource, setDeletingSource] = useState<any>(null);
+  const [testingSource, setTestingSource] = useState<number | null>(null);
   const {isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose} = useDisclosure();
 
   useEffect(() => {
@@ -57,22 +59,18 @@ export default function StoragePage() {
 
   const loadStorageSources = async () => {
     try {
+      setLoading(true);
+      
       const token = localStorage.getItem('token');
       const response = await ky.get('/api/storage-sources', {
         headers: { Authorization: `Bearer ${token}` },
       }).json<any>();
 
-      setStorageSources(response.sources);
-      setStats({
-        totalUsed: response.usedQuota,
-        totalCapacity: response.totalQuota,
-        totalSources: response.totalSources,
-        activeSources: response.activeSources,
-        totalFiles: response.sources.reduce((sum: number, s: any) => sum + s.fileCount, 0),
-      });
-    } catch (err: any) {
-      setError('加载存储源失败');
-      console.error(err);
+      setStorageSources(response.sources || []);
+      setStats(response.stats || null);
+    } catch (error: any) {
+      console.error('Load storage sources error:', error);
+      showError('加载失败', '加载存储源失败，请刷新重试');
     } finally {
       setLoading(false);
     }
@@ -95,6 +93,7 @@ export default function StoragePage() {
     setShowAddModal(false);
     loadStorageSources();
     notifyStorageUpdate();
+    showSuccess('添加成功', '存储源已成功添加');
   };
 
   const handleEdit = (source: any) => {
@@ -107,11 +106,46 @@ export default function StoragePage() {
     setEditingSource(null);
     loadStorageSources();
     notifyStorageUpdate();
+    showSuccess('更新成功', '存储源配置已成功更新');
   };
 
   const handleDelete = (source: any) => {
     setDeletingSource(source);
     onDeleteOpen();
+  };
+
+  const handleTestConnection = async (source: any) => {
+    setTestingSource(source.id);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await ky.post(`/api/storage-sources/${source.id}/test`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).json<{ success: boolean; connected: boolean; message: string; error?: string }>();
+
+      if (response.connected) {
+        showSuccess('测试成功', response.message);
+      } else {
+        showError('测试失败', response.message);
+      }
+
+      // 刷新存储源列表以更新状态
+      loadStorageSources();
+    } catch (error: any) {
+      console.error('Test storage source error:', error);
+
+      let errorMessage = '测试连接失败';
+      try {
+        const errorData = await error.response?.json();
+        errorMessage = errorData?.error || errorMessage;
+      } catch {
+        // 如果无法解析错误响应，使用默认消息
+      }
+
+      showError('测试失败', errorMessage);
+    } finally {
+      setTestingSource(null);
+    }
   };
 
   const confirmDelete = async () => {
@@ -127,15 +161,29 @@ export default function StoragePage() {
       setDeletingSource(null);
       loadStorageSources();
       notifyStorageUpdate();
+      showSuccess('删除成功', '存储源已成功删除');
     } catch (error: any) {
-      setError(error.response?.json?.()?.error || '删除存储源失败');
+      console.error('Delete storage source error:', error);
+      
+      // 尝试获取详细错误信息
+      let errorMessage = '删除存储源失败';
+      try {
+        const errorData = await error.response?.json();
+        errorMessage = errorData?.error || errorMessage;
+      } catch {
+        // 如果无法解析错误响应，使用默认消息
+      }
+      
+      showError('删除失败', errorMessage);
     }
   };
 
   const getStorageIcon = (type: string): JSX.Element => {
     const iconClass = "w-6 h-6 lg:w-8 lg:h-8 text-amber-brown-500";
-    
+
     switch (type) {
+      case 'local':
+        return <HardDriveIcon className={iconClass} />;
       case 'r2':
       case 'qiniu':
       case 'upyun':
@@ -165,7 +213,7 @@ export default function StoragePage() {
 
   return (
     <div className="h-full overflow-y-auto p-3 lg:p-6">
-      <div className="max-w-7xl mx-auto space-y-4 lg:space-y-6">
+      <div className="max-w-6xl mx-auto space-y-4 lg:space-y-6">
         {/* 页面标题 */}
         <div className="flex items-center justify-between">
           <div>
@@ -317,7 +365,7 @@ export default function StoragePage() {
               </CardBody>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-3 lg:gap-4">
               {storageSources.map((source) => (
                 <Card key={source.id} className="bg-white">
                   <CardBody className="p-4 lg:p-5">
@@ -384,6 +432,9 @@ export default function StoragePage() {
                         size="sm"
                         variant="flat"
                         className="flex-1 bg-secondary-100 text-dark-olive-700"
+                        onPress={() => handleTestConnection(source)}
+                        isLoading={testingSource === source.id}
+                        isDisabled={testingSource !== null}
                       >
                         测试连接
                       </Button>

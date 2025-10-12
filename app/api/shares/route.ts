@@ -23,20 +23,7 @@ export async function GET(request: NextRequest) {
         createdBy: user.id,
       },
       include: {
-        file: {
-          select: {
-            id: true,
-            name: true,
-            size: true,
-            mimeType: true,
-          },
-        },
-        folder: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
+        snapshot: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -44,35 +31,44 @@ export async function GET(request: NextRequest) {
     });
 
     // 格式化分享数据
-    const formattedShares = shares.map((share: any) => ({
-      id: share.id,
-      name: share.file?.name || share.folder?.name || '未知',
-      type: share.file ? 'file' : 'folder',
-      shareToken: share.shareToken,
-      hasPassword: !!share.passwordHash,
-      expiresAt: share.expiresAt,
-      downloadCount: share.downloadCount,
-      downloadLimit: share.downloadLimit,
-      isActive: share.isActive,
-      createdAt: share.createdAt,
-      fileId: share.fileId,
-      folderId: share.folderId,
-    }));
+    const formattedShares = shares.map((share: any) => {
+      const snapshotData = share.snapshot?.snapshotData;
+      const shareType = share.snapshot?.type;
 
-    // 统计数据（mock浏览量，因为数据库没有此字段）
+      return {
+        id: share.id,
+        name: snapshotData ? (snapshotData.name || snapshotData.originalName || '未知') : '未知',
+        type: shareType || 'unknown',
+        shareToken: share.shareToken,
+        hasPassword: !!share.passwordHash,
+        expiresAt: share.expiresAt,
+        downloadCount: share.downloadCount,
+        viewCount: share.viewCount || 0,
+        downloadLimit: share.downloadLimit,
+        isActive: share.isActive,
+        createdAt: share.createdAt,
+        // 使用快照数据中的ID
+        fileId: shareType === 'file' ? snapshotData?.id : undefined,
+        folderId: shareType === 'folder' ? snapshotData?.id : undefined,
+        // 添加额外的元数据
+        size: shareType === 'file' ? snapshotData?.size : snapshotData?.totalSize,
+        mimeType: shareType === 'file' ? snapshotData?.mimeType : undefined,
+        totalFiles: shareType === 'folder' ? snapshotData?.totalFiles : undefined,
+        totalFolders: shareType === 'folder' ? snapshotData?.totalFolders : undefined,
+      };
+    });
+
+    // 统计数据
     const stats = {
       total: shares.length,
-      totalViews: shares.reduce((sum: number, s: any) => sum + s.downloadCount * 3, 0), // 估算浏览量
+      totalViews: shares.reduce((sum: number, s: any) => sum + (s.viewCount || 0), 0),
       totalDownloads: shares.reduce((sum: number, s: any) => sum + s.downloadCount, 0),
       protected: shares.filter((s: any) => s.passwordHash).length,
       active: shares.filter((s: any) => s.isActive).length,
     };
 
     return NextResponse.json({
-      shares: formattedShares.map((s: any) => ({
-        ...s,
-        viewCount: s.downloadCount * 3, // 估算
-      })),
+      shares: formattedShares,
       stats,
     });
   } catch (error) {

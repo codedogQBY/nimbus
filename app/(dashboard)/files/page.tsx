@@ -14,14 +14,13 @@ import {
   Divider,
   Spinner
 } from '@heroui/react';
-import { 
+import {
   FolderIcon,
   FileTextIcon,
   ImageIcon,
   VideoIcon,
   MusicIcon,
   ArchiveIcon,
-  SearchIcon,
   MoreVerticalIcon,
   DownloadIcon,
   Share2Icon,
@@ -31,7 +30,8 @@ import {
   GridIcon,
   ListIcon,
   SortAscIcon,
-  ChevronLeftIcon
+  ChevronLeftIcon,
+  EyeIcon
 } from 'lucide-react';
 import ky from 'ky';
 import { UploadButton } from '@/components/upload-button';
@@ -39,6 +39,9 @@ import { CreateFolderModal } from '@/components/create-folder-modal';
 import { RenameModal } from '@/components/rename-modal';
 import { DeleteConfirmModal } from '@/components/delete-confirm-modal';
 import { CreateShareModal } from '@/components/create-share-modal';
+import { FileBreadcrumb } from '@/components/file-breadcrumb';
+import { FilePreview } from '@/lib/file-preview/preview-manager';
+import { AuthenticatedImage } from '@/components/authenticated-image';
 
 export default function FilesPage() {
   const [files, setFiles] = useState<any[]>([]);
@@ -46,12 +49,16 @@ export default function FilesPage() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [currentFolderId, setCurrentFolderId] = useState<number | null>(null);
-  
+  const [currentFolder, setCurrentFolder] = useState<any>(null);
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'size'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
   // Modal states
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [showRename, setShowRename] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
 
   useEffect(() => {
@@ -62,22 +69,86 @@ export default function FilesPage() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const url = currentFolderId 
-        ? `/api/files?folderId=${currentFolderId}` 
+      const url = currentFolderId
+        ? `/api/files?folderId=${currentFolderId}`
         : '/api/files';
-        
+
       const response = await ky.get(url, {
         headers: { Authorization: `Bearer ${token}` },
       }).json<any>();
 
       setFolders(response.folders || []);
       setFiles(response.files || []);
+
+      // 获取当前文件夹信息
+      if (currentFolderId) {
+        try {
+          const folderResponse = await ky.get(`/api/folders/${currentFolderId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }).json<any>();
+          setCurrentFolder(folderResponse);
+        } catch (folderErr) {
+          console.error('获取文件夹信息失败:', folderErr);
+          setCurrentFolder(null);
+        }
+      } else {
+        setCurrentFolder(null);
+      }
     } catch (err) {
       console.error('加载文件失败:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  // 排序函数
+  const sortItems = (items: any[], type: 'files' | 'folders') => {
+    return [...items].sort((a, b) => {
+      let valueA, valueB;
+
+      switch (sortBy) {
+        case 'name':
+          valueA = (type === 'files' ? a.name : a.name).toLowerCase();
+          valueB = (type === 'files' ? b.name : b.name).toLowerCase();
+          break;
+        case 'date':
+          valueA = new Date(a.createdAt || a.updatedAt || 0).getTime();
+          valueB = new Date(b.createdAt || b.updatedAt || 0).getTime();
+          break;
+        case 'size':
+          valueA = type === 'files' ? (a.size || 0) : 0; // 文件夹大小为0
+          valueB = type === 'files' ? (b.size || 0) : 0;
+          break;
+        default:
+          return 0;
+      }
+
+      if (valueA < valueB) {
+        return sortOrder === 'asc' ? -1 : 1;
+      }
+      if (valueA > valueB) {
+        return sortOrder === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  };
+
+  // 处理排序选择
+  const handleSort = (key: string) => {
+    const sortType = key as 'name' | 'date' | 'size';
+    if (sortBy === sortType) {
+      // 如果是同一个排序字段，切换排序顺序
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // 如果是不同排序字段，设置为新字段并重置为升序
+      setSortBy(sortType);
+      setSortOrder('asc');
+    }
+  };
+
+  // 获取排序后的数据
+  const sortedFolders = sortItems(folders, 'folders');
+  const sortedFiles = sortItems(files, 'files');
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 B';
@@ -110,6 +181,29 @@ export default function FilesPage() {
     setShowShare(true);
   };
 
+  const handlePreview = (file: any) => {
+    setSelectedItem({ ...file, type: 'file' });
+    setShowPreview(true);
+  };
+
+  const handleDownload = async (file: any) => {
+    try {
+      const token = localStorage.getItem('token');
+      const downloadUrl = `/api/files/${file.id}/serve?download=1&token=${encodeURIComponent(token || '')}`;
+      window.open(downloadUrl, '_blank');
+    } catch (error) {
+      console.error('下载失败:', error);
+    }
+  };
+
+  // 获取文件缩略图URL
+  const getFileThumbnailUrl = (file: any): string | null => {
+    if (file.mimeType?.startsWith('image/')) {
+      return `/api/files/${file.id}/serve`;
+    }
+    return null;
+  };
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -123,25 +217,10 @@ export default function FilesPage() {
       {/* 顶部工具栏 */}
       <div className="bg-white border-b border-divider p-3 lg:p-4">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          {/* 面包屑 */}
-          {currentFolderId && (
-            <Button
-              size="sm"
-              variant="flat"
-              startContent={<ChevronLeftIcon className="w-4 h-4" />}
-              onClick={() => setCurrentFolderId(null)}
-              className="bg-secondary-100"
-            >
-              返回
-            </Button>
-          )}
-
-          {/* 搜索框 */}
-          <Input
-            placeholder="搜索文件..."
-            startContent={<SearchIcon className="w-4 h-4 text-default-400" />}
-            size="sm"
-            className="flex-1 min-w-[200px]"
+          {/* 面包屑导航 */}
+          <FileBreadcrumb
+            currentFolder={currentFolder}
+            onNavigate={setCurrentFolderId}
           />
 
           {/* 工具按钮 */}
@@ -195,14 +274,40 @@ export default function FilesPage() {
                   variant="flat"
                   isIconOnly
                   className="bg-secondary-100"
+                  title={`当前排序：${sortBy === 'name' ? '按名称' : sortBy === 'date' ? '按日期' : '按大小'} (${sortOrder === 'asc' ? '升序' : '降序'})`}
                 >
                   <SortAscIcon className="w-4 h-4" />
                 </Button>
               </DropdownTrigger>
-              <DropdownMenu>
-                <DropdownItem key="name">按名称</DropdownItem>
-                <DropdownItem key="date">按日期</DropdownItem>
-                <DropdownItem key="size">按大小</DropdownItem>
+              <DropdownMenu
+                aria-label="排序选项"
+                selectedKeys={[sortBy]}
+                onSelectionChange={(keys) => {
+                  const selectedKey = Array.from(keys)[0] as string;
+                  if (selectedKey) {
+                    handleSort(selectedKey);
+                  }
+                }}
+                selectionMode="single"
+              >
+                <DropdownItem
+                  key="name"
+                  description={sortBy === 'name' ? (sortOrder === 'asc' ? '升序' : '降序') : undefined}
+                >
+                  按名称 {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </DropdownItem>
+                <DropdownItem
+                  key="date"
+                  description={sortBy === 'date' ? (sortOrder === 'asc' ? '升序' : '降序') : undefined}
+                >
+                  按日期 {sortBy === 'date' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </DropdownItem>
+                <DropdownItem
+                  key="size"
+                  description={sortBy === 'size' ? (sortOrder === 'asc' ? '升序' : '降序') : undefined}
+                >
+                  按大小 {sortBy === 'size' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </DropdownItem>
               </DropdownMenu>
             </Dropdown>
           </div>
@@ -213,7 +318,7 @@ export default function FilesPage() {
       <div className="flex-1 overflow-y-auto p-3 lg:p-4">
         <div className="max-w-7xl mx-auto space-y-4">
           {/* 空状态 */}
-          {folders.length === 0 && files.length === 0 ? (
+          {sortedFolders.length === 0 && sortedFiles.length === 0 ? (
             <Card className="bg-white">
               <CardBody className="p-8 lg:p-12 text-center">
                 <div className="w-16 h-16 lg:w-20 lg:h-20 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -236,17 +341,19 @@ export default function FilesPage() {
           ) : (
             <>
               {/* 文件夹列表 */}
-              {folders.length > 0 && (
+              {sortedFolders.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-dark-olive-800 mb-3 px-1">我的文件夹</h3>
+                  <h3 className="text-sm font-semibold text-dark-olive-800 mb-3 px-1">文件夹</h3>
                   <div className={`grid gap-3 ${viewMode === 'grid' ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6' : 'grid-cols-1'}`}>
-                    {folders.map((folder) => (
-                      <Card 
+                    {sortedFolders.map((folder) => (
+                      <div 
                         key={folder.id}
-                        isPressable
-                        className="bg-white hover:shadow-md transition-shadow"
-                        onPress={() => setCurrentFolderId(folder.id)}
+                        className="cursor-pointer"
+                        onClick={() => setCurrentFolderId(folder.id)}
                       >
+                        <Card 
+                          className="bg-white hover:shadow-md transition-shadow"
+                        >
                         <CardBody className={viewMode === 'grid' ? 'p-3 lg:p-4' : 'p-3 lg:p-4'}>
                           <div className={`flex ${viewMode === 'grid' ? 'flex-col' : 'flex-row'} items-start gap-3`}>
                             <div className={`${viewMode === 'grid' ? 'w-full' : ''} flex items-center justify-center bg-primary-100 rounded-lg ${viewMode === 'grid' ? 'h-20 lg:h-24' : 'w-12 h-12 flex-shrink-0'}`}>
@@ -309,6 +416,7 @@ export default function FilesPage() {
                           </div>
                         </CardBody>
                       </Card>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -317,22 +425,48 @@ export default function FilesPage() {
               <Divider />
 
               {/* 文件列表 */}
-              {files.length > 0 && (
+              {sortedFiles.length > 0 && (
                 <div>
                   <h3 className="text-sm font-semibold text-dark-olive-800 mb-3 px-1">文件</h3>
                   <div className={`grid gap-3 ${viewMode === 'grid' ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6' : 'grid-cols-1'}`}>
-                    {files.map((file) => (
-                      <Card 
+                    {sortedFiles.map((file) => {
+                      const thumbnailUrl = getFileThumbnailUrl(file);
+                      return (
+                      <Card
                         key={file.id}
                         isPressable
                         className="bg-white hover:shadow-md transition-shadow"
+                        onPress={() => handlePreview(file)}
+                        data-file-id={file.id}
                       >
                         <CardBody className={viewMode === 'grid' ? 'p-3 lg:p-4' : 'p-3 lg:p-4'}>
                           <div className={`flex ${viewMode === 'grid' ? 'flex-col' : 'flex-row'} items-start gap-3`}>
-                            <div className={`${viewMode === 'grid' ? 'w-full' : ''} flex items-center justify-center bg-secondary-100 rounded-lg ${viewMode === 'grid' ? 'h-20 lg:h-24' : 'w-12 h-12 flex-shrink-0'}`}>
-                              {getFileIcon(file.mimeType)}
+                            <div className={`${viewMode === 'grid' ? 'w-full' : ''} flex items-center justify-center bg-secondary-100 rounded-lg ${viewMode === 'grid' ? 'h-20 lg:h-24' : 'w-12 h-12 flex-shrink-0'} overflow-hidden relative`}>
+                              {thumbnailUrl ? (
+                                <>
+                                  <AuthenticatedImage
+                                    src={thumbnailUrl}
+                                    alt={file.name}
+                                    className="w-full h-full object-cover"
+                                    onError={() => {
+                                      // 图片加载失败时显示默认图标
+                                      const container = document.querySelector(`[data-file-id="${file.id}"] .thumbnail-fallback`);
+                                      if (container) {
+                                        container.classList.remove('hidden');
+                                      }
+                                    }}
+                                  />
+                                  <div className={`thumbnail-fallback hidden absolute inset-0 flex items-center justify-center w-full h-full`}>
+                                    {getFileIcon(file.mimeType)}
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="flex items-center justify-center w-full h-full">
+                                  {getFileIcon(file.mimeType)}
+                                </div>
+                              )}
                             </div>
-                            
+
                             <div className={`flex-1 min-w-0 ${viewMode === 'grid' ? 'w-full' : ''}`}>
                               <div className="flex items-start justify-between gap-2 mb-1">
                                 <h4 className="text-xs lg:text-sm font-semibold text-dark-olive-800 truncate flex-1" title={file.name}>
@@ -345,34 +479,43 @@ export default function FilesPage() {
                                       size="sm"
                                       variant="light"
                                       className="flex-shrink-0"
+                                      onClick={(e) => e.stopPropagation()}
                                     >
                                       <MoreVerticalIcon className="w-3.5 h-3.5" />
                                     </Button>
                                   </DropdownTrigger>
                                   <DropdownMenu>
-                                    <DropdownItem 
-                                      key="download" 
+                                    <DropdownItem
+                                      key="preview"
+                                      startContent={<EyeIcon className="w-4 h-4" />}
+                                      onPress={() => handlePreview(file)}
+                                    >
+                                      预览
+                                    </DropdownItem>
+                                    <DropdownItem
+                                      key="download"
                                       startContent={<DownloadIcon className="w-4 h-4" />}
+                                      onPress={() => handleDownload(file)}
                                     >
                                       下载
                                     </DropdownItem>
-                                    <DropdownItem 
-                                      key="share" 
+                                    <DropdownItem
+                                      key="share"
                                       startContent={<Share2Icon className="w-4 h-4" />}
                                       onPress={() => handleShare(file, 'file')}
                                     >
                                       分享
                                     </DropdownItem>
-                                    <DropdownItem 
-                                      key="rename" 
+                                    <DropdownItem
+                                      key="rename"
                                       startContent={<EditIcon className="w-4 h-4" />}
                                       onPress={() => handleRename(file, 'file')}
                                     >
                                       重命名
                                     </DropdownItem>
-                                    <DropdownItem 
-                                      key="delete" 
-                                      color="danger" 
+                                    <DropdownItem
+                                      key="delete"
+                                      color="danger"
                                       startContent={<TrashIcon className="w-4 h-4" />}
                                       onPress={() => handleDelete(file, 'file')}
                                     >
@@ -395,7 +538,8 @@ export default function FilesPage() {
                           </div>
                         </CardBody>
                       </Card>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -450,6 +594,20 @@ export default function FilesPage() {
             onSuccess={loadFiles}
           />
         </>
+      )}
+
+      {/* 文件预览 */}
+      {showPreview && selectedItem && selectedItem.type === 'file' && (
+        <FilePreview
+          file={{
+            ...selectedItem,
+            storagePath: `/api/files/${selectedItem.id}/serve`
+          }}
+          onClose={() => {
+            setShowPreview(false);
+            setSelectedItem(null);
+          }}
+        />
       )}
     </div>
   );

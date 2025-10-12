@@ -33,6 +33,26 @@ export async function DELETE(
       return NextResponse.json({ error: '存储源不存在' }, { status: 404 });
     }
 
+    // 检查是否为本地存储源
+    if (storageSource.type === 'local') {
+      // 检查是否还有其他存储源
+      const otherSources = await prisma.storageSource.count({
+        where: {
+          id: { not: storageSourceId },
+          isActive: true
+        }
+      });
+
+      if (otherSources === 0) {
+        return NextResponse.json({ 
+          error: '无法删除本地存储源，因为它是唯一的存储源',
+          details: {
+            message: '请先添加其他存储源后再删除本地存储源'
+          }
+        }, { status: 400 });
+      }
+    }
+
     // 检查是否有文件正在使用此存储源
     if (storageSource.files.length > 0) {
       return NextResponse.json({ 

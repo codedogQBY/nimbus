@@ -12,7 +12,7 @@ import {
   Switch,
   Select,
   SelectItem,
-  Divider
+  Divider,
 } from '@heroui/react';
 import { Share2Icon, CopyIcon, CheckCircle2Icon } from 'lucide-react';
 import ky from 'ky';
@@ -76,6 +76,14 @@ export function CreateShareModal({
       }).json<any>();
 
       setShareUrl(response.share.shareUrl);
+
+      // 复制分享链接到剪贴板
+      navigator.clipboard.writeText(response.share.shareUrl);
+
+      setTimeout(() => {
+        handleClose();
+      }, 2000);
+
       onSuccess?.();
     } catch (err: any) {
       setError(err.message || '创建分享失败');
@@ -200,7 +208,8 @@ export function CreateShareModal({
             <div className="space-y-4">
               <div className="flex flex-col items-center gap-3 py-4">
                 <CheckCircle2Icon className="w-12 h-12 text-success" />
-                <p className="text-sm text-default-600">分享链接已创建！</p>
+                <p className="text-sm text-default-600">分享链接已创建并复制到剪贴板！</p>
+                <p className="text-xs text-default-500">2秒后自动关闭</p>
               </div>
 
               <div className="bg-secondary-50 rounded-lg p-3">

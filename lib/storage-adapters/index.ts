@@ -6,6 +6,7 @@ import { TelegramAdapter } from './telegram';
 import { CloudinaryAdapter } from './cloudinary';
 import { GitHubAdapter } from './github';
 import { CustomAdapter } from './custom';
+import { LocalStorageAdapter } from './local';
 
 export interface StorageAdapter {
   name: string;
@@ -21,6 +22,9 @@ export interface UploadResult {
   url?: string;
   path?: string;
   error?: string;
+  size?: number;
+  hash?: string;
+  metadata?: Record<string, any>;
 }
 
 export interface StorageConfig {
@@ -29,6 +33,7 @@ export interface StorageConfig {
 
 // 存储源类型枚举
 export enum StorageType {
+  LOCAL = 'local',
   R2 = 'r2',
   QINIU = 'qiniu',
   MINIO = 'minio',
@@ -45,6 +50,7 @@ export class StorageAdapterFactory {
 
   static {
     // 注册所有适配器
+    this.adapters.set(StorageType.LOCAL, LocalStorageAdapter);
     this.adapters.set(StorageType.R2, R2Adapter);
     this.adapters.set(StorageType.QINIU, QiniuAdapter);
     this.adapters.set(StorageType.MINIO, MinIOAdapter);

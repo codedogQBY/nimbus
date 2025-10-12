@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
 import path from 'path';
 import prisma from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { requirePermissions } from '@/lib/permissions';
 import { nanoid } from 'nanoid';
+import { StorageAdapterFactory, StorageType } from '@/lib/storage-adapters';
 
 // POST /api/files/upload - 上传文件
 export async function POST(request: NextRequest) {
@@ -92,35 +91,63 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '存储空间不足' }, { status: 400 });
     }
 
-    // 生成唯一文件名
-    const ext = path.extname(file.name);
-    const uniqueName = `${nanoid()}-${Date.now()}${ext}`;
+    // 生成文件名（保留原始名称，处理重名冲突）
+    const originalName = file.name;
+    const ext = path.extname(originalName);
+    const baseName = path.basename(originalName, ext);
     
-    // 本地存储路径（临时方案，后续对接真实存储）
-    const uploadDir = path.join(process.cwd(), 'uploads');
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
+    // 检查同一文件夹下是否有重名文件
+    let finalName = originalName;
+    let counter = 1;
+    
+    while (true) {
+      const existingFile = await prisma.file.findFirst({
+        where: {
+          name: finalName,
+          folderId: targetFolderId,
+          uploadedBy: user.id,
+        },
+      });
+      
+      if (!existingFile) {
+        break;
+      }
+      
+      // 如果重名，添加数字后缀
+      finalName = `${baseName}(${counter})${ext}`;
+      counter++;
+    }
+    
+    // 为物理存储生成唯一标识符（避免文件系统冲突）
+    const storageFileName = `${nanoid()}-${Date.now()}${path.extname(originalName)}`;
+
+    // 使用存储适配器上传文件
+    const adapter = StorageAdapterFactory.create(storageSource.type as StorageType, storageSource.config);
+
+    // 对于本地存储，需要先初始化
+    if (storageSource.type === 'local' && typeof (adapter as any).initialize === 'function') {
+      await (adapter as any).initialize();
     }
 
-    const filePath = path.join(uploadDir, uniqueName);
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const uploadResult = await adapter.upload(file, storageFileName);
 
-    // 保存文件到本地
-    await writeFile(filePath, new Uint8Array(buffer));
+    if (!uploadResult.success) {
+      return NextResponse.json({ error: uploadResult.error || '上传失败' }, { status: 500 });
+    }
 
     // TODO: 计算文件哈希
-    const md5Hash = Buffer.from(bytes).toString('hex').substring(0, 32);
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const md5Hash = buffer.toString('hex').substring(0, 32);
 
     // 保存文件信息到数据库
     const savedFile = await prisma.file.create({
       data: {
-        name: uniqueName,
+        name: finalName,
         originalName: file.name,
         size: BigInt(fileSize),
         mimeType: file.type || 'application/octet-stream',
         md5Hash: md5Hash,
-        storagePath: `/uploads/${uniqueName}`,
+        storagePath: uploadResult.path || storageFileName,
         storageSourceId: storageSource.id,
         folderId: targetFolderId,
         uploadedBy: user.id,

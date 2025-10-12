@@ -271,7 +271,7 @@ export function AssignmentsTab() {
                           size="sm"
                           color="primary"
                           variant="flat"
-                          disabled={user.is_owner}
+                          disabled={user.is_owner || !selectedRoles[user.id] || selectedRoles[user.id].size === 0}
                           onPress={() => handleAssignRole(user.id)}
                         >
                           分配

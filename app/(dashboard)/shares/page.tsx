@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  Card, 
+import { useToast } from '@/components/toast-provider';
+import {
+  Card,
   CardBody,
   Chip,
   Button,
@@ -10,9 +11,15 @@ import {
   DropdownTrigger,
   DropdownMenu,
   DropdownItem,
-  Spinner
+  Spinner,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  useDisclosure
 } from '@heroui/react';
-import { 
+import {
   Share2Icon,
   LinkIcon,
   EyeIcon,
@@ -26,14 +33,23 @@ import {
   FileIcon,
   FolderIcon,
   CalendarIcon,
-  CheckCircle2Icon
+  CheckCircle2Icon,
+  EditIcon,
+  SettingsIcon,
+  TrendingUpIcon
 } from 'lucide-react';
 import ky from 'ky';
 
 export default function SharesPage() {
+  const { showSuccess, showError } = useToast();
   const [shares, setShares] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedShare, setSelectedShare] = useState<any>(null);
+
+  // Modals
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
+  const { isOpen: isStatsOpen, onOpen: onStatsOpen, onClose: onStatsClose } = useDisclosure();
 
   useEffect(() => {
     loadShares();
@@ -55,10 +71,43 @@ export default function SharesPage() {
     }
   };
 
-  const copyShareLink = (token: string) => {
-    const link = `${window.location.origin}/s/${token}`;
-    navigator.clipboard.writeText(link);
-    // TODO: 显示复制成功提示
+  const copyShareLink = async (token: string) => {
+    try {
+      const link = `${window.location.origin}/s/${token}`;
+      await navigator.clipboard.writeText(link);
+      showSuccess('复制成功', '分享链接已复制到剪贴板');
+    } catch (error) {
+      showError('复制失败', '无法复制分享链接');
+    }
+  };
+
+  const handleDeleteShare = (share: any) => {
+    setSelectedShare(share);
+    onDeleteOpen();
+  };
+
+  const handleShowStats = (share: any) => {
+    setSelectedShare(share);
+    onStatsOpen();
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedShare) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      await ky.delete(`/api/shares/delete/${selectedShare.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setShares(shares.filter(s => s.id !== selectedShare.id));
+      showSuccess('删除成功', '分享链接已删除');
+      onDeleteClose();
+      setSelectedShare(null);
+    } catch (error) {
+      console.error('Delete share error:', error);
+      showError('删除失败', '无法删除分享链接');
+    }
   };
 
   if (loading) {
@@ -246,6 +295,7 @@ export default function SharesPage() {
                         variant="flat"
                         startContent={<BarChart3Icon className="w-4 h-4" />}
                         className="flex-1 lg:flex-none bg-secondary-100"
+                        onPress={() => handleShowStats(share)}
                       >
                         统计
                       </Button>
@@ -261,16 +311,28 @@ export default function SharesPage() {
                           </Button>
                         </DropdownTrigger>
                         <DropdownMenu>
-                          <DropdownItem key="copy" startContent={<CopyIcon className="w-4 h-4" />}>
+                          <DropdownItem
+                            key="copy"
+                            startContent={<CopyIcon className="w-4 h-4" />}
+                            onPress={() => copyShareLink(share.shareToken)}
+                          >
                             复制链接
                           </DropdownItem>
-                          <DropdownItem key="edit">
+                          <DropdownItem
+                            key="edit"
+                            startContent={<SettingsIcon className="w-4 h-4" />}
+                            onPress={() => {
+                              // TODO: 实现编辑设置功能
+                              showError('功能开发中', '编辑设置功能正在开发中');
+                            }}
+                          >
                             编辑设置
                           </DropdownItem>
-                          <DropdownItem 
-                            key="delete" 
+                          <DropdownItem
+                            key="delete"
                             color="danger"
                             startContent={<Trash2Icon className="w-4 h-4" />}
+                            onPress={() => handleDeleteShare(share)}
                           >
                             删除分享
                           </DropdownItem>
@@ -284,6 +346,111 @@ export default function SharesPage() {
           </div>
         )}
       </div>
+
+      {/* 删除确认模态框 */}
+      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose}>
+        <ModalContent>
+          <ModalHeader>删除分享</ModalHeader>
+          <ModalBody>
+            <p>确定要删除分享 <strong>{selectedShare?.name}</strong> 吗？</p>
+            <p className="text-danger text-sm mt-2">
+              此操作不可撤销，分享链接将立即失效。
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onPress={onDeleteClose}>
+              取消
+            </Button>
+            <Button color="danger" onPress={confirmDelete}>
+              删除
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* 统计信息模态框 */}
+      <Modal isOpen={isStatsOpen} onClose={onStatsClose} size="lg">
+        <ModalContent>
+          <ModalHeader className="flex items-center gap-2">
+            <TrendingUpIcon className="w-5 h-5 text-primary" />
+            分享统计 - {selectedShare?.name}
+          </ModalHeader>
+          <ModalBody>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <Card className="bg-primary-50">
+                <CardBody className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                      <EyeIcon className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-default-500">总浏览量</p>
+                      <p className="text-xl font-bold text-primary">
+                        {selectedShare?.viewCount || 0}
+                      </p>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+
+              <Card className="bg-success-50">
+                <CardBody className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-success-100 rounded-lg flex items-center justify-center">
+                      <DownloadIcon className="w-5 h-5 text-success" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-default-500">总下载量</p>
+                      <p className="text-xl font-bold text-success">
+                        {selectedShare?.downloadCount || 0}
+                      </p>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-default-600">创建时间</span>
+                <span className="text-sm font-medium">
+                  {selectedShare?.createdAt && new Date(selectedShare.createdAt).toLocaleDateString('zh-CN')}
+                </span>
+              </div>
+
+              {selectedShare?.expiresAt && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-default-600">过期时间</span>
+                  <span className="text-sm font-medium">
+                    {new Date(selectedShare.expiresAt).toLocaleDateString('zh-CN')}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-default-600">分享类型</span>
+                <Chip size="sm" variant="flat">
+                  {selectedShare?.type === 'folder' ? '文件夹' : '文件'}
+                </Chip>
+              </div>
+
+              {selectedShare?.hasPassword && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-default-600">访问控制</span>
+                  <Chip size="sm" color="warning" variant="flat" startContent={<LockIcon className="w-3 h-3" />}>
+                    密码保护
+                  </Chip>
+                </div>
+              )}
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button onPress={onStatsClose}>
+              关闭
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

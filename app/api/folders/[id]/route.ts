@@ -4,6 +4,57 @@ import { getCurrentUser } from '@/lib/auth';
 import { requirePermissions } from '@/lib/permissions';
 import { z } from 'zod';
 
+// GET /api/folders/[id] - 获取文件夹详情
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { authorized } = await requirePermissions(request, ['files.view']);
+    if (!authorized) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { id } = await params;
+    const folderId = parseInt(id);
+
+    // 获取文件夹详情
+    const folder = await prisma.folder.findUnique({
+      where: { id: folderId },
+      include: {
+        creator: {
+          select: {
+            username: true,
+          },
+        },
+        _count: {
+          select: {
+            files: true,
+            children: true,
+          },
+        },
+      },
+    });
+
+    if (!folder) {
+      return NextResponse.json({ error: '文件夹不存在' }, { status: 404 });
+    }
+
+    return NextResponse.json(folder);
+  } catch (error) {
+    console.error('Get folder error:', error);
+    return NextResponse.json(
+      { error: '获取文件夹失败', details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
+  }
+}
+
 // DELETE /api/folders/[id] - 删除文件夹
 export async function DELETE(
   request: NextRequest,

@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { requirePermissions } from '@/lib/permissions';
 import { z } from 'zod';
+import { StorageAdapterFactory } from '@/lib/storage-adapters';
 
 // DELETE /api/files/[id] - 删除文件
 export async function DELETE(
@@ -33,6 +34,24 @@ export async function DELETE(
       return NextResponse.json({ error: '文件不存在' }, { status: 404 });
     }
 
+    // 删除实际的物理文件
+    try {
+      const config = file.storageSource.config as Record<string, any>;
+      const adapter = StorageAdapterFactory.create(file.storageSource.type as any, config);
+      if (adapter) {
+        // 使用存储路径，不需要去掉前缀
+        const filePath = file.storagePath;
+
+        const deleteSuccess = await adapter.delete(filePath);
+        if (!deleteSuccess) {
+          console.warn(`Failed to delete physical file: ${file.storagePath}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting physical file:', error);
+      // 继续执行数据库删除，即使物理文件删除失败
+    }
+
     // 删除文件记录
     await prisma.file.delete({
       where: { id: fileId },
@@ -47,8 +66,6 @@ export async function DELETE(
         },
       },
     });
-
-    // TODO: 删除实际的文件
 
     return NextResponse.json({ success: true });
   } catch (error) {

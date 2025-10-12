@@ -86,6 +86,7 @@ function UnsupportedPreview({ file, onClose }: FilePreviewProps) {
       classNames={{
         base: "max-w-lg"
       }}
+      hideCloseButton={true}
     >
       <ModalContent>
         <ModalHeader className="flex justify-between items-center">
@@ -131,15 +132,13 @@ function UnsupportedPreview({ file, onClose }: FilePreviewProps) {
               className="w-full"
               startContent={<DownloadIcon className="w-4 h-4" />}
               onPress={() => {
-                const link = document.createElement('a');
-                link.href = file.storagePath;
-                link.download = file.originalName;
-                link.click();
+                const downloadUrl = `${file.storagePath}${file.storagePath.includes('?') ? '&' : '?'}download=1`;
+                window.open(downloadUrl, '_blank');
               }}
             >
               下载文件
             </Button>
-            
+
             <Button
               variant="light"
               className="w-full"
@@ -216,15 +215,13 @@ function ComingSoonPreview({ file, onClose }: FilePreviewProps) {
               className="w-full"
               startContent={<DownloadIcon className="w-4 h-4" />}
               onPress={() => {
-                const link = document.createElement('a');
-                link.href = file.storagePath;
-                link.download = file.originalName;
-                link.click();
+                const downloadUrl = `${file.storagePath}${file.storagePath.includes('?') ? '&' : '?'}download=1`;
+                window.open(downloadUrl, '_blank');
               }}
             >
               下载文件
             </Button>
-            
+
             <Button
               variant="light"
               className="w-full"

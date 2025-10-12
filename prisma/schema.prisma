@@ -241,7 +241,7 @@ model Folder {
   parent       Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children     Folder[] @relation("FolderHierarchy")
   files        File[]
-  sharesFolder Share[]  @relation("ShareFolder")
+  shareSnapshots ShareSnapshot[] @relation("ShareSnapshotFolder")
 
   @@index([parentId])
   @@index([path])
@@ -271,7 +271,7 @@ model File {
   uploader      User          @relation("FileUploader", fields: [uploadedBy], references: [id])
   folder        Folder?       @relation(fields: [folderId], references: [id], onDelete: SetNull)
   storageSource StorageSource @relation(fields: [storageSourceId], references: [id])
-  sharesFile    Share[]       @relation("ShareFile")
+  shareSnapshots ShareSnapshot[] @relation("ShareSnapshotFile")
 
   @@index([folderId])
   @@index([md5Hash])
@@ -284,27 +284,49 @@ model File {
 /// 分享链接表
 model Share {
   id            Int       @id @default(autoincrement())
-  fileId        Int?      @map("file_id")
-  folderId      Int?      @map("folder_id")
   shareToken    String    @unique @map("share_token") @db.VarChar(50)
   passwordHash  String?   @map("password_hash") @db.VarChar(255)
   expiresAt     DateTime? @map("expires_at")
   downloadLimit Int?      @map("download_limit")
   downloadCount Int       @default(0) @map("download_count")
+  viewCount     Int       @default(0) @map("view_count")
   isActive      Boolean   @default(true) @map("is_active")
   createdBy     Int       @map("created_by")
   createdAt     DateTime  @default(now()) @map("created_at")
 
   // 关系
-  creator User    @relation("ShareCreator", fields: [createdBy], references: [id])
-  file    File?   @relation("ShareFile", fields: [fileId], references: [id], onDelete: Cascade)
-  folder  Folder? @relation("ShareFolder", fields: [folderId], references: [id], onDelete: Cascade)
+  creator User @relation("ShareCreator", fields: [createdBy], references: [id])
+  snapshot ShareSnapshot?
 
   @@index([shareToken])
   @@index([createdBy])
   @@index([expiresAt])
-  @@index([fileId])
-  @@index([folderId])
   @@map("shares")
+}
+
+/// 分享快照表 - 存储分享时的完整快照信息
+model ShareSnapshot {
+  id          Int      @id @default(autoincrement())
+  shareId     Int      @unique @map("share_id")
+  type        String   @db.VarChar(10) // 'file' or 'folder'
+
+  // 原文件/文件夹信息（用于追溯和引用计数）
+  originalFileId   Int?    @map("original_file_id")
+  originalFolderId Int?    @map("original_folder_id")
+
+  // 快照内容（JSON格式存储完整的文件/文件夹信息）
+  snapshotData Json    @map("snapshot_data")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // 关系
+  share Share @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  originalFile File? @relation("ShareSnapshotFile", fields: [originalFileId], references: [id], onDelete: SetNull)
+  originalFolder Folder? @relation("ShareSnapshotFolder", fields: [originalFolderId], references: [id], onDelete: SetNull)
+
+  @@index([shareId])
+  @@index([originalFileId])
+  @@index([originalFolderId])
+  @@map("share_snapshots")
 }
 

@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
 // POST /api/storage-sources - 创建存储源
 const createStorageSourceSchema = z.object({
   name: z.string().min(1).max(100),
-  type: z.enum(['r2', 'qiniu', 'minio', 'upyun', 'telegram', 'cloudinary', 'github', 'custom']),
+  type: z.enum(['local', 'r2', 'qiniu', 'minio', 'upyun', 'telegram', 'cloudinary', 'github', 'custom']),
   config: z.any(),
   priority: z.number().int().min(0).max(100).optional(),
   quotaLimit: z.number().int().min(0).optional(),
@@ -92,7 +92,7 @@ export async function PUT(request: NextRequest) {
 
     const updateSchema = z.object({
       name: z.string().min(1).max(100).optional(),
-      type: z.enum(['r2', 'qiniu', 'minio', 'upyun', 'telegram', 'cloudinary', 'github', 'custom']).optional(),
+      type: z.enum(['local', 'r2', 'qiniu', 'minio', 'upyun', 'telegram', 'cloudinary', 'github', 'custom']).optional(),
       config: z.any().optional(),
       priority: z.number().int().min(0).max(100).optional(),
       quotaLimit: z.number().int().min(0).optional(),
@@ -106,9 +106,16 @@ export async function PUT(request: NextRequest) {
       data: validatedData,
     });
 
+    // 转换 BigInt 为 Number
+    const sourceData = {
+      ...updatedSource,
+      quotaUsed: Number(updatedSource.quotaUsed),
+      quotaLimit: Number(updatedSource.quotaLimit),
+    };
+
     return NextResponse.json({
       success: true,
-      data: updatedSource,
+      data: sourceData,
       message: '存储源更新成功'
     });
 

@@ -226,6 +226,9 @@ export function canPreview(filename: string, mimeType?: string, fileSize?: numbe
 
 // 获取文件扩展名
 function getFileExtension(filename: string): string {
+  if (!filename || typeof filename !== 'string') {
+    return '';
+  }
   const lastDot = filename.lastIndexOf('.');
   return lastDot !== -1 ? filename.substring(lastDot) : '';
 }
