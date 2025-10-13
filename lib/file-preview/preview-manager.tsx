@@ -132,7 +132,8 @@ function UnsupportedPreview({ file, onClose }: FilePreviewProps) {
               className="w-full"
               startContent={<DownloadIcon className="w-4 h-4" />}
               onPress={() => {
-                const downloadUrl = `${file.storagePath}${file.storagePath.includes('?') ? '&' : '?'}download=1`;
+                const token = localStorage.getItem('token');
+                const downloadUrl = `/api/files/${file.id}/serve?download=1&token=${encodeURIComponent(token || '')}`;
                 window.open(downloadUrl, '_blank');
               }}
             >
@@ -159,6 +160,7 @@ function ComingSoonPreview({ file, onClose }: FilePreviewProps) {
       classNames={{
         base: "max-w-2xl"
       }}
+      hideCloseButton={true}
     >
       <ModalContent>
         <ModalHeader className="flex justify-between items-center">
@@ -204,7 +206,8 @@ function ComingSoonPreview({ file, onClose }: FilePreviewProps) {
               className="w-full"
               startContent={<DownloadIcon className="w-4 h-4" />}
               onPress={() => {
-                const downloadUrl = `${file.storagePath}${file.storagePath.includes('?') ? '&' : '?'}download=1`;
+                const token = localStorage.getItem('token');
+                const downloadUrl = `/api/files/${file.id}/serve?download=1&token=${encodeURIComponent(token || '')}`;
                 window.open(downloadUrl, '_blank');
               }}
             >

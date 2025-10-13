@@ -279,7 +279,7 @@ export function ImagePreview({ file, onClose }: PreviewComponentProps) {
                 onPress={() => {
                   // 通过添加token到URL参数来下载
                   const token = localStorage.getItem('token');
-                  const downloadUrl = `${file.storagePath}${file.storagePath.includes('?') ? '&' : '?'}download=1${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+                  const downloadUrl = `/api/files/${file.id}/serve?download=1&token=${encodeURIComponent(token || '')}`;
                   window.open(downloadUrl, '_blank');
                 }}
                 className="flex-shrink-0"
@@ -460,7 +460,7 @@ export function VideoPreview({ file, onClose }: PreviewComponentProps) {
                 onPress={() => {
                   // 通过添加token到URL参数来下载
                   const token = localStorage.getItem('token');
-                  const downloadUrl = `${file.storagePath}${file.storagePath.includes('?') ? '&' : '?'}download=1${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+                  const downloadUrl = `/api/files/${file.id}/serve?download=1&token=${encodeURIComponent(token || '')}`;
                   window.open(downloadUrl, '_blank');
                 }}
                 className="flex-shrink-0"
@@ -627,7 +627,7 @@ export function PDFPreview({ file, onClose }: PreviewComponentProps) {
                 onPress={() => {
                   // 通过添加token到URL参数来下载
                   const token = localStorage.getItem('token');
-                  const downloadUrl = `${file.storagePath}${file.storagePath.includes('?') ? '&' : '?'}download=1${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+                  const downloadUrl = `/api/files/${file.id}/serve?download=1&token=${encodeURIComponent(token || '')}`;
                   window.open(downloadUrl, '_blank');
                 }}
                 className="flex-shrink-0"
@@ -710,7 +710,7 @@ export function PDFPreview({ file, onClose }: PreviewComponentProps) {
                     variant="solid"
                     onPress={() => {
                       const token = localStorage.getItem('token');
-                      const downloadUrl = `${file.storagePath}${file.storagePath.includes('?') ? '&' : '?'}download=1${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+                      const downloadUrl = `/api/files/${file.id}/serve?download=1&token=${encodeURIComponent(token || '')}`;
                       window.open(downloadUrl, '_blank');
                     }}
                     className="shadow-lg"
@@ -826,7 +826,7 @@ export function AudioPreview({ file, onClose }: PreviewComponentProps) {
                 onPress={() => {
                   // 通过添加token到URL参数来下载
                   const token = localStorage.getItem('token');
-                  const downloadUrl = `${file.storagePath}${file.storagePath.includes('?') ? '&' : '?'}download=1${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+                  const downloadUrl = `/api/files/${file.id}/serve?download=1&token=${encodeURIComponent(token || '')}`;
                   window.open(downloadUrl, '_blank');
                 }}
                 className="flex-shrink-0"
