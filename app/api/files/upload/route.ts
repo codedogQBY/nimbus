@@ -122,6 +122,7 @@ export async function POST(request: NextRequest) {
     const storageFileName = `${nanoid()}-${Date.now()}${path.extname(originalName)}`;
 
     // 使用存储适配器上传文件
+    console.log('Creating storage adapter for:', storageSource.type, 'with config keys:', Object.keys(storageSource.config));
     const adapter = StorageAdapterFactory.create(storageSource.type as StorageType, storageSource.config);
 
     // 对于本地存储，需要先初始化
@@ -129,15 +130,24 @@ export async function POST(request: NextRequest) {
       await (adapter as any).initialize();
     }
 
-    const uploadResult = await adapter.upload(file, storageFileName);
+    console.log('Starting upload with adapter:', adapter.name, 'file:', storageFileName);
+
+    // 读取文件内容一次，用于上传和哈希计算
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+
+    // 创建一个新的File对象以避免重复读取
+    const uploadFile = new File([fileBuffer], file.name, { type: file.type });
+
+    const uploadResult = await adapter.upload(uploadFile, storageFileName);
+    console.log('Upload result:', uploadResult);
 
     if (!uploadResult.success) {
       return NextResponse.json({ error: uploadResult.error || '上传失败' }, { status: 500 });
     }
 
-    // TODO: 计算文件哈希
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const md5Hash = buffer.toString('hex').substring(0, 32);
+    // 计算文件哈希
+    const crypto = await import('crypto');
+    const md5Hash = crypto.createHash('md5').update(fileBuffer).digest('hex');
 
     // 保存文件信息到数据库
     const savedFile = await prisma.file.create({

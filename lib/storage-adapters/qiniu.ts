@@ -96,19 +96,18 @@ export class QiniuAdapter implements StorageAdapter {
     }
   }
 
-  async download(url: string): Promise<Buffer> {
+  async download(path: string): Promise<Buffer> {
     try {
-      // 如果是私有空间，需要生成签名URL
-      let downloadUrl = url;
-
-      // 简单判断：如果URL包含我们的domain，则认为是七牛云的URL
-      if (url.includes(this.domain)) {
-        // 为私有空间生成带签名的下载URL
-        downloadUrl = this.generatePrivateDownloadUrl(url);
-      }
+      // 将文件路径转换为完整的下载URL
+      const downloadUrl = this.getDownloadUrl(path);
+      console.log('Qiniu download - path:', path);
+      console.log('Qiniu download - domain:', this.domain);
+      console.log('Qiniu download - downloadUrl:', downloadUrl);
 
       const response = await fetch(downloadUrl);
       if (!response.ok) {
+        console.log('Qiniu download - response status:', response.status);
+        console.log('Qiniu download - response statusText:', response.statusText);
         throw new Error(`Download failed: ${response.status} ${response.statusText}`);
       }
 
@@ -157,7 +156,16 @@ export class QiniuAdapter implements StorageAdapter {
   }
 
   getUrl(path: string): string {
-    return `${this.domain}/${path}`;
+    // 确保domain包含协议
+    let domain = this.domain;
+    if (!domain.startsWith('http://') && !domain.startsWith('https://')) {
+      domain = `https://${domain}`;
+    }
+    
+    // 移除domain末尾的斜杠，避免双斜杠
+    domain = domain.replace(/\/$/, '');
+    
+    return `${domain}/${path}`;
   }
 
   // 获取文件的下载URL（支持私有空间）

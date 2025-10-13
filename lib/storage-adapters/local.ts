@@ -73,15 +73,23 @@ export class LocalStorageAdapter implements StorageAdapter {
     }
   }
 
-  async download(url: string): Promise<Buffer> {
+  async download(path: string): Promise<Buffer> {
     try {
-      // 从URL中提取文件路径
-      const urlPath = decodeURIComponent(url.replace('/api/files/local/', ''));
-      const filePath = path.join(this.config.basePath, urlPath);
-      
-      const buffer = await fs.readFile(filePath);
+      // 如果已经是一个路径（不是完整URL），直接使用；否则从URL中提取路径
+      let filePath: string;
+      if (path.startsWith('/api/files/local/')) {
+        filePath = decodeURIComponent(path.replace('/api/files/local/', ''));
+      } else {
+        filePath = path;
+      }
+
+      console.log(`Downloading file from local storage: ${path} -> ${filePath}`);
+
+      const fullPath = path.join(this.config.basePath, filePath);
+      const buffer = await fs.readFile(fullPath);
       return buffer;
     } catch (error) {
+      console.error('Local storage download error:', error);
       throw new Error(`本地存储下载失败: ${error instanceof Error ? error.message : String(error)}`);
     }
   }

@@ -333,7 +333,10 @@ export async function PATCH(
 
     return NextResponse.json({
       success: true,
-      file: updatedFile,
+      file: {
+        ...updatedFile,
+        size: Number(updatedFile.size), // 转换BigInt为Number
+      },
     });
   } catch (error) {
     console.error('Update file error:', error);

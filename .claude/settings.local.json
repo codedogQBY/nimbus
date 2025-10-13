@@ -13,7 +13,12 @@
       "Bash(npx prisma migrate dev:*)",
       "Bash(npx prisma:*)",
       "Bash(psql:*)",
-      "Bash(cloc:*)"
+      "Bash(cloc:*)",
+      "Bash(tree:*)",
+      "Read(//Users/tuntuntutu/Project/**)",
+      "WebFetch(domain:github.com)",
+      "Bash(npx tsx:*)",
+      "WebFetch(domain:developer.qiniu.com)"
     ],
     "deny": [],
     "ask": []

@@ -190,11 +190,11 @@ export function CreateShareModal({
                     selectedKeys={[expiryDays]}
                     onChange={(e) => setExpiryDays(e.target.value)}
                   >
-                    <SelectItem key="1" value="1">1天</SelectItem>
-                    <SelectItem key="3" value="3">3天</SelectItem>
-                    <SelectItem key="7" value="7">7天</SelectItem>
-                    <SelectItem key="30" value="30">30天</SelectItem>
-                    <SelectItem key="90" value="90">90天</SelectItem>
+                    <SelectItem key="1">1天</SelectItem>
+                    <SelectItem key="3">3天</SelectItem>
+                    <SelectItem key="7">7天</SelectItem>
+                    <SelectItem key="30">30天</SelectItem>
+                    <SelectItem key="90">90天</SelectItem>
                   </Select>
                 )}
               </div>

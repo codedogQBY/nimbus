@@ -52,17 +52,20 @@ export class R2Adapter implements StorageAdapter {
     }
   }
 
-  async download(url: string): Promise<Buffer> {
+  async download(path: string): Promise<Buffer> {
     try {
-      const path = this.extractPathFromUrl(url);
+      // 如果已经是一个路径（不是完整URL），直接使用；否则提取路径
+      const filePath = path.startsWith('http') ? this.extractPathFromUrl(path) : path;
+      console.log(`Downloading file from R2: ${path} -> ${filePath}`);
+
       const command = new GetObjectCommand({
         Bucket: this.bucketName,
-        Key: path,
+        Key: filePath,
       });
 
       const response = await this.client.send(command);
       const chunks: Uint8Array[] = [];
-      
+
       if (response.Body) {
         const stream = response.Body as any;
         for await (const chunk of stream) {
@@ -72,6 +75,7 @@ export class R2Adapter implements StorageAdapter {
 
       return Buffer.concat(chunks);
     } catch (error) {
+      console.error('R2 download error:', error);
       throw new Error(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
