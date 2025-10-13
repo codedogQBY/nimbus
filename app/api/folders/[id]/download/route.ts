@@ -6,6 +6,68 @@ import { getCurrentUser } from '@/lib/auth';
 import { requirePermissions } from '@/lib/permissions';
 import { StorageAdapterFactory, StorageType } from '@/lib/storage-adapters';
 
+// 从快照数据中获取所有文件
+async function getAllFilesFromSnapshot(contents: any, basePath: string = ''): Promise<Array<{ file: any; relativePath: string }>> {
+  let files: Array<{ file: any; relativePath: string }> = [];
+  
+  // 添加当前层级的文件
+  if (contents.files) {
+    // 获取所有唯一的存储源ID
+    const storageSourceIds = Array.from(new Set(contents.files.map((file: any) => file.storageSourceId)));
+    
+    // 批量获取存储源配置
+    const storageSources = await prisma.storageSource.findMany({
+      where: { id: { in: storageSourceIds } },
+    });
+    
+    const storageSourceMap = new Map(storageSources.map((source: any) => [source.id, source]));
+    
+    files = contents.files.map((file: any) => ({
+      file: {
+        ...file,
+        storageSource: storageSourceMap.get(file.storageSourceId) || { type: 'local', config: {} },
+      },
+      relativePath: basePath ? `${basePath}/${file.originalName}` : file.originalName,
+    }));
+  }
+  
+  // 递归处理子文件夹
+  if (contents.folders) {
+    for (const folder of contents.folders) {
+      const subPath = basePath ? `${basePath}/${folder.name}` : folder.name;
+      const subFiles = await getAllFilesFromSnapshot(folder.children, subPath);
+      files = [...files, ...subFiles];
+    }
+  }
+  
+  return files;
+}
+
+// 递归获取文件夹下所有文件和子文件夹
+async function getAllFilesInFolder(folderId: number, basePath: string = ''): Promise<Array<{ file: any; relativePath: string }>> {
+  const files = await prisma.file.findMany({
+    where: { folderId },
+    include: { storageSource: true },
+  });
+
+  const subfolders = await prisma.folder.findMany({
+    where: { parentId: folderId },
+  });
+
+  let allFiles = files.map(file => ({
+    file,
+    relativePath: basePath ? `${basePath}/${file.originalName}` : file.originalName,
+  }));
+
+  for (const subfolder of subfolders) {
+    const subPath = basePath ? `${basePath}/${subfolder.name}` : subfolder.name;
+    const subFiles = await getAllFilesInFolder(subfolder.id, subPath);
+    allFiles = [...allFiles, ...subFiles];
+  }
+
+  return allFiles;
+}
+
 // GET /api/folders/[id]/download - 下载文件夹（打包为zip）
 export async function GET(
   request: NextRequest,
@@ -22,6 +84,8 @@ export async function GET(
     }
 
     let hasAccess = false;
+    let shareSnapshot: any = null;
+    let folderName = '';
 
     // 如果有分享token，验证分享访问
     if (shareToken) {
@@ -52,6 +116,8 @@ export async function GET(
       const snapshotData = share.snapshot.snapshotData as any;
       if (share.snapshot.type === 'folder' && snapshotData.id === folderId) {
         hasAccess = true;
+        shareSnapshot = snapshotData;
+        folderName = snapshotData.name;
       }
     } else {
       // 常规用户认证
@@ -73,41 +139,24 @@ export async function GET(
       return NextResponse.json({ error: '无权访问此文件夹' }, { status: 403 });
     }
 
-    // 获取文件夹信息
-    const folder = await prisma.folder.findUnique({
-      where: { id: folderId },
-    });
+    let allFiles: Array<{ file: any; relativePath: string }>;
 
-    if (!folder) {
-      return NextResponse.json({ error: '文件夹不存在' }, { status: 404 });
-    }
-
-    // 递归获取文件夹下所有文件和子文件夹
-    async function getAllFilesInFolder(folderId: number, basePath: string = ''): Promise<Array<{ file: any; relativePath: string }>> {
-      const files = await prisma.file.findMany({
-        where: { folderId },
-        include: { storageSource: true },
+    if (shareSnapshot) {
+      // 分享模式：使用快照数据
+      allFiles = await getAllFilesFromSnapshot(shareSnapshot.contents);
+    } else {
+      // 常规模式：从数据库查询
+      const folder = await prisma.folder.findUnique({
+        where: { id: folderId },
       });
 
-      const subfolders = await prisma.folder.findMany({
-        where: { parentId: folderId },
-      });
-
-      let allFiles = files.map(file => ({
-        file,
-        relativePath: basePath ? `${basePath}/${file.originalName}` : file.originalName,
-      }));
-
-      for (const subfolder of subfolders) {
-        const subPath = basePath ? `${basePath}/${subfolder.name}` : subfolder.name;
-        const subFiles = await getAllFilesInFolder(subfolder.id, subPath);
-        allFiles = [...allFiles, ...subFiles];
+      if (!folder) {
+        return NextResponse.json({ error: '文件夹不存在' }, { status: 404 });
       }
 
-      return allFiles;
+      folderName = folder.name;
+      allFiles = await getAllFilesInFolder(folderId);
     }
-
-    const allFiles = await getAllFilesInFolder(folderId);
 
     if (allFiles.length === 0) {
       return NextResponse.json({ error: '文件夹为空' }, { status: 400 });
@@ -119,10 +168,10 @@ export async function GET(
     });
 
     // 设置响应头
-    const folderName = encodeURIComponent(folder.name);
+    const encodedFolderName = encodeURIComponent(folderName);
     const headers = new Headers({
       'Content-Type': 'application/zip',
-      'Content-Disposition': `attachment; filename*=UTF-8''${folderName}.zip`,
+      'Content-Disposition': `attachment; filename*=UTF-8''${encodedFolderName}.zip`,
       'Transfer-Encoding': 'chunked',
     });
 
