@@ -12,7 +12,8 @@
       "Bash(npx prisma generate:*)",
       "Bash(npx prisma migrate dev:*)",
       "Bash(npx prisma:*)",
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "Bash(cloc:*)"
     ],
     "deny": [],
     "ask": []

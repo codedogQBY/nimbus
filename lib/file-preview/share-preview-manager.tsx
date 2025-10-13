@@ -345,17 +345,6 @@ function ShareUnsupportedPreview({ file, shareToken, onClose }: ShareFilePreview
             >
               下载文件
             </Button>
-
-            <Button
-              variant="light"
-              className="w-full"
-              startContent={<ExternalLinkIcon className="w-4 h-4" />}
-              onPress={() => {
-                window.open(`/api/files/${file.id}/serve?share=${shareToken}`, '_blank');
-              }}
-            >
-              在新窗口打开
-            </Button>
           </div>
         </ModalBody>
       </ModalContent>

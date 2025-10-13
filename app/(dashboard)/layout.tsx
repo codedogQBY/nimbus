@@ -139,6 +139,13 @@ export default function DashboardLayout({
       show: true 
     },
     { 
+      key: 'settings', 
+      label: '个人设置', 
+      icon: SettingsIcon, 
+      href: '/settings',
+      show: true 
+    },
+    { 
       key: 'users', 
       label: '用户', 
       icon: UsersIcon, 
@@ -300,6 +307,7 @@ export default function DashboardLayout({
                 <DropdownItem 
                   key="settings" 
                   startContent={<SettingsIcon className="w-4 h-4" />}
+                  onClick={() => router.push('/settings')}
                 >
                   个人设置
                 </DropdownItem>

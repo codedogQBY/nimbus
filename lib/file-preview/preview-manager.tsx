@@ -138,17 +138,6 @@ function UnsupportedPreview({ file, onClose }: FilePreviewProps) {
             >
               下载文件
             </Button>
-
-            <Button
-              variant="light"
-              className="w-full"
-              startContent={<ExternalLinkIcon className="w-4 h-4" />}
-              onPress={() => {
-                window.open(file.storagePath, '_blank');
-              }}
-            >
-              在新窗口打开
-            </Button>
           </div>
         </ModalBody>
       </ModalContent>
@@ -220,17 +209,6 @@ function ComingSoonPreview({ file, onClose }: FilePreviewProps) {
               }}
             >
               下载文件
-            </Button>
-
-            <Button
-              variant="light"
-              className="w-full"
-              startContent={<ExternalLinkIcon className="w-4 h-4" />}
-              onPress={() => {
-                window.open(file.storagePath, '_blank');
-              }}
-            >
-              在新窗口打开
             </Button>
           </div>
         </ModalBody>
