@@ -99,6 +99,10 @@ export function EditStorageModal({ isOpen, onClose, onSuccess, storageSource }: 
   const [customBody, setCustomBody] = useState('');
   const [customResponsePath, setCustomResponsePath] = useState('');
 
+  // 本地存储配置
+  const [localBasePath, setLocalBasePath] = useState('');
+  const [localMaxFileSize, setLocalMaxFileSize] = useState('');
+
   useEffect(() => {
     if (storageSource && isOpen) {
       // 填充基本信息
@@ -108,54 +112,58 @@ export function EditStorageModal({ isOpen, onClose, onSuccess, storageSource }: 
       setQuotaLimit(storageSource.quotaLimit ? storageSource.quotaLimit.toString() : '');
       setIsActive(storageSource.isActive !== false);
 
-      // 填充配置信息
+      // 填充配置信息 - 使用 storageSource.type 而不是状态变量 type
       const config = storageSource.config || {};
-      
-      if (type === 'r2') {
+      const sourceType = storageSource.type;
+
+      if (sourceType === 'r2') {
         setR2AccountId(config.accountId || '');
         setR2AccessKey(config.accessKeyId || '');
         setR2SecretKey(config.secretAccessKey || '');
         setR2Bucket(config.bucketName || '');
         setR2Domain(config.domain || '');
-      } else if (type === 'qiniu') {
+      } else if (sourceType === 'qiniu') {
         setQiniuAccessKey(config.accessKey || '');
         setQiniuSecretKey(config.secretKey || '');
         setQiniuBucket(config.bucket || '');
         setQiniuDomain(config.domain || '');
         setQiniuRegion(config.region || '');
-      } else if (type === 'minio') {
+      } else if (sourceType === 'minio') {
         setMinioEndpoint(config.endpoint || '');
         setMinioAccessKey(config.accessKey || '');
         setMinioSecretKey(config.secretKey || '');
         setMinioBucket(config.bucket || '');
         setMinioUseSSL(config.useSSL || false);
-      } else if (type === 'upyun') {
+      } else if (sourceType === 'upyun') {
         setUpyunBucket(config.bucket || '');
         setUpyunOperator(config.operator || '');
         setUpyunPassword(config.password || '');
         setUpyunDomain(config.domain || '');
-      } else if (type === 'telegram') {
+      } else if (sourceType === 'telegram') {
         setTelegramBotToken(config.botToken || '');
         setTelegramChatId(config.chatId || '');
-      } else if (type === 'cloudinary') {
+      } else if (sourceType === 'cloudinary') {
         setCloudinaryCloudName(config.cloudName || '');
         setCloudinaryApiKey(config.apiKey || '');
         setCloudinaryApiSecret(config.apiSecret || '');
-      } else if (type === 'github') {
+      } else if (sourceType === 'github') {
         setGithubToken(config.token || '');
         setGithubRepo(config.repo || '');
         setGithubBranch(config.branch || 'main');
         setGithubPath(config.path || 'uploads/');
-      } else if (type === 'custom') {
+      } else if (sourceType === 'custom') {
         setCustomUploadUrl(config.uploadUrl || '');
         setCustomDownloadUrl(config.downloadUrl || '');
         setCustomMethod(config.method || 'POST');
         setCustomHeaders(config.headers ? JSON.stringify(config.headers, null, 2) : '');
         setCustomBody(config.body || '');
         setCustomResponsePath(config.responsePath || '');
+      } else if (sourceType === 'local') {
+        setLocalBasePath(config.basePath || config.path || '');
+        setLocalMaxFileSize(config.maxFileSize ? (config.maxFileSize / (1024 * 1024)).toString() : '');
       }
     }
-  }, [storageSource, isOpen, type]);
+  }, [storageSource, isOpen]);
 
   const buildConfig = () => {
     switch (type) {
@@ -216,6 +224,11 @@ export function EditStorageModal({ isOpen, onClose, onSuccess, storageSource }: 
           headers: customHeaders ? JSON.parse(customHeaders) : {},
           body: customBody,
           responsePath: customResponsePath,
+        };
+      case 'local':
+        return {
+          basePath: localBasePath,
+          maxFileSize: localMaxFileSize ? parseInt(localMaxFileSize) * 1024 * 1024 : undefined,
         };
       default:
         return {};
@@ -279,6 +292,12 @@ export function EditStorageModal({ isOpen, onClose, onSuccess, storageSource }: 
       case 'custom':
         if (!customUploadUrl || !customDownloadUrl || !customResponsePath) {
           setError('请填写完整的自定义图床配置信息（上传URL、下载URL、响应路径）');
+          return false;
+        }
+        break;
+      case 'local':
+        if (!localBasePath) {
+          setError('请填写本地存储的基础路径');
           return false;
         }
         break;
@@ -378,6 +397,16 @@ export function EditStorageModal({ isOpen, onClose, onSuccess, storageSource }: 
                   size="sm"
                 />
               </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="storageIsActive"
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
+                />
+                <label htmlFor="storageIsActive" className="text-sm">启用此存储源</label>
+              </div>
             </div>
 
             {/* 配置信息 */}
@@ -425,6 +454,244 @@ export function EditStorageModal({ isOpen, onClose, onSuccess, storageSource }: 
                     value={r2Domain}
                     onChange={(e) => setR2Domain(e.target.value)}
                     size="sm"
+                  />
+                </>
+              )}
+
+              {type === 'qiniu' && (
+                <>
+                  <Input
+                    label="Access Key"
+                    placeholder="your-access-key"
+                    value={qiniuAccessKey}
+                    onChange={(e) => setQiniuAccessKey(e.target.value)}
+                    isRequired
+                    size="sm"
+                  />
+                  <Input
+                    label="Secret Key"
+                    placeholder="your-secret-key"
+                    type="password"
+                    value={qiniuSecretKey}
+                    onChange={(e) => setQiniuSecretKey(e.target.value)}
+                    isRequired
+                    size="sm"
+                  />
+                  <Input
+                    label="存储桶名称"
+                    placeholder="my-bucket"
+                    value={qiniuBucket}
+                    onChange={(e) => setQiniuBucket(e.target.value)}
+                    isRequired
+                    size="sm"
+                  />
+                  <Input
+                    label="CDN域名"
+                    placeholder="https://cdn.example.com"
+                    value={qiniuDomain}
+                    onChange={(e) => setQiniuDomain(e.target.value)}
+                    size="sm"
+                  />
+                  <Input
+                    label="区域 (可选)"
+                    placeholder="z0"
+                    value={qiniuRegion}
+                    onChange={(e) => setQiniuRegion(e.target.value)}
+                    size="sm"
+                  />
+                </>
+              )}
+
+              {type === 'minio' && (
+                <>
+                  <Input
+                    label="服务器地址"
+                    placeholder="https://minio.example.com"
+                    value={minioEndpoint}
+                    onChange={(e) => setMinioEndpoint(e.target.value)}
+                    isRequired
+                    size="sm"
+                  />
+                  <Input
+                    label="Access Key"
+                    placeholder="your-access-key"
+                    value={minioAccessKey}
+                    onChange={(e) => setMinioAccessKey(e.target.value)}
+                    isRequired
+                    size="sm"
+                  />
+                  <Input
+                    label="Secret Key"
+                    placeholder="your-secret-key"
+                    type="password"
+                    value={minioSecretKey}
+                    onChange={(e) => setMinioSecretKey(e.target.value)}
+                    isRequired
+                    size="sm"
+                  />
+                  <Input
+                    label="存储桶名称"
+                    placeholder="my-bucket"
+                    value={minioBucket}
+                    onChange={(e) => setMinioBucket(e.target.value)}
+                    isRequired
+                    size="sm"
+                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="minioUseSSL"
+                      checked={minioUseSSL}
+                      onChange={(e) => setMinioUseSSL(e.target.checked)}
+                    />
+                    <label htmlFor="minioUseSSL" className="text-sm">使用 SSL</label>
+                  </div>
+                </>
+              )}
+
+              {type === 'upyun' && (
+                <>
+                  <Input
+                    label="存储桶名称"
+                    placeholder="my-bucket"
+                    value={upyunBucket}
+                    onChange={(e) => setUpyunBucket(e.target.value)}
+                    isRequired
+                    size="sm"
+                  />
+                  <Input
+                    label="操作员"
+                    placeholder="operator-name"
+                    value={upyunOperator}
+                    onChange={(e) => setUpyunOperator(e.target.value)}
+                    isRequired
+                    size="sm"
+                  />
+                  <Input
+                    label="操作员密码"
+                    placeholder="operator-password"
+                    type="password"
+                    value={upyunPassword}
+                    onChange={(e) => setUpyunPassword(e.target.value)}
+                    isRequired
+                    size="sm"
+                  />
+                  <Input
+                    label="CDN域名"
+                    placeholder="https://cdn.example.com"
+                    value={upyunDomain}
+                    onChange={(e) => setUpyunDomain(e.target.value)}
+                    size="sm"
+                  />
+                </>
+              )}
+
+              {type === 'telegram' && (
+                <>
+                  <Input
+                    label="Bot Token"
+                    placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+                    value={telegramBotToken}
+                    onChange={(e) => setTelegramBotToken(e.target.value)}
+                    isRequired
+                    size="sm"
+                  />
+                  <Input
+                    label="Chat ID"
+                    placeholder="@your-channel"
+                    value={telegramChatId}
+                    onChange={(e) => setTelegramChatId(e.target.value)}
+                    isRequired
+                    size="sm"
+                  />
+                </>
+              )}
+
+              {type === 'cloudinary' && (
+                <>
+                  <Input
+                    label="Cloud Name"
+                    placeholder="your-cloud-name"
+                    value={cloudinaryCloudName}
+                    onChange={(e) => setCloudinaryCloudName(e.target.value)}
+                    isRequired
+                    size="sm"
+                  />
+                  <Input
+                    label="API Key"
+                    placeholder="your-api-key"
+                    value={cloudinaryApiKey}
+                    onChange={(e) => setCloudinaryApiKey(e.target.value)}
+                    isRequired
+                    size="sm"
+                  />
+                  <Input
+                    label="API Secret"
+                    placeholder="your-api-secret"
+                    type="password"
+                    value={cloudinaryApiSecret}
+                    onChange={(e) => setCloudinaryApiSecret(e.target.value)}
+                    isRequired
+                    size="sm"
+                  />
+                </>
+              )}
+
+              {type === 'github' && (
+                <>
+                  <Input
+                    label="GitHub Token"
+                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                    type="password"
+                    value={githubToken}
+                    onChange={(e) => setGithubToken(e.target.value)}
+                    isRequired
+                    size="sm"
+                  />
+                  <Input
+                    label="仓库名称"
+                    placeholder="username/repository"
+                    value={githubRepo}
+                    onChange={(e) => setGithubRepo(e.target.value)}
+                    isRequired
+                    size="sm"
+                  />
+                  <Input
+                    label="分支名称"
+                    placeholder="main"
+                    value={githubBranch}
+                    onChange={(e) => setGithubBranch(e.target.value)}
+                    size="sm"
+                  />
+                  <Input
+                    label="存储路径"
+                    placeholder="uploads/"
+                    value={githubPath}
+                    onChange={(e) => setGithubPath(e.target.value)}
+                    size="sm"
+                  />
+                </>
+              )}
+
+              {type === 'local' && (
+                <>
+                  <Input
+                    label="基础路径"
+                    placeholder="./storage"
+                    value={localBasePath}
+                    onChange={(e) => setLocalBasePath(e.target.value)}
+                    isRequired
+                    size="sm"
+                    description="本地存储文件的基础目录路径"
+                  />
+                  <Input
+                    label="最大文件大小 (MB)"
+                    type="number"
+                    placeholder="100"
+                    value={localMaxFileSize}
+                    onChange={(e) => setLocalMaxFileSize(e.target.value)}
+                    size="sm"
+                    description="单个文件的最大大小限制（留空为不限制）"
                   />
                 </>
               )}

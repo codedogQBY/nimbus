@@ -10,6 +10,7 @@ import { LocalStorageAdapter } from './local';
 
 export interface StorageAdapter {
   name: string;
+  initialize?(): Promise<void>;
   upload(file: File, path: string): Promise<UploadResult>;
   download(url: string): Promise<Buffer>;
   delete(path: string): Promise<boolean>;
@@ -85,36 +86,69 @@ export class StorageManager {
     priority: number;
     isActive: boolean;
   }>) {
-    this.initializeAdapters();
+    // 不在构造函数中调用异步方法
   }
 
-  private initializeAdapters() {
-    this.storageSources
-      .filter(source => source.isActive)
-      .sort((a, b) => a.priority - b.priority)
-      .forEach(source => {
-        try {
-          const adapter = StorageAdapterFactory.create(source.type, source.config);
-          this.adapters.set(source.id, adapter);
-        } catch (error) {
-          console.error(`Failed to initialize adapter for source ${source.id}:`, error);
+  // 异步初始化方法
+  async initialize(): Promise<void> {
+    await this.initializeAdapters();
+  }
+
+  private async initializeAdapters() {
+    for (const source of this.storageSources.filter(source => source.isActive).sort((a, b) => a.priority - b.priority)) {
+      try {
+        const adapter = StorageAdapterFactory.create(source.type, source.config);
+
+        // 调用适配器的初始化方法（如果存在）
+        if (adapter.initialize) {
+          await adapter.initialize();
         }
-      });
+
+        this.adapters.set(source.id, adapter);
+      } catch (error) {
+        console.error(`Failed to initialize adapter for source ${source.id}:`, error);
+      }
+    }
   }
 
   // 获取最佳存储源
-  getBestStorageSource(): StorageAdapter | null {
+  getBestStorageSource(fileSize?: number): StorageAdapter | null {
+    return this.selectBestStorageSource(fileSize);
+  }
+
+  // 智能选择存储源
+  selectBestStorageSource(fileSize?: number): StorageAdapter | null {
     const activeSources = this.storageSources
       .filter(source => source.isActive)
-      .sort((a, b) => a.priority - b.priority);
+      .sort((a, b) => b.priority - a.priority); // 降序排列，优先级高的在前
 
-    for (const source of activeSources) {
+    // GitHub单文件大小限制为100MB
+    const GITHUB_MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+
+    // 如果提供了文件大小，且大于100MB，排除GitHub
+    let eligibleSources = activeSources;
+    if (fileSize && fileSize > GITHUB_MAX_FILE_SIZE) {
+      eligibleSources = activeSources.filter(source => source.type !== StorageType.GITHUB);
+
+      // 如果只有GitHub可用且文件超过100MB，返回null让调用方处理错误
+      if (eligibleSources.length === 0 && activeSources.some(source => source.type === StorageType.GITHUB)) {
+        return null;
+      }
+    }
+
+    for (const source of eligibleSources) {
       const adapter = this.adapters.get(source.id);
       if (adapter) {
         return adapter;
       }
     }
     return null;
+  }
+
+  // 检查是否只有GitHub可用（用于错误提示）
+  isOnlyGitHubAvailable(): boolean {
+    const activeSources = this.storageSources.filter(source => source.isActive);
+    return activeSources.length > 0 && activeSources.every(source => source.type === StorageType.GITHUB);
   }
 
   // 获取指定存储源
@@ -124,17 +158,25 @@ export class StorageManager {
 
   // 上传文件（自动选择最佳存储源）
   async uploadFile(file: File, path: string): Promise<UploadResult> {
-    const adapter = this.getBestStorageSource();
+    const adapter = this.getBestStorageSource(file.size);
+
     if (!adapter) {
+      // 检查是否只有GitHub可用但文件太大
+      if (this.isOnlyGitHubAvailable() && file.size > 100 * 1024 * 1024) {
+        return {
+          success: false,
+          error: `文件大小 ${(file.size / 1024 / 1024).toFixed(2)}MB 超过GitHub限制 100MB。请启用其他存储源（如又拍云、七牛云、R2等）或压缩文件后重试。`
+        };
+      }
       return { success: false, error: 'No active storage source available' };
     }
 
     try {
       return await adapter.upload(file, path);
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Upload failed' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Upload failed'
       };
     }
   }
