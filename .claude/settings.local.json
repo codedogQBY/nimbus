@@ -19,7 +19,10 @@
       "WebFetch(domain:github.com)",
       "Bash(npx tsx:*)",
       "WebFetch(domain:developer.qiniu.com)",
-      "Bash(PGPASSWORD=$POSTGRES_PASSWORD psql:*)"
+      "Bash(PGPASSWORD=$POSTGRES_PASSWORD psql:*)",
+      "Bash(npm --version)",
+      "Bash(curl:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

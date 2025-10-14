@@ -39,9 +39,19 @@ export async function POST(request: NextRequest) {
       // 创建存储适配器
       const adapter = StorageAdapterFactory.create(type as StorageType, config);
 
-      // 对于本地存储，需要先初始化
-      if (type === 'local' && typeof (adapter as any).initialize === 'function') {
-        await (adapter as any).initialize();
+      // 对于需要初始化的适配器（本地存储、R2等），先进行初始化
+      if (typeof (adapter as any).initialize === 'function') {
+        try {
+          await (adapter as any).initialize();
+        } catch (initError) {
+          console.error('Adapter initialization failed:', initError);
+          return NextResponse.json({
+            success: false,
+            connected: false,
+            message: '适配器初始化失败',
+            error: initError instanceof Error ? initError.message : String(initError),
+          });
+        }
       }
 
       // 测试连接

@@ -128,12 +128,47 @@ export function UploadButton({ folderId, onSuccess, className, size = 'md', isIc
     }
   };
 
+  // 系统文件和隐藏文件过滤列表
+  const shouldSkipFile = (fileName: string): boolean => {
+    const skipPatterns = [
+      '.DS_Store',           // macOS 系统文件
+      'Thumbs.db',          // Windows 缩略图文件
+      'desktop.ini',        // Windows 系统文件
+      '.localized',         // macOS 本地化文件
+      '._*',                // macOS 资源分叉文件
+      '.Spotlight-V100',    // macOS Spotlight 索引
+      '.Trashes',           // macOS 回收站
+      '.fseventsd',         // macOS 文件系统事件
+      '.TemporaryItems',    // macOS 临时文件
+      '.DocumentRevisions-V100', // macOS 文档版本
+      '.VolumeIcon.icns',   // macOS 卷图标
+      '.com.apple.*',       // Apple 系统文件
+      '.apdisk',            // Apple 磁盘映像
+    ];
+
+    return skipPatterns.some(pattern => {
+      if (pattern.includes('*')) {
+        const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+        return regex.test(fileName);
+      }
+      return fileName === pattern;
+    });
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    // 过滤掉系统文件和隐藏文件
+    const validFiles = Array.from(files).filter(file => !shouldSkipFile(file.name));
+    
+    if (validFiles.length === 0) {
+      showError('没有有效文件', '所选文件都是系统文件，已自动过滤');
+      return;
+    }
+
     // 检查文件大小
-    const oversizedFiles = Array.from(files).filter(f => f.size > 100 * 1024 * 1024);
+    const oversizedFiles = validFiles.filter(f => f.size > 100 * 1024 * 1024);
     if (oversizedFiles.length > 0) {
       showError(
         '文件大小超限',
@@ -143,7 +178,7 @@ export function UploadButton({ folderId, onSuccess, className, size = 'md', isIc
     }
 
     // 创建上传任务
-    const tasks: UploadTask[] = Array.from(files).map(file => ({
+    const tasks: UploadTask[] = validFiles.map(file => ({
       file,
       progress: 0,
       status: 'pending' as const,
@@ -155,16 +190,43 @@ export function UploadButton({ folderId, onSuccess, className, size = 'md', isIc
     setUploading(true);
     setTotalProgress(0);
 
-    // 并发上传（最多3个同时进行）
+    // 并发上传（但对同一文件夹的文件进行序列化处理以避免重复创建文件夹）
     const concurrency = 3;
-    const results: Promise<void>[] = [];
-    
-    for (let i = 0; i < tasks.length; i += concurrency) {
-      const batch = tasks.slice(i, i + concurrency);
-      const batchPromises = batch.map((task, batchIndex) => 
-        uploadFile(task, i + batchIndex)
-      );
-      await Promise.allSettled(batchPromises);
+
+    // 按文件夹路径分组文件
+    const filesByFolder = new Map<string, UploadTask[]>();
+    tasks.forEach(task => {
+      const folderPath = task.relativePath ?
+        task.relativePath.split('/').slice(0, -1).join('/') :
+        '';
+
+      if (!filesByFolder.has(folderPath)) {
+        filesByFolder.set(folderPath, []);
+      }
+      filesByFolder.get(folderPath)!.push(task);
+    });
+
+    // 对每个文件夹分组进行串行处理，避免重复创建文件夹
+    for (const [folderPath, folderTasks] of filesByFolder.entries()) {
+      console.log(`Uploading ${folderTasks.length} files to folder: ${folderPath || 'root'}`);
+
+      // 首先串行上传一个文件来创建文件夹结构
+      if (folderTasks.length > 0) {
+        const firstTask = folderTasks[0];
+        const firstTaskIndex = tasks.indexOf(firstTask);
+        await uploadFile(firstTask, firstTaskIndex);
+
+        // 然后并发上传剩余文件（文件夹已存在，不会重复创建）
+        const remainingTasks = folderTasks.slice(1);
+        for (let i = 0; i < remainingTasks.length; i += concurrency) {
+          const batch = remainingTasks.slice(i, i + concurrency);
+          const batchPromises = batch.map((task) => {
+            const taskIndex = tasks.indexOf(task);
+            return uploadFile(task, taskIndex);
+          });
+          await Promise.allSettled(batchPromises);
+        }
+      }
     }
 
     // 上传完成

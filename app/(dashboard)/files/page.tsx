@@ -31,13 +31,17 @@ import {
   ListIcon,
   SortAscIcon,
   ChevronLeftIcon,
-  EyeIcon
+  EyeIcon,
+  CheckSquareIcon,
+  SquareIcon,
+  XIcon
 } from 'lucide-react';
 import ky from 'ky';
 import { UploadButton } from '@/components/upload-button';
 import { CreateFolderModal } from '@/components/create-folder-modal';
 import { RenameModal } from '@/components/rename-modal';
 import { DeleteConfirmModal } from '@/components/delete-confirm-modal';
+import { BatchDeleteConfirmModal } from '@/components/batch-delete-confirm-modal';
 import { CreateShareModal } from '@/components/create-share-modal';
 import { FileBreadcrumb } from '@/components/file-breadcrumb';
 import { FilePreview } from '@/lib/file-preview/preview-manager';
@@ -54,12 +58,18 @@ export default function FilesPage() {
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'size'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
+  // Selection states
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set());
+  const [selectedFolders, setSelectedFolders] = useState<Set<number>>(new Set());
+
   // Modal states
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [showRename, setShowRename] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showBatchDelete, setShowBatchDelete] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
 
   // Drag and drop states
@@ -317,6 +327,58 @@ export default function FilesPage() {
     return null;
   };
 
+  // 批量操作相关函数
+  const toggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode);
+    if (isSelectionMode) {
+      // 退出选择模式时清空选择
+      setSelectedFiles(new Set());
+      setSelectedFolders(new Set());
+    }
+  };
+
+  const toggleFileSelection = (fileId: number) => {
+    const newSelected = new Set(selectedFiles);
+    if (newSelected.has(fileId)) {
+      newSelected.delete(fileId);
+    } else {
+      newSelected.add(fileId);
+    }
+    setSelectedFiles(newSelected);
+  };
+
+  const toggleFolderSelection = (folderId: number) => {
+    const newSelected = new Set(selectedFolders);
+    if (newSelected.has(folderId)) {
+      newSelected.delete(folderId);
+    } else {
+      newSelected.add(folderId);
+    }
+    setSelectedFolders(newSelected);
+  };
+
+  const selectAll = () => {
+    setSelectedFiles(new Set(files.map(f => f.id)));
+    setSelectedFolders(new Set(folders.map(f => f.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedFiles(new Set());
+    setSelectedFolders(new Set());
+  };
+
+  const getSelectedCount = () => {
+    return selectedFiles.size + selectedFolders.size;
+  };
+
+  const handleBatchDelete = () => {
+    if (getSelectedCount() === 0) {
+      showError('请先选择要删除的文件或文件夹');
+      return;
+    }
+    setShowBatchDelete(true);
+  };
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -374,6 +436,17 @@ export default function FilesPage() {
               onPress={() => setShowCreateFolder(true)}
             >
               <FolderPlusIcon className="w-4 h-4" />
+            </Button>
+
+            {/* 批量操作按钮 */}
+            <Button
+              size="sm"
+              variant={isSelectionMode ? "solid" : "flat"}
+              isIconOnly
+              className={isSelectionMode ? "bg-primary-500 text-white" : "bg-secondary-100"}
+              onPress={toggleSelectionMode}
+            >
+              {isSelectionMode ? <XIcon className="w-4 h-4" /> : <CheckSquareIcon className="w-4 h-4" />}
             </Button>
 
             {/* 视图切换 */}
@@ -446,6 +519,54 @@ export default function FilesPage() {
         </div>
       </div>
 
+      {/* 批量操作工具栏 */}
+      {isSelectionMode && (
+        <div className="bg-white border-b border-divider p-3 lg:p-4">
+          <div className="flex flex-col gap-3">
+            {/* 选择状态信息 */}
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-default-600">
+                已选择 <span className="font-semibold text-primary">{getSelectedCount()}</span> 项
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="flat"
+                  onPress={selectAll}
+                  className="text-xs px-3 h-8"
+                >
+                  全选
+                </Button>
+                <Button
+                  size="sm"
+                  variant="flat"
+                  onPress={clearSelection}
+                  className="text-xs px-3 h-8"
+                >
+                  清空
+                </Button>
+              </div>
+            </div>
+
+            {/* 批量操作按钮 */}
+            {getSelectedCount() > 0 && (
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  color="danger"
+                  variant="flat"
+                  startContent={<TrashIcon className="w-4 h-4" />}
+                  onPress={handleBatchDelete}
+                  className="flex-1 h-10"
+                >
+                  删除选中项 ({getSelectedCount()})
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 主内容区域 */}
       <div className="flex-1 overflow-y-auto p-3 lg:p-4">
         <div className="max-w-7xl mx-auto space-y-4">
@@ -478,68 +599,106 @@ export default function FilesPage() {
                   <h3 className="text-sm font-semibold text-dark-olive-800 mb-3 px-1">文件夹</h3>
                   <div className={`grid gap-3 ${viewMode === 'grid' ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6' : 'grid-cols-1'}`}>
                     {sortedFolders.map((folder) => (
-                      <div 
+                      <div
                         key={folder.id}
-                        className="cursor-pointer"
-                        onClick={() => setCurrentFolderId(folder.id)}
+                        className="cursor-pointer relative"
+                        onClick={() => {
+                          if (isSelectionMode) {
+                            toggleFolderSelection(folder.id);
+                          } else {
+                            setCurrentFolderId(folder.id);
+                          }
+                        }}
                       >
-                        <Card 
-                          className="bg-white hover:shadow-md transition-shadow"
+                        <Card
+                          className={`bg-white hover:shadow-md transition-all ${
+                            isSelectionMode && selectedFolders.has(folder.id)
+                              ? 'ring-2 ring-primary-500 shadow-md'
+                              : ''
+                          }`}
                         >
                         <CardBody className={viewMode === 'grid' ? 'p-3 lg:p-4' : 'p-3 lg:p-4'}>
                           <div className={`flex ${viewMode === 'grid' ? 'flex-col' : 'flex-row'} items-start gap-3`}>
+                            {/* 选择模式下的复选框 */}
+                            {isSelectionMode && (
+                              <div className={`${viewMode === 'grid' ? 'absolute top-2 left-2 z-10' : 'flex-shrink-0'}`}>
+                                <Button
+                                  isIconOnly
+                                  size="sm"
+                                  variant="flat"
+                                  className={`w-8 h-8 min-w-8 ${
+                                    selectedFolders.has(folder.id)
+                                      ? 'bg-primary-500 text-white'
+                                      : 'bg-white border border-default-300'
+                                  }`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleFolderSelection(folder.id);
+                                  }}
+                                >
+                                  {selectedFolders.has(folder.id) ? (
+                                    <CheckSquareIcon className="w-4 h-4" />
+                                  ) : (
+                                    <SquareIcon className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            )}
+
                             <div className={`${viewMode === 'grid' ? 'w-full' : ''} flex items-center justify-center bg-primary-100 rounded-lg ${viewMode === 'grid' ? 'h-20 lg:h-24' : 'w-12 h-12 flex-shrink-0'}`}>
                               <FolderIcon className={`${viewMode === 'grid' ? 'w-10 h-10 lg:w-12 lg:h-12' : 'w-6 h-6'} text-amber-brown-500`} />
                             </div>
-                            
+
                             <div className={`flex-1 min-w-0 ${viewMode === 'grid' ? 'w-full' : ''}`}>
                               <div className="flex items-start justify-between gap-2 mb-1">
                                 <h4 className="text-xs lg:text-sm font-semibold text-dark-olive-800 truncate flex-1">
                                   {folder.name}
                                 </h4>
-                                <Dropdown>
-                                  <DropdownTrigger>
-                                    <Button
-                                      isIconOnly
-                                      size="sm"
-                                      variant="light"
-                                      className="flex-shrink-0"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <MoreVerticalIcon className="w-3.5 h-3.5" />
-                                    </Button>
-                                  </DropdownTrigger>
-                                  <DropdownMenu>
-                                    <DropdownItem 
-                                      key="rename" 
-                                      startContent={<EditIcon className="w-4 h-4" />}
-                                      onPress={() => {
-                                        handleRename(folder, 'folder');
-                                      }}
-                                    >
-                                      重命名
-                                    </DropdownItem>
-                                    <DropdownItem 
-                                      key="share" 
-                                      startContent={<Share2Icon className="w-4 h-4" />}
-                                      onPress={() => {
-                                        handleShare(folder, 'folder');
-                                      }}
-                                    >
-                                      分享
-                                    </DropdownItem>
-                                    <DropdownItem 
-                                      key="delete" 
-                                      color="danger" 
-                                      startContent={<TrashIcon className="w-4 h-4" />}
-                                      onPress={() => {
-                                        handleDelete(folder, 'folder');
-                                      }}
-                                    >
-                                      删除
-                                    </DropdownItem>
-                                  </DropdownMenu>
-                                </Dropdown>
+                                {!isSelectionMode && (
+                                  <Dropdown>
+                                    <DropdownTrigger>
+                                      <Button
+                                        isIconOnly
+                                        size="sm"
+                                        variant="light"
+                                        className="flex-shrink-0"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <MoreVerticalIcon className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </DropdownTrigger>
+                                    <DropdownMenu>
+                                      <DropdownItem
+                                        key="rename"
+                                        startContent={<EditIcon className="w-4 h-4" />}
+                                        onPress={() => {
+                                          handleRename(folder, 'folder');
+                                        }}
+                                      >
+                                        重命名
+                                      </DropdownItem>
+                                      <DropdownItem
+                                        key="share"
+                                        startContent={<Share2Icon className="w-4 h-4" />}
+                                        onPress={() => {
+                                          handleShare(folder, 'folder');
+                                        }}
+                                      >
+                                        分享
+                                      </DropdownItem>
+                                      <DropdownItem
+                                        key="delete"
+                                        color="danger"
+                                        startContent={<TrashIcon className="w-4 h-4" />}
+                                        onPress={() => {
+                                          handleDelete(folder, 'folder');
+                                        }}
+                                      >
+                                        删除
+                                      </DropdownItem>
+                                    </DropdownMenu>
+                                  </Dropdown>
+                                )}
                               </div>
                               <p className="text-xs text-default-500">
                                 {folder.itemCount} 项
@@ -567,12 +726,48 @@ export default function FilesPage() {
                       <Card
                         key={file.id}
                         isPressable
-                        className="bg-white hover:shadow-md transition-shadow"
-                        onPress={() => handlePreview(file)}
+                        className={`bg-white hover:shadow-md transition-all relative ${
+                          isSelectionMode && selectedFiles.has(file.id)
+                            ? 'ring-2 ring-primary-500 shadow-md'
+                            : ''
+                        }`}
+                        onPress={() => {
+                          if (isSelectionMode) {
+                            toggleFileSelection(file.id);
+                          } else {
+                            handlePreview(file);
+                          }
+                        }}
                         data-file-id={file.id}
                       >
                         <CardBody className={viewMode === 'grid' ? 'p-3 lg:p-4' : 'p-3 lg:p-4'}>
                           <div className={`flex ${viewMode === 'grid' ? 'flex-col' : 'flex-row'} items-start gap-3`}>
+                            {/* 选择模式下的复选框 */}
+                            {isSelectionMode && (
+                              <div className={`${viewMode === 'grid' ? 'absolute top-2 left-2 z-10' : 'flex-shrink-0'}`}>
+                                <Button
+                                  isIconOnly
+                                  size="sm"
+                                  variant="flat"
+                                  className={`w-8 h-8 min-w-8 ${
+                                    selectedFiles.has(file.id)
+                                      ? 'bg-primary-500 text-white'
+                                      : 'bg-white border border-default-300'
+                                  }`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleFileSelection(file.id);
+                                  }}
+                                >
+                                  {selectedFiles.has(file.id) ? (
+                                    <CheckSquareIcon className="w-4 h-4" />
+                                  ) : (
+                                    <SquareIcon className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            )}
+
                             <div className={`${viewMode === 'grid' ? 'w-full' : ''} flex items-center justify-center bg-secondary-100 rounded-lg ${viewMode === 'grid' ? 'h-20 lg:h-24' : 'w-12 h-12 flex-shrink-0'} overflow-hidden relative`}>
                               {thumbnailUrl ? (
                                 <>
@@ -604,57 +799,59 @@ export default function FilesPage() {
                                 <h4 className="text-xs lg:text-sm font-semibold text-dark-olive-800 truncate flex-1" title={file.name}>
                                   {file.name}
                                 </h4>
-                                <Dropdown>
-                                  <DropdownTrigger>
-                                    <Button
-                                      isIconOnly
-                                      size="sm"
-                                      variant="light"
-                                      className="flex-shrink-0"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <MoreVerticalIcon className="w-3.5 h-3.5" />
-                                    </Button>
-                                  </DropdownTrigger>
-                                  <DropdownMenu>
-                                    <DropdownItem
-                                      key="preview"
-                                      startContent={<EyeIcon className="w-4 h-4" />}
-                                      onPress={() => handlePreview(file)}
-                                    >
-                                      预览
-                                    </DropdownItem>
-                                    <DropdownItem
-                                      key="download"
-                                      startContent={<DownloadIcon className="w-4 h-4" />}
-                                      onPress={() => handleDownload(file)}
-                                    >
-                                      下载
-                                    </DropdownItem>
-                                    <DropdownItem
-                                      key="share"
-                                      startContent={<Share2Icon className="w-4 h-4" />}
-                                      onPress={() => handleShare(file, 'file')}
-                                    >
-                                      分享
-                                    </DropdownItem>
-                                    <DropdownItem
-                                      key="rename"
-                                      startContent={<EditIcon className="w-4 h-4" />}
-                                      onPress={() => handleRename(file, 'file')}
-                                    >
-                                      重命名
-                                    </DropdownItem>
-                                    <DropdownItem
-                                      key="delete"
-                                      color="danger"
-                                      startContent={<TrashIcon className="w-4 h-4" />}
-                                      onPress={() => handleDelete(file, 'file')}
-                                    >
-                                      删除
-                                    </DropdownItem>
-                                  </DropdownMenu>
-                                </Dropdown>
+                                {!isSelectionMode && (
+                                  <Dropdown>
+                                    <DropdownTrigger>
+                                      <Button
+                                        isIconOnly
+                                        size="sm"
+                                        variant="light"
+                                        className="flex-shrink-0"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <MoreVerticalIcon className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </DropdownTrigger>
+                                    <DropdownMenu>
+                                      <DropdownItem
+                                        key="preview"
+                                        startContent={<EyeIcon className="w-4 h-4" />}
+                                        onPress={() => handlePreview(file)}
+                                      >
+                                        预览
+                                      </DropdownItem>
+                                      <DropdownItem
+                                        key="download"
+                                        startContent={<DownloadIcon className="w-4 h-4" />}
+                                        onPress={() => handleDownload(file)}
+                                      >
+                                        下载
+                                      </DropdownItem>
+                                      <DropdownItem
+                                        key="share"
+                                        startContent={<Share2Icon className="w-4 h-4" />}
+                                        onPress={() => handleShare(file, 'file')}
+                                      >
+                                        分享
+                                      </DropdownItem>
+                                      <DropdownItem
+                                        key="rename"
+                                        startContent={<EditIcon className="w-4 h-4" />}
+                                        onPress={() => handleRename(file, 'file')}
+                                      >
+                                        重命名
+                                      </DropdownItem>
+                                      <DropdownItem
+                                        key="delete"
+                                        color="danger"
+                                        startContent={<TrashIcon className="w-4 h-4" />}
+                                        onPress={() => handleDelete(file, 'file')}
+                                      >
+                                        删除
+                                      </DropdownItem>
+                                    </DropdownMenu>
+                                  </Dropdown>
+                                )}
                               </div>
                               <div className="flex flex-col gap-1">
                                 <p className="text-xs text-default-500">
@@ -686,6 +883,20 @@ export default function FilesPage() {
         onClose={() => setShowCreateFolder(false)}
         parentId={currentFolderId}
         onSuccess={loadFiles}
+      />
+
+      <BatchDeleteConfirmModal
+        isOpen={showBatchDelete}
+        onClose={() => setShowBatchDelete(false)}
+        selectedFiles={selectedFiles}
+        selectedFolders={selectedFolders}
+        onSuccess={() => {
+          loadFiles();
+          // 批量删除成功后，清空选择并退出选择模式
+          setSelectedFiles(new Set());
+          setSelectedFolders(new Set());
+          setIsSelectionMode(false);
+        }}
       />
 
       {selectedItem && (

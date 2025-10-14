@@ -11,11 +11,36 @@ import { LocalStorageAdapter } from './local';
 export interface StorageAdapter {
   name: string;
   initialize?(): Promise<void>;
-  upload(file: File, path: string): Promise<UploadResult>;
+  upload(file: File, path: string, options?: any): Promise<UploadResult>;
   download(url: string): Promise<Buffer>;
   delete(path: string): Promise<boolean>;
   getUrl(path: string): string;
   testConnection(): Promise<boolean>;
+
+  // 扩展功能（可选）
+  getFileMetadata?(path: string): Promise<{
+    size: number;
+    lastModified: Date;
+    etag: string;
+    contentType: string;
+    metadata?: Record<string, string>;
+  }>;
+  getSignedUrl?(path: string, expiresIn?: number): Promise<string>;
+  getUploadSignedUrl?(path: string, contentType?: string, expiresIn?: number): Promise<string>;
+  listObjects?(prefix?: string, maxKeys?: number): Promise<{
+    objects: Array<{
+      key: string;
+      size: number;
+      lastModified: Date;
+      etag: string;
+    }>;
+    truncated: boolean;
+    nextContinuationToken?: string;
+  }>;
+  getStorageUsage?(): Promise<{
+    objectCount: number;
+    totalSize: number;
+  }>;
 }
 
 export interface UploadResult {
@@ -25,6 +50,9 @@ export interface UploadResult {
   error?: string;
   size?: number;
   hash?: string;
+  etag?: string;
+  versionId?: string;
+  multipart?: boolean;
   metadata?: Record<string, any>;
 }
 

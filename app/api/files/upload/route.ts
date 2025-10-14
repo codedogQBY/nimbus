@@ -29,15 +29,50 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '没有文件' }, { status: 400 });
     }
 
+    // 检查是否为系统文件或隐藏文件
+    const shouldSkipFile = (fileName: string): boolean => {
+      const skipPatterns = [
+        '.DS_Store',           // macOS 系统文件
+        'Thumbs.db',          // Windows 缩略图文件
+        'desktop.ini',        // Windows 系统文件
+        '.localized',         // macOS 本地化文件
+        '._*',                // macOS 资源分叉文件
+        '.Spotlight-V100',    // macOS Spotlight 索引
+        '.Trashes',           // macOS 回收站
+        '.fseventsd',         // macOS 文件系统事件
+        '.TemporaryItems',    // macOS 临时文件
+        '.DocumentRevisions-V100', // macOS 文档版本
+        '.VolumeIcon.icns',   // macOS 卷图标
+        '.com.apple.*',       // Apple 系统文件
+        '.apdisk',            // Apple 磁盘映像
+      ];
+
+      return skipPatterns.some(pattern => {
+        if (pattern.includes('*')) {
+          const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+          return regex.test(fileName);
+        }
+        return fileName === pattern;
+      });
+    };
+
+    if (shouldSkipFile(file.name)) {
+      return NextResponse.json({ error: '不允许上传系统文件' }, { status: 400 });
+    }
+
     // 如果有relativePath，需要创建对应的文件夹结构
     let targetFolderId = folderId ? parseInt(folderId) : null;
 
     if (relativePath) {
+      console.log(`Processing relativePath: ${relativePath}`);
+
       // 解析路径并创建文件夹结构
       const pathParts = relativePath.split('/').filter(p => p);
-      
+
       // relativePath包含完整路径（包括文件名），所以需要移除最后一个部分（文件名）
       const folderParts = pathParts.slice(0, -1); // 移除文件名，只保留文件夹路径
+
+      console.log(`Folder parts to create: ${JSON.stringify(folderParts)}`);
 
       let currentFolderId = targetFolderId;
       let currentPath = targetFolderId ?
@@ -45,23 +80,32 @@ export async function POST(request: NextRequest) {
         '/';
 
       // 只有当有文件夹路径时才创建文件夹
-      for (const folderName of folderParts) {
+      for (let i = 0; i < folderParts.length; i++) {
+        const folderName = folderParts[i];
         const folderPath = currentPath === '/' ? `/${folderName}` : `${currentPath}/${folderName}`;
 
-        // 检查文件夹是否存在（更严格的唯一性检查）
-        let folder = await prisma.folder.findFirst({
-          where: {
-            name: folderName,
-            parentId: currentFolderId,
-            path: folderPath,
-          },
-        });
+        console.log(`Creating/finding folder: ${folderName} at path: ${folderPath} (parent: ${currentFolderId})`);
 
-        // 不存在则创建
-        if (!folder) {
-          // 使用 upsert 来避免竞争条件
+        // 使用事务和锁机制来避免并发创建重复文件夹
+        const folder = await prisma.$transaction(async (tx) => {
+          // 先尝试查找现有文件夹（使用更宽松的条件先查询）
+          let existingFolder = await tx.folder.findFirst({
+            where: {
+              name: folderName,
+              parentId: currentFolderId,
+            },
+          });
+
+          if (existingFolder) {
+            console.log(`Found existing folder: ${folderName} (id: ${existingFolder.id})`);
+            return existingFolder;
+          }
+
+          console.log(`Creating new folder: ${folderName}`);
+
+          // 如果不存在，尝试创建新文件夹
           try {
-            folder = await prisma.folder.create({
+            const newFolder = await tx.folder.create({
               data: {
                 name: folderName,
                 path: folderPath,
@@ -69,30 +113,51 @@ export async function POST(request: NextRequest) {
                 createdBy: user.id,
               },
             });
+            console.log(`Successfully created folder: ${folderName} (id: ${newFolder.id})`);
+            return newFolder;
           } catch (error: any) {
-            // 如果创建失败（可能是并发创建），再次查询
+            console.log(`Failed to create folder: ${folderName}, error: ${error.code} - ${error.message}`);
+
+            // 如果创建失败（可能是并发创建导致的唯一约束冲突），再次查询
             if (error.code === 'P2002') { // Unique constraint violation
-              folder = await prisma.folder.findFirst({
+              console.log(`Unique constraint violation, retrying query for folder: ${folderName}`);
+
+              const retryFolder = await tx.folder.findFirst({
                 where: {
                   name: folderName,
                   parentId: currentFolderId,
-                  path: folderPath,
                 },
               });
-              if (!folder) {
-                throw error; // 如果仍然找不到，抛出原始错误
+
+              if (retryFolder) {
+                console.log(`Found folder on retry: ${folderName} (id: ${retryFolder.id})`);
+                return retryFolder;
               }
-            } else {
-              throw error;
             }
+
+            // 如果仍然失败，抛出详细错误信息
+            console.error('Failed to create folder after retry:', {
+              folderName,
+              parentId: currentFolderId,
+              path: folderPath,
+              error: error.message,
+              code: error.code
+            });
+            throw new Error(`创建文件夹失败: ${folderName} (${error.message})`);
           }
-        }
+        }, {
+          maxWait: 5000, // 最大等待5秒
+          timeout: 10000, // 事务超时10秒
+        });
 
         currentFolderId = folder.id;
         currentPath = folderPath;
+
+        console.log(`Updated current folder: ${currentFolderId}, path: ${currentPath}`);
       }
 
       targetFolderId = currentFolderId;
+      console.log(`Final target folder ID: ${targetFolderId}`);
     }
 
     // 获取默认存储源（优先级最高的活跃存储源）
