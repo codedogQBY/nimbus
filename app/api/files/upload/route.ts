@@ -35,14 +35,17 @@ export async function POST(request: NextRequest) {
     if (relativePath) {
       // 解析路径并创建文件夹结构
       const pathParts = relativePath.split('/').filter(p => p);
-      pathParts.pop(); // 移除文件名，只保留文件夹路径
+      
+      // relativePath包含完整路径（包括文件名），所以需要移除最后一个部分（文件名）
+      const folderParts = pathParts.slice(0, -1); // 移除文件名，只保留文件夹路径
 
       let currentFolderId = targetFolderId;
       let currentPath = targetFolderId ?
         (await prisma.folder.findUnique({ where: { id: targetFolderId } }))?.path || '/' :
         '/';
 
-      for (const folderName of pathParts) {
+      // 只有当有文件夹路径时才创建文件夹
+      for (const folderName of folderParts) {
         const folderPath = currentPath === '/' ? `/${folderName}` : `${currentPath}/${folderName}`;
 
         // 检查文件夹是否存在（更严格的唯一性检查）
@@ -112,7 +115,15 @@ export async function POST(request: NextRequest) {
     }
 
     // 生成文件名（保留原始名称，处理重名冲突）
-    const originalName = file.name;
+    // 如果有relativePath，从中提取文件名；否则使用原始文件名
+    let originalName = file.name;
+    if (relativePath) {
+      const pathParts = relativePath.split('/').filter(p => p);
+      if (pathParts.length > 0) {
+        originalName = pathParts[pathParts.length - 1]; // 取最后一个部分作为文件名
+      }
+    }
+    
     const ext = path.extname(originalName);
     const baseName = path.basename(originalName, ext);
     
@@ -167,7 +178,7 @@ export async function POST(request: NextRequest) {
 
     // 计算文件哈希
     const crypto = await import('crypto');
-    const md5Hash = crypto.createHash('md5').update(fileBuffer).digest('hex');
+    const md5Hash = crypto.createHash('md5').update(new Uint8Array(fileBuffer)).digest('hex');
 
     // 保存文件信息到数据库
     const savedFile = await prisma.file.create({
