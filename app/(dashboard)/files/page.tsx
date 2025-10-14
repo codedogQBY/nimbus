@@ -42,6 +42,7 @@ import { CreateShareModal } from '@/components/create-share-modal';
 import { FileBreadcrumb } from '@/components/file-breadcrumb';
 import { FilePreview } from '@/lib/file-preview/preview-manager';
 import { AuthenticatedImage } from '@/components/authenticated-image';
+import { useToast } from '@/components/toast-provider';
 
 export default function FilesPage() {
   const [files, setFiles] = useState<any[]>([]);
@@ -61,9 +62,121 @@ export default function FilesPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
 
+  // Drag and drop states
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [dragCounter, setDragCounter] = useState(0);
+
+  const { showError, showSuccess } = useToast();
+
   useEffect(() => {
     loadFiles();
   }, [currentFolderId]);
+
+  useEffect(() => {
+    // 阻止浏览器默认的拖放行为
+    const preventDefaults = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const handleDragEnter = (e: DragEvent) => {
+      preventDefaults(e);
+      setDragCounter(prev => prev + 1);
+      if (e.dataTransfer?.types.includes('Files')) {
+        setIsDragOver(true);
+      }
+    };
+
+    const handleDragLeave = (e: DragEvent) => {
+      preventDefaults(e);
+      setDragCounter(prev => {
+        const newCounter = prev - 1;
+        if (newCounter === 0) {
+          setIsDragOver(false);
+        }
+        return newCounter;
+      });
+    };
+
+    const handleDragOver = (e: DragEvent) => {
+      preventDefaults(e);
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy';
+      }
+    };
+
+    const handleDrop = (e: DragEvent) => {
+      preventDefaults(e);
+      setIsDragOver(false);
+      setDragCounter(0);
+
+      const files = e.dataTransfer?.files;
+      if (files && files.length > 0) {
+        handleFilesDrop(files);
+      }
+    };
+
+    // 添加事件监听器
+    document.addEventListener('dragenter', handleDragEnter);
+    document.addEventListener('dragleave', handleDragLeave);
+    document.addEventListener('dragover', handleDragOver);
+    document.addEventListener('drop', handleDrop);
+
+    return () => {
+      document.removeEventListener('dragenter', handleDragEnter);
+      document.removeEventListener('dragleave', handleDragLeave);
+      document.removeEventListener('dragover', handleDragOver);
+      document.removeEventListener('drop', handleDrop);
+    };
+  }, [currentFolderId]);
+
+  const handleFilesDrop = async (files: FileList) => {
+    const fileArray = Array.from(files);
+
+    // 检查文件大小
+    const oversizedFiles = fileArray.filter(f => f.size > 100 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      showError(
+        '文件大小超限',
+        `以下文件超过100MB限制：${oversizedFiles.map(f => f.name).join(', ')}`
+      );
+      return;
+    }
+
+    // 模拟 UploadButton 的上传逻辑
+    try {
+      const uploadPromises = fileArray.map(async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (currentFolderId) {
+          formData.append('folderId', currentFolderId.toString());
+        }
+
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/files/upload', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`上传 ${file.name} 失败`);
+        }
+
+        return response.json();
+      });
+
+      await Promise.all(uploadPromises);
+      showSuccess(`成功上传 ${fileArray.length} 个文件`);
+      loadFiles(); // 重新加载文件列表
+      window.dispatchEvent(new Event('storageUpdated'));
+    } catch (error) {
+      console.error('拖放上传失败:', error);
+      showError('上传失败', error instanceof Error ? error.message : '未知错误');
+    }
+  };
 
   const loadFiles = async () => {
     try {
@@ -151,7 +264,7 @@ export default function FilesPage() {
   const sortedFiles = sortItems(files, 'files');
 
   const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
+    if (!bytes || bytes === 0 || isNaN(bytes)) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -213,7 +326,26 @@ export default function FilesPage() {
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden relative">
+      {/* 拖放覆盖层 */}
+      {isDragOver && (
+        <div className="fixed inset-0 bg-primary-500/20 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 shadow-2xl border-2 border-dashed border-primary-500 max-w-md text-center">
+            <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-dark-olive-800 mb-2">
+              拖放文件到此处上传
+            </h3>
+            <p className="text-sm text-default-500">
+              支持多文件上传，单个文件最大 100MB
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* 顶部工具栏 */}
       <div className="bg-white border-b border-divider p-3 lg:p-4">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -226,7 +358,7 @@ export default function FilesPage() {
           {/* 工具按钮 */}
           <div className="flex items-center gap-2">
             {/* 上传按钮 */}
-            <UploadButton 
+            <UploadButton
               folderId={currentFolderId}
               onSuccess={loadFiles}
               className="flex-1 sm:flex-none bg-amber-brown-500 hover:bg-amber-brown-600 text-white"

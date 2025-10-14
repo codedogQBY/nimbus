@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { Button, Progress, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from '@heroui/react';
 import { UploadIcon, CheckCircle2Icon, XCircleIcon, FileIcon, FolderIcon, FilesIcon, ChevronDownIcon } from 'lucide-react';
 import ky from 'ky';
+import { useToast } from '@/components/toast-provider';
 
 interface UploadButtonProps {
   folderId?: number | null;
@@ -28,6 +29,7 @@ export function UploadButton({ folderId, onSuccess, className, size = 'md', isIc
   const [uploadTasks, setUploadTasks] = useState<UploadTask[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [totalProgress, setTotalProgress] = useState(0);
+  const { showError } = useToast();
 
   // 单文件上传
   const handleSingleFileSelect = () => {
@@ -133,7 +135,10 @@ export function UploadButton({ folderId, onSuccess, className, size = 'md', isIc
     // 检查文件大小
     const oversizedFiles = Array.from(files).filter(f => f.size > 100 * 1024 * 1024);
     if (oversizedFiles.length > 0) {
-      alert(`以下文件超过100MB限制：\n${oversizedFiles.map(f => f.name).join('\n')}`);
+      showError(
+        '文件大小超限',
+        `以下文件超过100MB限制：${oversizedFiles.map(f => f.name).join(', ')}`
+      );
       return;
     }
 

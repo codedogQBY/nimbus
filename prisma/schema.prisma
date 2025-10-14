@@ -243,6 +243,7 @@ model Folder {
   files        File[]
   shareSnapshots ShareSnapshot[] @relation("ShareSnapshotFolder")
 
+  @@unique([parentId, name], name: "unique_folder_parent_name")
   @@index([parentId])
   @@index([path])
   @@index([createdBy])

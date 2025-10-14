@@ -33,6 +33,7 @@ import {
   CrownIcon,
 } from 'lucide-react';
 import ky from 'ky';
+import { useToast } from '@/components/toast-provider';
 
 interface User {
   id: number;
@@ -65,6 +66,7 @@ export function AssignmentsTab() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedRole, setSelectedRole] = useState('');
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { showError, showSuccess, showWarning } = useToast();
 
   useEffect(() => {
     loadUsers();
@@ -102,14 +104,14 @@ export function AssignmentsTab() {
   const handleAssignRole = async (userId: number) => {
     const roleKeys = selectedRoles[userId];
     if (!roleKeys || roleKeys.size === 0) {
-      alert('请先选择角色');
+      showWarning('请选择角色', '请先选择要分配的角色');
       return;
     }
 
     try {
       const token = localStorage.getItem('token');
       const roleKey = Array.from(roleKeys)[0]; // 取第一个（单选）
-      
+
       await ky.post('/api/rbac/assign', {
         headers: { Authorization: `Bearer ${token}` },
         json: {
@@ -118,9 +120,9 @@ export function AssignmentsTab() {
         },
       }).json();
 
-      alert('角色分配成功');
+      showSuccess('角色分配成功');
       loadUsers(); // 重新加载用户列表
-      
+
       // 清除选择
       setSelectedRoles(prev => {
         const newState = { ...prev };
@@ -129,19 +131,19 @@ export function AssignmentsTab() {
       });
     } catch (error: any) {
       console.error('Assign role error:', error);
-      alert('角色分配失败：' + (error.message || '未知错误'));
+      showError('角色分配失败', error.message || '未知错误');
     }
   };
 
   const handleModalAssign = async () => {
     if (!currentUser || !selectedRole) {
-      alert('请选择角色');
+      showWarning('请选择角色', '请选择要分配的角色');
       return;
     }
 
     try {
       const token = localStorage.getItem('token');
-      
+
       await ky.post('/api/rbac/assign', {
         headers: { Authorization: `Bearer ${token}` },
         json: {
@@ -150,12 +152,12 @@ export function AssignmentsTab() {
         },
       }).json();
 
-      alert('角色分配成功');
+      showSuccess('角色分配成功');
       onClose();
       loadUsers(); // 重新加载用户列表
     } catch (error: any) {
       console.error('Assign role error:', error);
-      alert('角色分配失败：' + (error.message || '未知错误'));
+      showError('角色分配失败', error.message || '未知错误');
     }
   };
 

@@ -102,7 +102,7 @@ export async function POST(
             where: { id: file.storageSourceId },
             data: {
               quotaUsed: {
-                increment: file.size,
+                increment: Number(file.size), // 确保转换为Number
               },
             },
           });

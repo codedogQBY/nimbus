@@ -31,44 +31,64 @@ export async function POST(request: NextRequest) {
 
     // 如果有relativePath，需要创建对应的文件夹结构
     let targetFolderId = folderId ? parseInt(folderId) : null;
-    
+
     if (relativePath) {
       // 解析路径并创建文件夹结构
       const pathParts = relativePath.split('/').filter(p => p);
       pathParts.pop(); // 移除文件名，只保留文件夹路径
-      
+
       let currentFolderId = targetFolderId;
-      let currentPath = targetFolderId ? 
-        (await prisma.folder.findUnique({ where: { id: targetFolderId } }))?.path || '/' : 
+      let currentPath = targetFolderId ?
+        (await prisma.folder.findUnique({ where: { id: targetFolderId } }))?.path || '/' :
         '/';
-      
+
       for (const folderName of pathParts) {
         const folderPath = currentPath === '/' ? `/${folderName}` : `${currentPath}/${folderName}`;
-        
-        // 检查文件夹是否存在
+
+        // 检查文件夹是否存在（更严格的唯一性检查）
         let folder = await prisma.folder.findFirst({
           where: {
             name: folderName,
             parentId: currentFolderId,
+            path: folderPath,
           },
         });
-        
+
         // 不存在则创建
         if (!folder) {
-          folder = await prisma.folder.create({
-            data: {
-              name: folderName,
-              path: folderPath,
-              parentId: currentFolderId,
-              createdBy: user.id,
-            },
-          });
+          // 使用 upsert 来避免竞争条件
+          try {
+            folder = await prisma.folder.create({
+              data: {
+                name: folderName,
+                path: folderPath,
+                parentId: currentFolderId,
+                createdBy: user.id,
+              },
+            });
+          } catch (error: any) {
+            // 如果创建失败（可能是并发创建），再次查询
+            if (error.code === 'P2002') { // Unique constraint violation
+              folder = await prisma.folder.findFirst({
+                where: {
+                  name: folderName,
+                  parentId: currentFolderId,
+                  path: folderPath,
+                },
+              });
+              if (!folder) {
+                throw error; // 如果仍然找不到，抛出原始错误
+              }
+            } else {
+              throw error;
+            }
+          }
         }
-        
+
         currentFolderId = folder.id;
         currentPath = folderPath;
       }
-      
+
       targetFolderId = currentFolderId;
     }
 

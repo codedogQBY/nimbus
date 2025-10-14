@@ -106,7 +106,7 @@ export default function DashboardLayout({
   };
 
   const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 GB';
+    if (!bytes || bytes === 0 || isNaN(bytes)) return '0 GB';
     const gb = bytes / (1024 * 1024 * 1024);
     return gb.toFixed(1) + ' GB';
   };

@@ -278,7 +278,7 @@ export async function DELETE(
       where: { id: file.storageSourceId },
       data: {
         quotaUsed: {
-          decrement: file.size,
+          decrement: Number(file.size), // 确保转换为Number
         },
       },
     });
