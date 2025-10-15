@@ -1,5 +1,3 @@
-const upyun = require("upyun") as any;
-
 import { StorageAdapter, UploadResult, StorageConfig } from "./index";
 
 export interface UpyunConfig extends StorageConfig {
@@ -40,16 +38,32 @@ export class UpyunAdapter implements StorageAdapter {
       hasPassword: !!cleanPassword,
     });
 
-    // 创建又拍云服务实例
-    this.service = new upyun.Service(cleanBucket, cleanOperator, cleanPassword);
+    // 动态导入又拍云SDK
+    let upyun: any;
+    try {
+      upyun = require("upyun");
+    } catch (error: any) {
+      throw new Error(`无法导入又拍云SDK: ${error.message}`);
+    }
+    
+    // 创建又拍云服务实例 - 修复：使用正确的导入路径
+    try {
+      this.service = new upyun.default.Service(cleanBucket, cleanOperator, cleanPassword);
+    } catch (error: any) {
+      throw new Error(`无法创建又拍云Service: ${error.message}`);
+    }
 
-    // 创建又拍云客户端实例，关键：传入options参数
+    // 创建又拍云客户端实例
     const options = {
-      domain: config.apiDomain || "v0.api.upyun.com", // 使用REST API成功的域名
-      protocol: "http", // 使用http协议
+      domain: config.apiDomain || "v0.api.upyun.com",
+      protocol: "http",
     };
 
-    this.client = new upyun.Client(this.service, options);
+    try {
+      this.client = new upyun.default.Client(this.service, options);
+    } catch (error: any) {
+      throw new Error(`无法创建又拍云Client: ${error.message}`);
+    }
     this.domain = cleanDomain; // 这是CDN访问域名
     this.protocol = config.protocol || "https";
   }
