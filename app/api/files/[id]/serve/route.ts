@@ -157,7 +157,7 @@ export async function GET(
     // 创建存储适配器
     const adapter = StorageAdapterFactory.create(
       file.storageSource.type as StorageType,
-      file.storageSource.config,
+      file.storageSource.config as Record<string, any>,
     );
 
     // 下载文件

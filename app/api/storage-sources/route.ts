@@ -164,7 +164,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(
         {
           error: "数据验证失败",
-          details: error.errors,
+          details: error.issues,
         },
         { status: 400 },
       );

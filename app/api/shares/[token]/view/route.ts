@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 // POST /api/shares/[token]/view - 记录分享访问
 export async function POST(
   request: NextRequest,
-  { params }: { params: { token: string } },
+  { params }: { params: Promise<{ token: string }> },
 ) {
   try {
     const { token } = await params;

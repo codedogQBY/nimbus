@@ -8,7 +8,7 @@ import prisma from "@/lib/prisma";
 // POST /api/storage-sources/[id]/test - 测试现有存储源连接
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await getCurrentUser(request);
@@ -62,11 +62,11 @@ export async function POST(
       }
 
       // 对于本地存储，确保有默认配置
-      if (source.type === "local" && (!config || !config.basePath)) {
+      if (source.type === "local" && (!config || !(config as any).basePath)) {
         config = {
           basePath: "./storage",
           maxFileSize: 100 * 1024 * 1024,
-          ...config,
+          ...(config as object),
         };
         console.log("Using default local storage config:", config);
       }
@@ -74,7 +74,7 @@ export async function POST(
       // 创建存储适配器
       const adapter = StorageAdapterFactory.create(
         source.type as StorageType,
-        config,
+        config as any,
       );
 
       // 对于本地存储，需要先初始化

@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
       shareName = folder.name;
 
       // 递归获取文件夹的完整结构
-      async function getFolderSnapshot(folderId: number): Promise<any> {
+      const getFolderSnapshot = async (folderId: number): Promise<any> => {
         const subFolders = await prisma.folder.findMany({
           where: { parentId: folderId },
           orderBy: { name: "asc" },
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
           folders: folderSnapshots,
           files: fileSnapshots,
         };
-      }
+      };
 
       const folderContents = await getFolderSnapshot(folder.id);
 
@@ -198,11 +198,13 @@ export async function POST(request: NextRequest) {
       };
 
       // 计算统计信息
-      function calculateStats(contents: any): {
+      const calculateStats = (
+        contents: any,
+      ): {
         files: number;
         folders: number;
         size: number;
-      } {
+      } => {
         let files = contents.files.length;
         let folders = contents.folders.length;
         let size = contents.files.reduce(
@@ -219,7 +221,7 @@ export async function POST(request: NextRequest) {
         }
 
         return { files, folders, size };
-      }
+      };
 
       const stats = calculateStats(folderContents);
 

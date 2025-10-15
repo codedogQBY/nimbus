@@ -68,62 +68,64 @@ export async function POST(request: NextRequest) {
     }
 
     // 使用事务批量删除用户及其相关数据
-    const result = await prisma.$transaction(async (tx: typeof prisma) => {
-      const deletedUsers = [];
+    const result = await prisma.$transaction(
+      async (tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]) => {
+        const deletedUsers = [];
 
-      for (const userId of userIds) {
-        // 删除用户相关的分享
-        await tx.share.deleteMany({
-          where: { createdBy: userId },
-        });
-
-        // 删除用户的文件
-        await tx.file.deleteMany({
-          where: { uploadedBy: userId },
-        });
-
-        // 删除用户的文件夹
-        await tx.folder.deleteMany({
-          where: { createdBy: userId },
-        });
-
-        // 删除用户角色关联
-        await tx.userRole.deleteMany({
-          where: { userId },
-        });
-
-        // 删除邮件验证记录
-        await tx.emailVerification.deleteMany({
-          where: { userId },
-        });
-
-        // 删除邮件日志（注意：EmailLog表没有userId字段，需要通过email关联）
-        const userToDelete = await tx.user.findUnique({
-          where: { id: userId },
-          select: { email: true },
-        });
-
-        if (userToDelete) {
-          await tx.emailLog.deleteMany({
-            where: { email: userToDelete.email },
+        for (const userId of userIds) {
+          // 删除用户相关的分享
+          await tx.share.deleteMany({
+            where: { createdBy: userId },
           });
+
+          // 删除用户的文件
+          await tx.file.deleteMany({
+            where: { uploadedBy: userId },
+          });
+
+          // 删除用户的文件夹
+          await tx.folder.deleteMany({
+            where: { createdBy: userId },
+          });
+
+          // 删除用户角色关联
+          await tx.userRole.deleteMany({
+            where: { userId },
+          });
+
+          // 删除邮件验证记录
+          await tx.emailVerification.deleteMany({
+            where: { userId },
+          });
+
+          // 删除邮件日志（注意：EmailLog表没有userId字段，需要通过email关联）
+          const userToDelete = await tx.user.findUnique({
+            where: { id: userId },
+            select: { email: true },
+          });
+
+          if (userToDelete) {
+            await tx.emailLog.deleteMany({
+              where: { email: userToDelete.email },
+            });
+          }
+
+          // 删除权限日志
+          await tx.permissionLog.deleteMany({
+            where: { userId },
+          });
+
+          // 删除用户
+          const deletedUser = await tx.user.delete({
+            where: { id: userId },
+          });
+
+          deletedUsers.push(deletedUser);
         }
 
-        // 删除权限日志
-        await tx.permissionLog.deleteMany({
-          where: { userId },
-        });
-
-        // 删除用户
-        const deletedUser = await tx.user.delete({
-          where: { id: userId },
-        });
-
-        deletedUsers.push(deletedUser);
-      }
-
-      return deletedUsers;
-    });
+        return deletedUsers;
+      },
+    );
 
     return NextResponse.json({
       message: `成功删除 ${result.length} 个用户`,

@@ -76,8 +76,7 @@ export class R2Adapter implements StorageAdapter {
       requestHandler: {
         httpsAgent,
       },
-      // 设置超时和重试
-      requestTimeout: 30000,
+      // 设置重试
       maxAttempts: 3,
     });
   }
@@ -150,7 +149,10 @@ export class R2Adapter implements StorageAdapter {
     const metadata = {
       uploadedAt: new Date().toISOString(),
       size: buffer.length.toString(),
-      hash: crypto.createHash("md5").update(buffer).digest("hex"),
+      hash: crypto
+        .createHash("md5")
+        .update(buffer as any)
+        .digest("hex"),
       ...options?.metadata,
     };
 
@@ -160,7 +162,10 @@ export class R2Adapter implements StorageAdapter {
       Body: buffer,
       ContentType: contentType || "application/octet-stream",
       Metadata: metadata,
-      ContentMD5: crypto.createHash("md5").update(buffer).digest("base64"),
+      ContentMD5: crypto
+        .createHash("md5")
+        .update(buffer as any)
+        .digest("base64"),
     });
 
     const response = await this.client.send(command);
@@ -196,7 +201,10 @@ export class R2Adapter implements StorageAdapter {
     const metadata = {
       uploadedAt: new Date().toISOString(),
       size: buffer.length.toString(),
-      hash: crypto.createHash("md5").update(buffer).digest("hex"),
+      hash: crypto
+        .createHash("md5")
+        .update(buffer as any)
+        .digest("hex"),
       chunks: chunks.toString(),
       ...options?.metadata,
     };
@@ -604,7 +612,7 @@ export class R2Adapter implements StorageAdapter {
       return urlObj.pathname.startsWith("/")
         ? urlObj.pathname.slice(1)
         : urlObj.pathname;
-    } catch (error) {
+    } catch (_error) {
       // 如果不是有效的URL，直接返回原始路径
       return url;
     }

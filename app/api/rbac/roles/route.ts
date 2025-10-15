@@ -75,10 +75,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description } = body;
+    const { name, displayName, description } = body;
 
     if (!name) {
       return NextResponse.json({ error: "角色名称不能为空" }, { status: 400 });
+    }
+
+    if (!displayName) {
+      return NextResponse.json(
+        { error: "角色显示名称不能为空" },
+        { status: 400 },
+      );
     }
 
     // 检查角色名是否已存在
@@ -93,6 +100,7 @@ export async function POST(request: NextRequest) {
     const role = await prisma.role.create({
       data: {
         name,
+        displayName,
         description,
         isSystem: false,
       },

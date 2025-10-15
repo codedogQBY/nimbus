@@ -4,9 +4,9 @@ import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 
 // POST /api/shares/[token]/verify - 验证分享密码
-export async function POST(
+export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } },
+  { params }: { params: Promise<{ token: string }> },
 ) {
   try {
     const { token } = await params;

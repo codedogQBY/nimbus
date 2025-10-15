@@ -7,7 +7,7 @@ import { requirePermissions } from "@/lib/permissions";
 // DELETE /api/shares/delete/[id] - 删除分享
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await getCurrentUser(request);

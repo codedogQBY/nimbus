@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Card,
@@ -13,7 +13,7 @@ import {
 import { EyeIcon, EyeOffIcon, CheckCircle2Icon } from "lucide-react";
 import ky from "ky";
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
@@ -238,5 +238,13 @@ function PasswordCheck({ checked, text }: { checked: boolean; text: string }) {
         {text}
       </span>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

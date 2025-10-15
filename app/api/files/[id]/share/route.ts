@@ -6,7 +6,7 @@ import { StorageAdapterFactory, StorageType } from "@/lib/storage-adapters";
 // GET /api/files/[id]/share?token=xxx - 通过分享访问文件
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -81,7 +81,7 @@ export async function GET(
     // 创建存储适配器
     const adapter = StorageAdapterFactory.create(
       file.storageSource.type as StorageType,
-      file.storageSource.config,
+      file.storageSource.config as Record<string, any>,
     );
 
     // 下载文件

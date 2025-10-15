@@ -1,6 +1,6 @@
 import prisma from "../prisma";
 
-import { FolderContents, FileInfo } from "./base";
+import { FolderContents, FileInfo, FolderInfo } from "./base";
 import { storageManager } from "./manager";
 
 export interface SyncResult {
@@ -87,7 +87,7 @@ export class FolderSyncManager {
       sourceName: string;
       sourceType: string;
     })[] = [];
-    const allFolders = new Map<string, FileInfo>();
+    const allFolders = new Map<string, FolderInfo>();
     const sourceStatus: SourceStatus[] = [];
 
     await Promise.allSettled(
@@ -137,7 +137,7 @@ export class FolderSyncManager {
 
     return {
       files: allFiles,
-      folders,
+      folders: folders,
       totalFiles: allFiles.length,
       totalSize: allFiles.reduce((sum, f) => sum + f.size, 0),
       sourceStatus,

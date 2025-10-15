@@ -36,8 +36,6 @@ async function handleSharesOnFileDelete(fileId: number) {
       },
     });
 
-    let updatedFolderShares = 0;
-
     for (const snapshot of folderShareSnapshots) {
       // 检查快照数据中是否包含被删除的文件
       if (
@@ -45,7 +43,6 @@ async function handleSharesOnFileDelete(fileId: number) {
         containsFile(snapshot.snapshotData, fileId)
       ) {
         await updateFolderSnapshotOnFileDelete(snapshot.id, fileId);
-        updatedFolderShares++;
       }
     }
   } catch (error) {

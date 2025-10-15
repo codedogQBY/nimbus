@@ -69,56 +69,58 @@ export async function DELETE(
     }
 
     // 使用事务删除用户及其相关数据
-    await prisma.$transaction(async (tx: typeof prisma) => {
-      // 1. 删除用户的分享
-      if (targetUser.sharesCreated.length > 0) {
-        await tx.share.deleteMany({
-          where: { createdBy: targetUserId },
-        });
-      }
+    await prisma.$transaction(
+      async (tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]) => {
+        // 1. 删除用户的分享
+        if (targetUser.sharesCreated.length > 0) {
+          await tx.share.deleteMany({
+            where: { createdBy: targetUserId },
+          });
+        }
 
-      // 2. 删除用户的文件（注意：这里只删除数据库记录，不删除物理文件）
-      // 在实际应用中，可能需要将文件转移给其他用户或删除物理文件
-      if (targetUser.filesUploaded.length > 0) {
-        await tx.file.deleteMany({
-          where: { uploadedBy: targetUserId },
-        });
-      }
+        // 2. 删除用户的文件（注意：这里只删除数据库记录，不删除物理文件）
+        // 在实际应用中，可能需要将文件转移给其他用户或删除物理文件
+        if (targetUser.filesUploaded.length > 0) {
+          await tx.file.deleteMany({
+            where: { uploadedBy: targetUserId },
+          });
+        }
 
-      // 3. 删除用户的文件夹
-      if (targetUser.foldersCreated.length > 0) {
-        await tx.folder.deleteMany({
-          where: { createdBy: targetUserId },
-        });
-      }
+        // 3. 删除用户的文件夹
+        if (targetUser.foldersCreated.length > 0) {
+          await tx.folder.deleteMany({
+            where: { createdBy: targetUserId },
+          });
+        }
 
-      // 4. 删除用户角色关联
-      if (targetUser.userRoles.length > 0) {
-        await tx.userRole.deleteMany({
+        // 4. 删除用户角色关联
+        if (targetUser.userRoles.length > 0) {
+          await tx.userRole.deleteMany({
+            where: { userId: targetUserId },
+          });
+        }
+
+        // 5. 删除邮件验证记录
+        await tx.emailVerification.deleteMany({
           where: { userId: targetUserId },
         });
-      }
 
-      // 5. 删除邮件验证记录
-      await tx.emailVerification.deleteMany({
-        where: { userId: targetUserId },
-      });
+        // 6. 删除邮件日志记录（通过邮箱删除）
+        await tx.emailLog.deleteMany({
+          where: { email: targetUser.email },
+        });
 
-      // 6. 删除邮件日志记录（通过邮箱删除）
-      await tx.emailLog.deleteMany({
-        where: { email: targetUser.email },
-      });
+        // 7. 删除权限日志记录
+        await tx.permissionLog.deleteMany({
+          where: { userId: targetUserId },
+        });
 
-      // 7. 删除权限日志记录
-      await tx.permissionLog.deleteMany({
-        where: { userId: targetUserId },
-      });
-
-      // 8. 最后删除用户
-      await tx.user.delete({
-        where: { id: targetUserId },
-      });
-    });
+        // 8. 最后删除用户
+        await tx.user.delete({
+          where: { id: targetUserId },
+        });
+      },
+    );
 
     return NextResponse.json({
       success: true,

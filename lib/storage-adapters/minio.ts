@@ -16,7 +16,7 @@ export class MinIOAdapter implements StorageAdapter {
     this.useSSL = config.useSSL || false;
   }
 
-  async upload(file: File, path: string): Promise<UploadResult> {
+  async upload(_file: File, _path: string): Promise<UploadResult> {
     try {
       // TODO: 实现 MinIO 上传逻辑
       // 可以使用 MinIO 客户端库
@@ -29,7 +29,7 @@ export class MinIOAdapter implements StorageAdapter {
     }
   }
 
-  async download(url: string): Promise<Buffer> {
+  async download(_url: string): Promise<Buffer> {
     try {
       // TODO: 实现 MinIO 下载逻辑
       throw new Error("MinIO download not implemented yet");
@@ -40,12 +40,12 @@ export class MinIOAdapter implements StorageAdapter {
     }
   }
 
-  async delete(path: string): Promise<boolean> {
+  async delete(_path: string): Promise<boolean> {
     try {
       // TODO: 实现 MinIO 删除逻辑
       return false;
-    } catch (error) {
-      console.error("Delete failed:", error);
+    } catch (_error) {
+      console.error("Delete failed:", _error);
 
       return false;
     }

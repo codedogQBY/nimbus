@@ -15,9 +15,9 @@ export class LocalStorageAdapter implements StorageAdapter {
   constructor(config: LocalConfig) {
     // 确保配置正确
     this.config = {
-      basePath: config.basePath || config.path || "./storage", // 兼容性处理
-      maxFileSize: config.maxFileSize || 100 * 1024 * 1024, // 默认100MB
       ...config,
+      basePath: config.basePath || (config as any).path || "./storage", // 兼容性处理
+      maxFileSize: config.maxFileSize || 100 * 1024 * 1024, // 默认100MB
     };
     this.name = "Local Storage";
 
@@ -77,20 +77,9 @@ export class LocalStorageAdapter implements StorageAdapter {
     }
   }
 
-  async download(path: string): Promise<Buffer> {
+  async download(filePath: string): Promise<Buffer> {
     try {
-      // 如果已经是一个路径（不是完整URL），直接使用；否则从URL中提取路径
-      let filePath: string;
-
-      if (path.startsWith("/api/files/local/")) {
-        filePath = decodeURIComponent(path.replace("/api/files/local/", ""));
-      } else {
-        filePath = path;
-      }
-
-      console.log(
-        `Downloading file from local storage: ${path} -> ${filePath}`,
-      );
+      console.log(`Downloading file from local storage: ${filePath}`);
 
       const fullPath = path.join(this.config.basePath, filePath);
       const buffer = await fs.readFile(fullPath);

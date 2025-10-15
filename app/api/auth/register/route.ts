@@ -98,20 +98,24 @@ export async function POST(request: NextRequest) {
     let user;
 
     try {
-      user = await prisma.$transaction(async (tx: typeof prisma) => {
-        // 创建未激活的用户账号
-        const newUser = await tx.user.create({
-          data: {
-            username,
-            email,
-            passwordHash,
-            isActive: false,
-          },
-        });
+      user = await prisma.$transaction(
+        async (
+          tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+        ) => {
+          // 创建未激活的用户账号
+          const newUser = await tx.user.create({
+            data: {
+              username,
+              email,
+              passwordHash,
+              isActive: false,
+            },
+          });
 
-        // 发送验证邮件（在事务外处理）
-        return newUser;
-      });
+          // 发送验证邮件（在事务外处理）
+          return newUser;
+        },
+      );
 
       // 在事务外发送邮件，如果失败则删除用户
       await emailService.sendVerificationEmail(email, "register", user.id);

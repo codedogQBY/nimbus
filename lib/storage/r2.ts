@@ -219,7 +219,7 @@ export class R2StorageSource extends StorageSource {
     // 删除文件夹标记
     try {
       await this.deleteFile(folderPath);
-    } catch (error) {
+    } catch (_error) {
       // 文件夹标记可能不存在
     }
   }
@@ -322,7 +322,7 @@ export class R2StorageSource extends StorageSource {
       const contents = await this.listFolder(folderPath);
 
       return contents.files.length > 0 || contents.folders.length > 0;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }

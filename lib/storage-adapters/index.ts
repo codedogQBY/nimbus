@@ -84,7 +84,7 @@ export enum StorageType {
 export class StorageAdapterFactory {
   private static adapters = new Map<
     StorageType,
-    new (config: StorageConfig) => StorageAdapter
+    new (config: any) => StorageAdapter
   >();
 
   static {
@@ -298,7 +298,7 @@ export class StorageManager {
   async testAllConnections(): Promise<Record<number, boolean>> {
     const results: Record<number, boolean> = {};
 
-    for (const [sourceId, adapter] of this.adapters) {
+    for (const [sourceId, adapter] of Array.from(this.adapters.entries())) {
       try {
         results[sourceId] = await adapter.testConnection();
       } catch (error) {

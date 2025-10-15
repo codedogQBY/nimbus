@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import * as jwt from "jsonwebtoken";
 import { NextRequest } from "next/server";
 
 import prisma from "./prisma";
@@ -53,7 +53,7 @@ export async function verifyPassword(
 export function generateToken(
   payload: Omit<JWTPayload, "iat" | "exp">,
 ): string {
-  return jwt.sign(payload, JWT_SECRET, {
+  return (jwt as any).sign(payload, JWT_SECRET, {
     expiresIn: JWT_EXPIRES_IN,
   });
 }
@@ -63,7 +63,7 @@ export function generateToken(
  */
 export function verifyToken(token: string): JWTPayload {
   try {
-    return jwt.verify(token, JWT_SECRET) as JWTPayload;
+    return (jwt as any).verify(token, JWT_SECRET) as JWTPayload;
   } catch (error) {
     throw new Error("Invalid or expired token");
   }

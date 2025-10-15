@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 // POST /api/shares/[token]/download - 记录下载
 export async function POST(
   request: NextRequest,
-  { params }: { params: { token: string } },
+  { params }: { params: Promise<{ token: string }> },
 ) {
   try {
     const { token } = await params;
@@ -61,7 +61,7 @@ export async function POST(
 // GET /api/shares/[token]/download - 获取下载链接
 export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } },
+  { params }: { params: Promise<{ token: string }> },
 ) {
   try {
     const { token } = await params;

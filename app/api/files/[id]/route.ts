@@ -337,7 +337,7 @@ export async function DELETE(
 
     // 更新存储源使用量，确保不会变成负数
     const storageSource = await prisma.storageSource.findUnique({
-      where: { id: file.sourceId },
+      where: { id: file.storageSource.id },
       select: { quotaUsed: true },
     });
 
@@ -347,7 +347,7 @@ export async function DELETE(
       const newUsed = Math.max(0, currentUsed - fileSize); // 确保不为负数
 
       await prisma.storageSource.update({
-        where: { id: file.sourceId },
+        where: { id: file.storageSource.id },
         data: {
           quotaUsed: newUsed,
         },

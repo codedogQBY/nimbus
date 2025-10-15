@@ -26,16 +26,16 @@ export class QiniuAdapter implements StorageAdapter {
     this.config.useCdnDomain = false;
   }
 
-  private getZone(region: string): qiniu.zone.Zone {
-    const zoneMap: Record<string, qiniu.zone.Zone> = {
-      z0: qiniu.zone.Zone_z0, // 华东
-      z1: qiniu.zone.Zone_z1, // 华北
-      z2: qiniu.zone.Zone_z2, // 华南
-      na0: qiniu.zone.Zone_na0, // 北美
-      as0: qiniu.zone.Zone_as0, // 东南亚
+  private getZone(region: string): any {
+    const zoneMap: Record<string, any> = {
+      z0: (qiniu.zone as any).Zone_z0, // 华东
+      z1: (qiniu.zone as any).Zone_z1, // 华北
+      z2: (qiniu.zone as any).Zone_z2, // 华南
+      na0: (qiniu.zone as any).Zone_na0, // 北美
+      as0: (qiniu.zone as any).Zone_as0, // 东南亚
     };
 
-    return zoneMap[region] || qiniu.zone.Zone_z0;
+    return zoneMap[region] || (qiniu.zone as any).Zone_z0;
   }
 
   async upload(file: File, path: string): Promise<UploadResult> {
@@ -198,12 +198,12 @@ export class QiniuAdapter implements StorageAdapter {
   }
 
   // 获取文件的下载URL（支持私有空间）
-  getDownloadUrl(path: string, expires: number = 3600): string {
+  getDownloadUrl(path: string, _expires: number = 3600): string {
     const url = this.getUrl(path);
 
     // 如果需要签名（私有空间），生成带签名的URL
     // 这里可以根据配置决定是否需要签名，暂时默认为公开空间
-    // return this.generatePrivateDownloadUrl(url, expires);
+    // return this.generatePrivateDownloadUrl(url, _expires);
 
     return url;
   }

@@ -12,7 +12,7 @@ export class CloudinaryAdapter implements StorageAdapter {
     this.apiSecret = config.apiSecret;
   }
 
-  async upload(file: File, path: string): Promise<UploadResult> {
+  async upload(_file: File, _path: string): Promise<UploadResult> {
     try {
       // TODO: 实现 Cloudinary 上传逻辑
       throw new Error("Cloudinary upload not implemented yet");
@@ -24,7 +24,7 @@ export class CloudinaryAdapter implements StorageAdapter {
     }
   }
 
-  async download(url: string): Promise<Buffer> {
+  async download(_url: string): Promise<Buffer> {
     try {
       // TODO: 实现 Cloudinary 下载逻辑
       throw new Error("Cloudinary download not implemented yet");
@@ -35,12 +35,12 @@ export class CloudinaryAdapter implements StorageAdapter {
     }
   }
 
-  async delete(path: string): Promise<boolean> {
+  async delete(_path: string): Promise<boolean> {
     try {
       // TODO: 实现 Cloudinary 删除逻辑
       return false;
-    } catch (error) {
-      console.error("Delete failed:", error);
+    } catch (_error) {
+      console.error("Delete failed:", _error);
 
       return false;
     }

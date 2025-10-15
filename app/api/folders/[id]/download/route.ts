@@ -18,7 +18,7 @@ async function getAllFilesFromSnapshot(
     // 获取所有唯一的存储源ID
     const storageSourceIds = Array.from(
       new Set(contents.files.map((file: any) => file.storageSourceId)),
-    );
+    ) as number[];
 
     // 批量获取存储源配置
     const storageSources = await prisma.storageSource.findMany({
@@ -254,7 +254,7 @@ async function addFilesToArchive(
       // 创建存储适配器
       const adapter = StorageAdapterFactory.create(
         file.storageSource.type as StorageType,
-        file.storageSource.config,
+        file.storageSource.config as Record<string, any>,
       );
 
       // 下载文件内容

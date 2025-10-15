@@ -42,11 +42,11 @@ export async function POST(
     }
 
     // 递归复制文件夹
-    async function copyFolderRecursive(
+    const copyFolderRecursive = async (
       sourceFolderId: number,
       targetParentId: number | null,
       targetPath: string,
-    ): Promise<number> {
+    ): Promise<number> => {
       // 获取源文件夹信息
       const folder = await prisma.folder.findUnique({
         where: { id: sourceFolderId },
@@ -127,7 +127,7 @@ export async function POST(
       }
 
       return newFolder.id;
-    }
+    };
 
     // 确定目标路径
     let targetPath = "/";

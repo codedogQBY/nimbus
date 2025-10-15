@@ -215,7 +215,7 @@ export function RolesTab() {
                           >
                             管理权限
                           </DropdownItem>
-                          {!role.isSystem && (
+                          {!role.isSystem ? (
                             <DropdownItem
                               key="delete"
                               color="danger"
@@ -223,7 +223,7 @@ export function RolesTab() {
                             >
                               删除角色
                             </DropdownItem>
-                          )}
+                          ) : null}
                         </DropdownMenu>
                       </Dropdown>
                     </TableCell>
@@ -280,7 +280,7 @@ export function RolesTab() {
                         >
                           管理权限
                         </DropdownItem>
-                        {!role.isSystem && (
+                        {!role.isSystem ? (
                           <DropdownItem
                             key="delete"
                             color="danger"
@@ -288,7 +288,7 @@ export function RolesTab() {
                           >
                             删除角色
                           </DropdownItem>
-                        )}
+                        ) : null}
                       </DropdownMenu>
                     </Dropdown>
                   </div>

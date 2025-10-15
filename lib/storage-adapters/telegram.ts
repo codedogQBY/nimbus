@@ -10,7 +10,7 @@ export class TelegramAdapter implements StorageAdapter {
     this.chatId = config.chatId;
   }
 
-  async upload(file: File, path: string): Promise<UploadResult> {
+  async upload(_file: File, _path: string): Promise<UploadResult> {
     try {
       // TODO: 实现 Telegram 上传逻辑
       throw new Error("Telegram upload not implemented yet");
@@ -22,7 +22,7 @@ export class TelegramAdapter implements StorageAdapter {
     }
   }
 
-  async download(url: string): Promise<Buffer> {
+  async download(_url: string): Promise<Buffer> {
     try {
       // TODO: 实现 Telegram 下载逻辑
       throw new Error("Telegram download not implemented yet");
@@ -33,12 +33,12 @@ export class TelegramAdapter implements StorageAdapter {
     }
   }
 
-  async delete(path: string): Promise<boolean> {
+  async delete(_path: string): Promise<boolean> {
     try {
       // TODO: 实现 Telegram 删除逻辑
       return false;
-    } catch (error) {
-      console.error("Delete failed:", error);
+    } catch (_error) {
+      console.error("Delete failed:", _error);
 
       return false;
     }

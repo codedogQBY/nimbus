@@ -224,7 +224,7 @@ export async function POST(request: NextRequest) {
     // 使用存储适配器上传文件
     const adapter = StorageAdapterFactory.create(
       storageSource.type as StorageType,
-      storageSource.config,
+      storageSource.config as Record<string, any>,
     );
 
     // 对于本地存储，需要先初始化

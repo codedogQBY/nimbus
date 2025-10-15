@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 // GET /api/shares/[token] - 获取分享信息（使用快照数据）
 export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } },
+  { params }: { params: Promise<{ token: string }> },
 ) {
   try {
     const { token } = await params;

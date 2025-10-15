@@ -87,7 +87,7 @@ export async function POST(
     }
 
     // 递归更新所有子文件夹的路径
-    async function updateFolderPaths(folderId: number, newBasePath: string) {
+    const updateFolderPaths = async (folderId: number, newBasePath: string) => {
       const folder = await prisma.folder.findUnique({
         where: { id: folderId },
       });
@@ -113,7 +113,7 @@ export async function POST(
 
         await updateFolderPaths(subfolder.id, subPath);
       }
-    }
+    };
 
     // 更新文件夹的父ID
     await prisma.folder.update({

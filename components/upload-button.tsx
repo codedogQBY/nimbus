@@ -264,7 +264,9 @@ export function UploadButton({
     });
 
     // 对每个文件夹分组进行串行处理，避免重复创建文件夹
-    for (const [folderPath, folderTasks] of filesByFolder.entries()) {
+    for (const [folderPath, folderTasks] of Array.from(
+      filesByFolder.entries(),
+    )) {
       console.log(
         `Uploading ${folderTasks.length} files to folder: ${folderPath || "root"}`,
       );
@@ -281,7 +283,7 @@ export function UploadButton({
 
         for (let i = 0; i < remainingTasks.length; i += concurrency) {
           const batch = remainingTasks.slice(i, i + concurrency);
-          const batchPromises = batch.map((task) => {
+          const batchPromises = batch.map((task: UploadTask) => {
             const taskIndex = tasks.indexOf(task);
 
             return uploadFile(task, taskIndex);
@@ -340,7 +342,6 @@ export function UploadButton({
         ref={folderInputRef}
         multiple
         className="hidden"
-        directory="true"
         type="file"
         onChange={handleFileChange}
         // @ts-ignore - webkitdirectory is not in the standard type definition

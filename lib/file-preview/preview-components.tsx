@@ -549,6 +549,7 @@ export function VideoPreview({ file, onClose }: PreviewComponentProps) {
                 }}
                 onLoadStart={() => setLoading(true)}
               >
+                <track default kind="captions" label="English" srcLang="en" />
                 您的浏览器不支持视频播放
               </video>
             ) : null}
@@ -944,6 +945,7 @@ export function AudioPreview({ file, onClose }: PreviewComponentProps) {
                   }}
                   onLoadStart={() => setLoading(true)}
                 >
+                  <track default kind="captions" label="English" srcLang="en" />
                   您的浏览器不支持音频播放
                 </audio>
               </div>

@@ -38,9 +38,9 @@ import { ShareAuthenticatedImage } from "@/components/share-authenticated-image"
 import { canPreview } from "@/lib/file-preview/types";
 
 interface SharePageProps {
-  params: {
+  params: Promise<{
     token: string;
-  };
+  }>;
 }
 
 export default function SharePage({ params }: SharePageProps) {
@@ -59,7 +59,7 @@ export default function SharePage({ params }: SharePageProps) {
 
   // 文件夹内容相关状态
   const [folderContents, setFolderContents] = useState<any>(null);
-  const [currentFolderId, setCurrentFolderId] = useState<number | null>(null);
+  const [_currentFolderId, setCurrentFolderId] = useState<number | null>(null);
   const [loadingContents, setLoadingContents] = useState(false);
 
   useEffect(() => {
@@ -685,8 +685,7 @@ export default function SharePage({ params }: SharePageProps) {
                                             className="text-primary"
                                             size="sm"
                                             variant="light"
-                                            onPress={(e) => {
-                                              e.stopPropagation();
+                                            onPress={() => {
                                               handleFilePreview(file);
                                             }}
                                           >
@@ -698,8 +697,7 @@ export default function SharePage({ params }: SharePageProps) {
                                             className="text-default-500"
                                             size="sm"
                                             variant="light"
-                                            onPress={(e) => {
-                                              e.stopPropagation();
+                                            onPress={() => {
                                               handleFilePreview(file);
                                             }}
                                           >

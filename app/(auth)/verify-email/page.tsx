@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Card,
@@ -13,7 +13,7 @@ import {
 import { MailIcon, TimerIcon } from "lucide-react";
 import ky from "ky";
 
-export default function VerifyEmailPage() {
+function VerifyEmailForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
@@ -212,5 +212,13 @@ export default function VerifyEmailPage() {
         </div>
       </CardBody>
     </Card>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <VerifyEmailForm />
+    </Suspense>
   );
 }

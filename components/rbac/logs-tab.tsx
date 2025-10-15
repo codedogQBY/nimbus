@@ -121,15 +121,9 @@ export function LogsTab() {
           size="sm"
           onChange={(e) => setFilter(e.target.value as any)}
         >
-          <SelectItem key="all" value="all">
-            全部
-          </SelectItem>
-          <SelectItem key="granted" value="granted">
-            已授权
-          </SelectItem>
-          <SelectItem key="denied" value="denied">
-            已拒绝
-          </SelectItem>
+          <SelectItem key="all">全部</SelectItem>
+          <SelectItem key="granted">已授权</SelectItem>
+          <SelectItem key="denied">已拒绝</SelectItem>
         </Select>
       </div>
 

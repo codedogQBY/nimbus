@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       data: {
         userId,
         roleId: role.id,
-        assignedBy: user.id,
+        grantedBy: user.id,
       },
     });
 

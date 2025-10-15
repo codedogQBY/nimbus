@@ -1,4 +1,4 @@
-import upyun from "upyun";
+const upyun = require("upyun") as any;
 
 import { StorageAdapter, UploadResult, StorageConfig } from "./index";
 
