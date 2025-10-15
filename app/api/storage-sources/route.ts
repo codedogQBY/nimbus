@@ -40,12 +40,17 @@ export async function GET(request: NextRequest) {
       }))
     );
 
-    const sourcesWithStats = sources.map((source: any) => ({
-      ...source,
-      fileCount: fileCounts.find((fc: any) => fc.sourceId === source.id)?.count || 0,
-      quotaUsed: Number(source.quotaUsed),
-      quotaLimit: Number(source.quotaLimit),
-    }));
+    const sourcesWithStats = sources.map((source: any) => {
+      const quotaUsed = Number(source.quotaUsed);
+      const quotaLimit = Number(source.quotaLimit);
+      
+      return {
+        ...source,
+        fileCount: fileCounts.find((fc: any) => fc.sourceId === source.id)?.count || 0,
+        quotaUsed: Math.max(0, isNaN(quotaUsed) ? 0 : quotaUsed), // 确保不为负数且不为NaN
+        quotaLimit: isNaN(quotaLimit) ? 0 : quotaLimit,
+      };
+    });
 
     return NextResponse.json({
       sources: sourcesWithStats,

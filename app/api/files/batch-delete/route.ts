@@ -306,15 +306,24 @@ async function deleteFileFromStorage(file: any) {
         console.warn(`Failed to delete physical file: ${file.storagePath}`);
       }
 
-      // 更新存储源使用量
-      await prisma.storageSource.update({
+      // 更新存储源使用量，确保不会变成负数
+      const storageSource = await prisma.storageSource.findUnique({
         where: { id: file.storageSourceId },
-        data: {
-          quotaUsed: {
-            decrement: Number(file.size), // 确保转换为Number
-          },
-        },
+        select: { quotaUsed: true }
       });
+      
+      if (storageSource) {
+        const currentUsed = Number(storageSource.quotaUsed);
+        const fileSize = Number(file.size);
+        const newUsed = Math.max(0, currentUsed - fileSize); // 确保不为负数
+        
+        await prisma.storageSource.update({
+          where: { id: file.storageSourceId },
+          data: {
+            quotaUsed: newUsed,
+          },
+        });
+      }
     }
   } catch (error) {
     console.error(`Failed to delete file from storage: ${file.storagePath}`, error);

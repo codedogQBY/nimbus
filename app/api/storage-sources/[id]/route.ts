@@ -120,16 +120,20 @@ export async function GET(
 
     // 计算存储使用情况
     const totalFiles = storageSource.files.length;
-    const totalUsed = storageSource.files.reduce((sum, file) => sum + Number(file.size), 0);
+    const calculatedUsed = storageSource.files.reduce((sum, file) => sum + Number(file.size), 0);
     const quotaLimit = storageSource.quotaLimit ? Number(storageSource.quotaLimit) : null;
+    
+    // 使用数据库中的quotaUsed字段，但确保不为负数且不为NaN
+    const dbQuotaUsed = Number(storageSource.quotaUsed);
+    const quotaUsed = Math.max(0, isNaN(dbQuotaUsed) ? calculatedUsed : dbQuotaUsed);
 
     const result = {
       ...storageSource,
       quotaLimit: quotaLimit,
-      quotaUsed: totalUsed,
+      quotaUsed: quotaUsed,
       fileCount: totalFiles,
-      usage: quotaLimit ? (totalUsed / quotaLimit * 100).toFixed(2) : null,
-      remaining: quotaLimit ? quotaLimit - totalUsed : null
+      usage: quotaLimit ? (quotaUsed / quotaLimit * 100).toFixed(2) : null,
+      remaining: quotaLimit ? quotaLimit - quotaUsed : null
     };
 
     return NextResponse.json({

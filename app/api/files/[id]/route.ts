@@ -273,15 +273,24 @@ export async function DELETE(
       where: { id: fileId },
     });
 
-    // 更新存储源使用量
-    await prisma.storageSource.update({
-      where: { id: file.storageSourceId },
-      data: {
-        quotaUsed: {
-          decrement: Number(file.size), // 确保转换为Number
-        },
-      },
+    // 更新存储源使用量，确保不会变成负数
+    const storageSource = await prisma.storageSource.findUnique({
+      where: { id: file.sourceId },
+      select: { quotaUsed: true }
     });
+    
+    if (storageSource) {
+      const currentUsed = Number(storageSource.quotaUsed);
+      const fileSize = Number(file.size);
+      const newUsed = Math.max(0, currentUsed - fileSize); // 确保不为负数
+      
+      await prisma.storageSource.update({
+        where: { id: file.sourceId },
+        data: {
+          quotaUsed: newUsed,
+        },
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
