@@ -1,0 +1,101 @@
+{
+  "name": "Nimbus Cloud Storage",
+  "short_name": "Nimbus",
+  "description": "智能云存储管理平台",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0070f3",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "zh-CN",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/icon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-64x64.png",
+      "sizes": "64x64",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-256x256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-1024x1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "文件管理",
+      "short_name": "文件",
+      "description": "快速访问文件管理",
+      "url": "/files",
+      "icons": [
+        {
+          "src": "/icons/icon-1024x1024.png",
+          "sizes": "1024x1024"
+        }
+      ]
+    },
+    {
+      "name": "分享管理",
+      "short_name": "分享",
+      "description": "快速访问分享管理",
+      "url": "/shares",
+      "icons": [
+        {
+          "src": "/icons/icon-1024x1024.png",
+          "sizes": "1024x1024"
+        }
+      ]
+    },
+    {
+      "name": "存储管理",
+      "short_name": "存储",
+      "description": "快速访问存储管理",
+      "url": "/storage",
+      "icons": [
+        {
+          "src": "/icons/icon-1024x1024.png",
+          "sizes": "1024x1024"
+        }
+      ]
+    }
+  ]
+}
