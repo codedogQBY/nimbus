@@ -1,8 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import prisma from '@/lib/prisma';
-import { hashPassword, validateUsername, validateEmail, validatePassword, getClientIp, getUserAgent } from '@/lib/auth';
-import EmailService from '@/lib/email';
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+import prisma from "@/lib/prisma";
+import {
+  hashPassword,
+  validateUsername,
+  validateEmail,
+  validatePassword,
+} from "@/lib/auth";
+import EmailService from "@/lib/email";
 
 // 注册请求验证 Schema
 const registerSchema = z.object({
@@ -15,13 +21,14 @@ export async function POST(request: NextRequest) {
   try {
     // 1. 解析请求体
     const body = await request.json();
-    
+
     // 2. 验证输入
     const validation = registerSchema.safeParse(body);
+
     if (!validation.success) {
       return NextResponse.json(
-        { error: '输入数据格式不正确', details: validation.error.issues },
-        { status: 400 }
+        { error: "输入数据格式不正确", details: validation.error.issues },
+        { status: 400 },
       );
     }
 
@@ -29,28 +36,31 @@ export async function POST(request: NextRequest) {
 
     // 3. 验证用户名格式
     const usernameValidation = validateUsername(username);
+
     if (!usernameValidation.valid) {
       return NextResponse.json(
         { error: usernameValidation.error },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // 4. 验证邮箱格式
     const emailValidation = validateEmail(email);
+
     if (!emailValidation.valid) {
       return NextResponse.json(
         { error: emailValidation.error },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // 5. 验证密码强度
     const passwordValidation = validatePassword(password);
+
     if (!passwordValidation.valid) {
       return NextResponse.json(
         { error: passwordValidation.error },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -60,10 +70,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingUsername) {
-      return NextResponse.json(
-        { error: '用户名已被使用' },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: "用户名已被使用" }, { status: 409 });
     }
 
     // 7. 检查邮箱是否已注册
@@ -74,10 +81,7 @@ export async function POST(request: NextRequest) {
 
     if (existingEmail) {
       if (existingEmail.isActive) {
-        return NextResponse.json(
-          { error: '该邮箱已被注册' },
-          { status: 409 }
-        );
+        return NextResponse.json({ error: "该邮箱已被注册" }, { status: 409 });
       } else {
         // 如果账号存在但未激活，删除旧账号重新注册
         await prisma.user.delete({
@@ -92,7 +96,7 @@ export async function POST(request: NextRequest) {
     // 9. 使用事务创建用户并发送验证邮件
     const emailService = new EmailService();
     let user;
-    
+
     try {
       user = await prisma.$transaction(async (tx: typeof prisma) => {
         // 创建未激活的用户账号
@@ -110,24 +114,26 @@ export async function POST(request: NextRequest) {
       });
 
       // 在事务外发送邮件，如果失败则删除用户
-      await emailService.sendVerificationEmail(email, 'register', user.id);
-      
+      await emailService.sendVerificationEmail(email, "register", user.id);
     } catch (error) {
       // 如果用户已创建但邮件发送失败，删除用户
       if (user) {
         try {
           await prisma.user.delete({ where: { id: user.id } });
         } catch (deleteError) {
-          console.error('Failed to delete user after email failure:', deleteError);
+          console.error(
+            "Failed to delete user after email failure:",
+            deleteError,
+          );
         }
       }
-      
+
       return NextResponse.json(
-        { 
-          error: '验证邮件发送失败，请检查邮箱地址或稍后重试',
-          details: error instanceof Error ? error.message : String(error)
+        {
+          error: "验证邮件发送失败，请检查邮箱地址或稍后重试",
+          details: error instanceof Error ? error.message : String(error),
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -135,21 +141,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: '注册成功，验证码已发送至您的邮箱',
+        message: "注册成功，验证码已发送至您的邮箱",
         email,
         verificationRequired: true,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error("Registration error:", error);
+
     return NextResponse.json(
-      { 
-        error: '注册失败，请稍后重试',
-        details: error instanceof Error ? error.message : String(error)
+      {
+        error: "注册失败，请稍后重试",
+        details: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-

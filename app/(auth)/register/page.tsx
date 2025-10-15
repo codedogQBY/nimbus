@@ -1,20 +1,28 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardBody, CardHeader, Input, Button, Link, Divider } from '@heroui/react';
-import { EyeIcon, EyeOffIcon, CheckCircle2Icon } from 'lucide-react';
-import ky from 'ky';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  Input,
+  Button,
+  Link,
+  Divider,
+} from "@heroui/react";
+import { EyeIcon, EyeOffIcon, CheckCircle2Icon } from "lucide-react";
+import ky from "ky";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   // 密码强度检查
   const passwordChecks = {
@@ -29,28 +37,34 @@ export default function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     // 前端验证
     if (!allChecksPassed) {
-      setError('请满足所有密码要求');
+      setError("请满足所有密码要求");
+
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await ky.post('/api/auth/register', {
-        json: { username, email, password },
-      }).json<any>();
+      const response = await ky
+        .post("/api/auth/register", {
+          json: { username, email, password },
+        })
+        .json<any>();
 
       if (response.success) {
         // 注册成功，跳转到邮箱验证页面
-        router.push(`/verify-email?email=${encodeURIComponent(response.email)}`);
+        router.push(
+          `/verify-email?email=${encodeURIComponent(response.email)}`,
+        );
       }
     } catch (err: any) {
       const errorData = await err.response?.json();
-      setError(errorData?.error || '注册失败，请重试');
+
+      setError(errorData?.error || "注册失败，请重试");
     } finally {
       setLoading(false);
     }
@@ -61,12 +75,14 @@ export default function RegisterPage() {
       <CardHeader className="flex flex-col gap-1 p-6 pb-0">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-dark-olive-800">创建账号</h1>
-          <p className="text-sm text-dark-olive-600 mt-2">加入 Nimbus，开始您的云存储之旅</p>
+          <p className="text-sm text-dark-olive-600 mt-2">
+            加入 Nimbus，开始您的云存储之旅
+          </p>
         </div>
       </CardHeader>
 
       <CardBody className="p-6 pt-4">
-        <form onSubmit={handleRegister} className="flex flex-col gap-4">
+        <form className="flex flex-col gap-4" onSubmit={handleRegister}>
           {error && (
             <div className="bg-danger-50 border border-danger-200 text-danger-700 px-4 py-3 rounded-lg text-sm">
               {error}
@@ -74,35 +90,29 @@ export default function RegisterPage() {
           )}
 
           <Input
-            label="用户名"
-            placeholder="3-20个字符，仅限字母数字下划线"
-            value={username}
-            onValueChange={setUsername}
-            variant="bordered"
             isRequired
             autoComplete="username"
             description="用于登录和显示"
+            label="用户名"
+            placeholder="3-20个字符，仅限字母数字下划线"
+            value={username}
+            variant="bordered"
+            onValueChange={setUsername}
           />
 
           <Input
+            isRequired
+            autoComplete="email"
+            description="用于接收验证码和找回密码"
             label="邮箱"
             placeholder="your@email.com"
             type="email"
             value={email}
-            onValueChange={setEmail}
             variant="bordered"
-            isRequired
-            autoComplete="email"
-            description="用于接收验证码和找回密码"
+            onValueChange={setEmail}
           />
 
           <Input
-            label="密码"
-            placeholder="至少8个字符"
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onValueChange={setPassword}
-            variant="bordered"
             isRequired
             autoComplete="new-password"
             endContent={
@@ -118,23 +128,31 @@ export default function RegisterPage() {
                 )}
               </button>
             }
+            label="密码"
+            placeholder="至少8个字符"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            variant="bordered"
+            onValueChange={setPassword}
           />
 
           <Input
-            label="确认密码"
-            placeholder="再次输入密码"
-            type={showPassword ? 'text' : 'password'}
-            value={confirmPassword}
-            onValueChange={setConfirmPassword}
-            variant="bordered"
             isRequired
             autoComplete="new-password"
+            label="确认密码"
+            placeholder="再次输入密码"
+            type={showPassword ? "text" : "password"}
+            value={confirmPassword}
+            variant="bordered"
+            onValueChange={setConfirmPassword}
           />
 
           {/* 密码强度指示器 */}
           {password && (
             <div className="bg-secondary-100 p-3 rounded-lg space-y-2">
-              <p className="text-xs font-medium text-dark-olive-700">密码要求：</p>
+              <p className="text-xs font-medium text-dark-olive-700">
+                密码要求：
+              </p>
               <div className="space-y-1 text-xs">
                 <PasswordCheck
                   checked={passwordChecks.length}
@@ -163,12 +181,12 @@ export default function RegisterPage() {
           )}
 
           <Button
-            type="submit"
-            color="primary"
-            size="lg"
-            isLoading={loading}
-            isDisabled={!allChecksPassed}
             className="w-full bg-amber-brown-500 hover:bg-amber-brown-600 text-white font-medium"
+            color="primary"
+            isDisabled={!allChecksPassed}
+            isLoading={loading}
+            size="lg"
+            type="submit"
           >
             注册
           </Button>
@@ -176,8 +194,8 @@ export default function RegisterPage() {
           <Divider className="my-2" />
 
           <div className="text-center text-sm text-dark-olive-600">
-            已有账号？{' '}
-            <Link href="/login" className="text-amber-brown-500 font-medium">
+            已有账号？{" "}
+            <Link className="text-amber-brown-500 font-medium" href="/login">
               立即登录
             </Link>
           </div>
@@ -193,13 +211,12 @@ function PasswordCheck({ checked, text }: { checked: boolean; text: string }) {
     <div className="flex items-center gap-2">
       <CheckCircle2Icon
         className={`w-3.5 h-3.5 ${
-          checked ? 'text-success' : 'text-default-300'
+          checked ? "text-success" : "text-default-300"
         }`}
       />
-      <span className={checked ? 'text-success' : 'text-default-500'}>
+      <span className={checked ? "text-success" : "text-default-500"}>
         {text}
       </span>
     </div>
   );
 }
-

@@ -12,7 +12,8 @@
 
 **接口**: `GET /api/storage-sources`
 
-**功能**: 
+**功能**:
+
 - 获取所有存储源配置
 - 计算总容量和已使用空间
 - 统计文件数量
@@ -20,6 +21,7 @@
 **权限**: `storage.view`
 
 **返回数据**:
+
 ```json
 {
   "sources": [
@@ -50,6 +52,7 @@
 **接口**: `GET /api/users`
 
 **功能**:
+
 - 获取所有用户列表
 - 获取用户角色信息
 - 统计用户数据（总数、活跃数、管理员数、今日活跃）
@@ -57,6 +60,7 @@
 **权限**: `users.view`
 
 **返回数据**:
+
 ```json
 {
   "users": [
@@ -90,6 +94,7 @@
 **接口**: `GET /api/shares`
 
 **功能**:
+
 - 获取用户的所有分享
 - 关联文件/文件夹信息
 - 统计浏览量、下载量
@@ -97,6 +102,7 @@
 **权限**: `shares.view`
 
 **返回数据**:
+
 ```json
 {
   "shares": [
@@ -132,6 +138,7 @@
 **接口**: `GET /api/files?folderId={id}`
 
 **功能**:
+
 - 获取指定文件夹下的文件和子文件夹
 - 支持分页、排序
 - 关联存储源信息
@@ -139,6 +146,7 @@
 **权限**: `files.view`
 
 **查询参数**:
+
 - `folderId`: 文件夹ID（可选，不传则返回根目录）
 - `page`: 页码（默认1）
 - `limit`: 每页数量（默认50）
@@ -146,6 +154,7 @@
 - `sortOrder`: 排序方向（asc/desc）
 
 **返回数据**:
+
 ```json
 {
   "folders": [
@@ -212,11 +221,11 @@ if (loading) {
 
 ```tsx
 try {
-  const response = await ky.get('/api/endpoint').json();
+  const response = await ky.get("/api/endpoint").json();
   setData(response);
 } catch (err) {
-  console.error('加载失败:', err);
-  setError('加载数据失败');
+  console.error("加载失败:", err);
+  setError("加载数据失败");
 } finally {
   setLoading(false);
 }
@@ -227,10 +236,12 @@ try {
 所有请求都携带 JWT Token：
 
 ```tsx
-const token = localStorage.getItem('token');
-const response = await ky.get('/api/endpoint', {
-  headers: { Authorization: `Bearer ${token}` },
-}).json();
+const token = localStorage.getItem("token");
+const response = await ky
+  .get("/api/endpoint", {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  .json();
 ```
 
 ### 4. 响应式设计
@@ -250,13 +261,13 @@ export async function GET(request: NextRequest) {
   // 1. 验证用户身份
   const user = await getCurrentUser(request);
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   // 2. 检查权限
-  const { authorized } = await requirePermissions(request, ['resource.view']);
+  const { authorized } = await requirePermissions(request, ["resource.view"]);
   if (!authorized) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   // 3. 返回数据
@@ -269,12 +280,14 @@ export async function GET(request: NextRequest) {
 ## 使用的技术栈
 
 ### 前端
+
 - **HTTP 客户端**: `ky` - 基于 fetch 的现代 HTTP 客户端
 - **UI 组件**: `@heroui/react` - 现代化 UI 组件库
 - **状态管理**: React Hooks (useState, useEffect)
 - **图标**: `lucide-react`
 
 ### 后端
+
 - **框架**: Next.js 14+ API Routes
 - **数据验证**: `zod` - TypeScript-first 验证库
 - **ORM**: Prisma
@@ -288,23 +301,27 @@ export async function GET(request: NextRequest) {
 ### 即将实现的功能
 
 1. **文件上传**
+
    - 拖拽上传
    - 进度条显示
    - 断点续传
 
 2. **文件操作**
+
    - 下载
    - 重命名
    - 移动
    - 删除
 
 3. **分享功能**
+
    - 创建分享链接
    - 设置密码
    - 设置过期时间
    - 访问统计
 
 4. **存储源管理**
+
    - 添加新存储源
    - 配置存储源
    - 测试连接
@@ -335,6 +352,7 @@ http://localhost:3000/shares
 ### 2. 检查权限控制
 
 使用不同角色的用户测试：
+
 - Owner: 所有权限
 - Admin: 大部分管理权限
 - Editor: 文件编辑权限
@@ -366,7 +384,8 @@ http://localhost:3000/shares
 
 ### Q: 数据加载慢？
 
-**A**: 
+**A**:
+
 - 检查数据库查询性能
 - 添加索引
 - 考虑分页加载
@@ -391,4 +410,3 @@ http://localhost:3000/shares
 
 **最后更新**: 2024-10-11  
 **状态**: ✅ 已完成并测试
-

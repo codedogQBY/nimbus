@@ -1,7 +1,7 @@
-import { StorageAdapter, UploadResult, StorageConfig } from './index';
+import { StorageAdapter, UploadResult, StorageConfig } from "./index";
 
 export class MinIOAdapter implements StorageAdapter {
-  name = 'MinIO';
+  name = "MinIO";
   private endpoint: string;
   private accessKey: string;
   private secretKey: string;
@@ -20,11 +20,11 @@ export class MinIOAdapter implements StorageAdapter {
     try {
       // TODO: 实现 MinIO 上传逻辑
       // 可以使用 MinIO 客户端库
-      throw new Error('MinIO upload not implemented yet');
+      throw new Error("MinIO upload not implemented yet");
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Upload failed',
+        error: error instanceof Error ? error.message : "Upload failed",
       };
     }
   }
@@ -32,9 +32,11 @@ export class MinIOAdapter implements StorageAdapter {
   async download(url: string): Promise<Buffer> {
     try {
       // TODO: 实现 MinIO 下载逻辑
-      throw new Error('MinIO download not implemented yet');
+      throw new Error("MinIO download not implemented yet");
     } catch (error) {
-      throw new Error(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Download failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
@@ -43,13 +45,15 @@ export class MinIOAdapter implements StorageAdapter {
       // TODO: 实现 MinIO 删除逻辑
       return false;
     } catch (error) {
-      console.error('Delete failed:', error);
+      console.error("Delete failed:", error);
+
       return false;
     }
   }
 
   getUrl(path: string): string {
-    const protocol = this.useSSL ? 'https' : 'http';
+    const protocol = this.useSSL ? "https" : "http";
+
     return `${protocol}://${this.endpoint}/${this.bucket}/${path}`;
   }
 

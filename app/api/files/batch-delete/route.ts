@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
-import { requirePermissions } from '@/lib/permissions';
-import { z } from 'zod';
-import { StorageAdapterFactory } from '@/lib/storage-adapters';
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+import prisma from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
+import { requirePermissions } from "@/lib/permissions";
+import { StorageAdapterFactory } from "@/lib/storage-adapters";
 
 // 批量删除请求验证
 const batchDeleteSchema = z.object({
@@ -18,7 +19,7 @@ async function handleSharesOnFileDelete(fileId: number) {
     const fileShareSnapshots = await prisma.shareSnapshot.findMany({
       where: {
         originalFileId: fileId,
-        type: 'file',
+        type: "file",
       },
       include: {
         share: true,
@@ -35,7 +36,7 @@ async function handleSharesOnFileDelete(fileId: number) {
     // 2. 查找所有文件夹类型的分享快照，检查是否包含被删除的文件
     const folderShareSnapshots = await prisma.shareSnapshot.findMany({
       where: {
-        type: 'folder',
+        type: "folder",
       },
       include: {
         share: true,
@@ -44,12 +45,15 @@ async function handleSharesOnFileDelete(fileId: number) {
 
     for (const snapshot of folderShareSnapshots) {
       // 检查快照数据中是否包含被删除的文件
-      if (snapshot.snapshotData && containsFile(snapshot.snapshotData, fileId)) {
+      if (
+        snapshot.snapshotData &&
+        containsFile(snapshot.snapshotData, fileId)
+      ) {
         await updateFolderSnapshotOnFileDelete(snapshot.id, fileId);
       }
     }
   } catch (error) {
-    console.error('处理文件分享删除逻辑时出错:', error);
+    console.error("处理文件分享删除逻辑时出错:", error);
     // 不抛出错误，避免影响文件删除的主流程
   }
 }
@@ -61,7 +65,7 @@ async function handleSharesOnFolderDelete(folderId: number) {
     const folderShareSnapshots = await prisma.shareSnapshot.findMany({
       where: {
         originalFolderId: folderId,
-        type: 'folder',
+        type: "folder",
       },
       include: {
         share: true,
@@ -78,7 +82,7 @@ async function handleSharesOnFolderDelete(folderId: number) {
     // 2. 查找所有其他文件夹类型的分享快照，检查是否包含被删除的文件夹
     const otherFolderShareSnapshots = await prisma.shareSnapshot.findMany({
       where: {
-        type: 'folder',
+        type: "folder",
         originalFolderId: {
           not: folderId,
         },
@@ -90,12 +94,15 @@ async function handleSharesOnFolderDelete(folderId: number) {
 
     for (const snapshot of otherFolderShareSnapshots) {
       // 检查快照数据中是否包含被删除的文件夹
-      if (snapshot.snapshotData && containsFolder(snapshot.snapshotData, folderId)) {
+      if (
+        snapshot.snapshotData &&
+        containsFolder(snapshot.snapshotData, folderId)
+      ) {
         await updateFolderSnapshotOnFolderDelete(snapshot.id, folderId);
       }
     }
   } catch (error) {
-    console.error('处理文件夹分享删除逻辑时出错:', error);
+    console.error("处理文件夹分享删除逻辑时出错:", error);
     // 不抛出错误，避免影响文件夹删除的主流程
   }
 }
@@ -113,14 +120,20 @@ function containsFile(snapshotData: any, fileId: number): boolean {
 
   // 检查contents对象中的files数组
   if (snapshotData.contents) {
-    if (snapshotData.contents.files && Array.isArray(snapshotData.contents.files)) {
+    if (
+      snapshotData.contents.files &&
+      Array.isArray(snapshotData.contents.files)
+    ) {
       if (snapshotData.contents.files.some((file: any) => file.id === fileId)) {
         return true;
       }
     }
 
     // 递归检查子文件夹
-    if (snapshotData.contents.folders && Array.isArray(snapshotData.contents.folders)) {
+    if (
+      snapshotData.contents.folders &&
+      Array.isArray(snapshotData.contents.folders)
+    ) {
       for (const subfolder of snapshotData.contents.folders) {
         if (subfolder.children && containsFile(subfolder.children, fileId)) {
           return true;
@@ -137,7 +150,11 @@ function containsFolder(snapshotData: any, folderId: number): boolean {
   if (!snapshotData) return false;
 
   // 检查contents对象中的folders数组
-  if (snapshotData.contents && snapshotData.contents.folders && Array.isArray(snapshotData.contents.folders)) {
+  if (
+    snapshotData.contents &&
+    snapshotData.contents.folders &&
+    Array.isArray(snapshotData.contents.folders)
+  ) {
     for (const subfolder of snapshotData.contents.folders) {
       if (subfolder.id === folderId) {
         return true;
@@ -153,7 +170,10 @@ function containsFolder(snapshotData: any, folderId: number): boolean {
 }
 
 // 更新文件夹快照，移除指定文件
-async function updateFolderSnapshotOnFileDelete(snapshotId: number, deletedFileId: number) {
+async function updateFolderSnapshotOnFileDelete(
+  snapshotId: number,
+  deletedFileId: number,
+) {
   try {
     const snapshot = await prisma.shareSnapshot.findUnique({
       where: { id: snapshotId },
@@ -161,7 +181,10 @@ async function updateFolderSnapshotOnFileDelete(snapshotId: number, deletedFileI
 
     if (!snapshot || !snapshot.snapshotData) return;
 
-    const updatedData = removeFileFromFolder(snapshot.snapshotData, deletedFileId);
+    const updatedData = removeFileFromFolder(
+      snapshot.snapshotData,
+      deletedFileId,
+    );
 
     await prisma.shareSnapshot.update({
       where: { id: snapshotId },
@@ -175,7 +198,10 @@ async function updateFolderSnapshotOnFileDelete(snapshotId: number, deletedFileI
 }
 
 // 更新文件夹快照，移除指定文件夹
-async function updateFolderSnapshotOnFolderDelete(snapshotId: number, deletedFolderId: number) {
+async function updateFolderSnapshotOnFolderDelete(
+  snapshotId: number,
+  deletedFolderId: number,
+) {
   try {
     const snapshot = await prisma.shareSnapshot.findUnique({
       where: { id: snapshotId },
@@ -183,7 +209,10 @@ async function updateFolderSnapshotOnFolderDelete(snapshotId: number, deletedFol
 
     if (!snapshot || !snapshot.snapshotData) return;
 
-    const updatedData = removeFolderFromSnapshot(snapshot.snapshotData, deletedFolderId);
+    const updatedData = removeFolderFromSnapshot(
+      snapshot.snapshotData,
+      deletedFolderId,
+    );
 
     await prisma.shareSnapshot.update({
       where: { id: snapshotId },
@@ -202,23 +231,36 @@ function removeFileFromFolder(folderData: any, deletedFileId: number): any {
 
   // 处理根级别的files数组
   if (folderData.files && Array.isArray(folderData.files)) {
-    folderData.files = folderData.files.filter((file: any) => file.id !== deletedFileId);
+    folderData.files = folderData.files.filter(
+      (file: any) => file.id !== deletedFileId,
+    );
   }
 
   // 处理contents对象中的files数组
   if (folderData.contents) {
     if (folderData.contents.files && Array.isArray(folderData.contents.files)) {
-      folderData.contents.files = folderData.contents.files.filter((file: any) => file.id !== deletedFileId);
+      folderData.contents.files = folderData.contents.files.filter(
+        (file: any) => file.id !== deletedFileId,
+      );
     }
 
     // 递归处理子文件夹
-    if (folderData.contents.folders && Array.isArray(folderData.contents.folders)) {
-      folderData.contents.folders = folderData.contents.folders.map((subfolder: any) => {
-        if (subfolder.children) {
-          subfolder.children = removeFileFromFolder(subfolder.children, deletedFileId);
-        }
-        return subfolder;
-      });
+    if (
+      folderData.contents.folders &&
+      Array.isArray(folderData.contents.folders)
+    ) {
+      folderData.contents.folders = folderData.contents.folders.map(
+        (subfolder: any) => {
+          if (subfolder.children) {
+            subfolder.children = removeFileFromFolder(
+              subfolder.children,
+              deletedFileId,
+            );
+          }
+
+          return subfolder;
+        },
+      );
     }
   }
 
@@ -226,16 +268,24 @@ function removeFileFromFolder(folderData: any, deletedFileId: number): any {
 }
 
 // 递归函数：从文件夹结构中移除指定文件夹
-function removeFolderFromSnapshot(folderData: any, deletedFolderId: number): any {
+function removeFolderFromSnapshot(
+  folderData: any,
+  deletedFolderId: number,
+): any {
   if (!folderData) return folderData;
 
   // 如果有contents对象，递归处理
   if (folderData.contents) {
     // 处理子文件夹
-    if (folderData.contents.folders && Array.isArray(folderData.contents.folders)) {
+    if (
+      folderData.contents.folders &&
+      Array.isArray(folderData.contents.folders)
+    ) {
       folderData.contents.folders = folderData.contents.folders
         .filter((subfolder: any) => subfolder.id !== deletedFolderId)
-        .map((subfolder: any) => removeFolderFromSnapshot(subfolder, deletedFolderId));
+        .map((subfolder: any) =>
+          removeFolderFromSnapshot(subfolder, deletedFolderId),
+        );
     }
   }
 
@@ -248,7 +298,7 @@ async function recursiveDeleteFolderContents(folderId: number) {
     // 1. 获取所有子文件夹
     const subfolders = await prisma.folder.findMany({
       where: { parentId: folderId },
-      select: { id: true }
+      select: { id: true },
     });
 
     // 2. 递归删除每个子文件夹
@@ -256,7 +306,7 @@ async function recursiveDeleteFolderContents(folderId: number) {
       await recursiveDeleteFolderContents(subfolder.id);
       await handleSharesOnFolderDelete(subfolder.id);
       await prisma.folder.delete({
-        where: { id: subfolder.id }
+        where: { id: subfolder.id },
       });
     }
 
@@ -264,8 +314,8 @@ async function recursiveDeleteFolderContents(folderId: number) {
     const files = await prisma.file.findMany({
       where: { folderId: folderId },
       include: {
-        storageSource: true
-      }
+        storageSource: true,
+      },
     });
 
     // 删除每个文件（包括存储源中的实际文件）
@@ -279,7 +329,7 @@ async function recursiveDeleteFolderContents(folderId: number) {
 
         // 从数据库删除文件记录
         await prisma.file.delete({
-          where: { id: file.id }
+          where: { id: file.id },
         });
       } catch (error) {
         console.error(`Failed to delete file ${file.id}:`, error);
@@ -287,7 +337,9 @@ async function recursiveDeleteFolderContents(folderId: number) {
       }
     }
 
-    console.log(`Deleted ${subfolders.length} subfolders and ${files.length} files from folder ${folderId}`);
+    console.log(
+      `Deleted ${subfolders.length} subfolders and ${files.length} files from folder ${folderId}`,
+    );
   } catch (error) {
     console.error(`Error in recursive delete for folder ${folderId}:`, error);
     throw error;
@@ -298,10 +350,14 @@ async function recursiveDeleteFolderContents(folderId: number) {
 async function deleteFileFromStorage(file: any) {
   try {
     const config = file.storageSource.config as Record<string, any>;
-    const adapter = StorageAdapterFactory.create(file.storageSource.type as any, config);
+    const adapter = StorageAdapterFactory.create(
+      file.storageSource.type as any,
+      config,
+    );
 
     if (adapter) {
       const deleteSuccess = await adapter.delete(file.storagePath);
+
       if (!deleteSuccess) {
         console.warn(`Failed to delete physical file: ${file.storagePath}`);
       }
@@ -309,14 +365,14 @@ async function deleteFileFromStorage(file: any) {
       // 更新存储源使用量，确保不会变成负数
       const storageSource = await prisma.storageSource.findUnique({
         where: { id: file.storageSourceId },
-        select: { quotaUsed: true }
+        select: { quotaUsed: true },
       });
-      
+
       if (storageSource) {
         const currentUsed = Number(storageSource.quotaUsed);
         const fileSize = Number(file.size);
         const newUsed = Math.max(0, currentUsed - fileSize); // 确保不为负数
-        
+
         await prisma.storageSource.update({
           where: { id: file.storageSourceId },
           data: {
@@ -326,7 +382,10 @@ async function deleteFileFromStorage(file: any) {
       }
     }
   } catch (error) {
-    console.error(`Failed to delete file from storage: ${file.storagePath}`, error);
+    console.error(
+      `Failed to delete file from storage: ${file.storagePath}`,
+      error,
+    );
     // 不抛出错误，允许数据库清理继续进行
   }
 }
@@ -335,20 +394,25 @@ async function deleteFileFromStorage(file: any) {
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser(request);
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { authorized } = await requirePermissions(request, ['files.delete']);
+    const { authorized } = await requirePermissions(request, ["files.delete"]);
+
     if (!authorized) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
     const { fileIds, folderIds } = batchDeleteSchema.parse(body);
 
     if (fileIds.length === 0 && folderIds.length === 0) {
-      return NextResponse.json({ error: '请选择要删除的文件或文件夹' }, { status: 400 });
+      return NextResponse.json(
+        { error: "请选择要删除的文件或文件夹" },
+        { status: 400 },
+      );
     }
 
     const results = {
@@ -375,7 +439,7 @@ export async function POST(request: NextRequest) {
         try {
           await deleteFileFromStorage(file);
         } catch (error) {
-          console.error('Error deleting physical file:', error);
+          console.error("Error deleting physical file:", error);
           // 继续执行数据库删除，即使物理文件删除失败
         }
 
@@ -390,7 +454,9 @@ export async function POST(request: NextRequest) {
         results.deletedFiles++;
       } catch (error) {
         console.error(`Error deleting file ${fileId}:`, error);
-        results.errors.push(`删除文件 ID ${fileId} 失败: ${error instanceof Error ? error.message : String(error)}`);
+        results.errors.push(
+          `删除文件 ID ${fileId} 失败: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     }
 
@@ -421,20 +487,26 @@ export async function POST(request: NextRequest) {
         results.deletedFolders++;
       } catch (error) {
         console.error(`Error deleting folder ${folderId}:`, error);
-        results.errors.push(`删除文件夹 ID ${folderId} 失败: ${error instanceof Error ? error.message : String(error)}`);
+        results.errors.push(
+          `删除文件夹 ID ${folderId} 失败: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     }
 
     return NextResponse.json({
       success: true,
       results,
-      message: `成功删除 ${results.deletedFiles} 个文件和 ${results.deletedFolders} 个文件夹${results.errors.length > 0 ? `，${results.errors.length} 个项目删除失败` : ''}`,
+      message: `成功删除 ${results.deletedFiles} 个文件和 ${results.deletedFolders} 个文件夹${results.errors.length > 0 ? `，${results.errors.length} 个项目删除失败` : ""}`,
     });
   } catch (error) {
-    console.error('Batch delete error:', error);
+    console.error("Batch delete error:", error);
+
     return NextResponse.json(
-      { error: '批量删除失败', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
+      {
+        error: "批量删除失败",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
     );
   }
 }

@@ -1,27 +1,29 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardBody, CardHeader, Input, Button, Link } from '@heroui/react';
-import { KeyRoundIcon } from 'lucide-react';
-import ky from 'ky';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardBody, CardHeader, Input, Button, Link } from "@heroui/react";
+import { KeyRoundIcon } from "lucide-react";
+import ky from "ky";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
-      const response = await ky.post('/api/auth/forgot-password', {
-        json: { email },
-      }).json<any>();
+      const response = await ky
+        .post("/api/auth/forgot-password", {
+          json: { email },
+        })
+        .json<any>();
 
       if (response.success) {
         setSuccess(true);
@@ -32,7 +34,8 @@ export default function ForgotPasswordPage() {
       }
     } catch (err: any) {
       const errorData = await err.response?.json();
-      setError(errorData?.error || '操作失败，请重试');
+
+      setError(errorData?.error || "操作失败，请重试");
     } finally {
       setLoading(false);
     }
@@ -61,7 +64,7 @@ export default function ForgotPasswordPage() {
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
             {error && (
               <div className="bg-danger-50 border border-danger-200 text-danger-700 px-4 py-3 rounded-lg text-sm">
                 {error}
@@ -69,29 +72,28 @@ export default function ForgotPasswordPage() {
             )}
 
             <Input
+              isRequired
+              autoComplete="email"
               label="邮箱地址"
               placeholder="your@email.com"
               type="email"
               value={email}
-              onValueChange={setEmail}
               variant="bordered"
-              isRequired
-              autoComplete="email"
-              autoFocus
+              onValueChange={setEmail}
             />
 
             <Button
-              type="submit"
-              color="primary"
-              size="lg"
-              isLoading={loading}
               className="w-full bg-amber-brown-500 hover:bg-amber-brown-600 text-white font-medium"
+              color="primary"
+              isLoading={loading}
+              size="lg"
+              type="submit"
             >
               发送验证码
             </Button>
 
             <div className="text-center text-sm text-dark-olive-600">
-              <Link href="/login" className="text-amber-brown-500">
+              <Link className="text-amber-brown-500" href="/login">
                 返回登录
               </Link>
             </div>
@@ -101,4 +103,3 @@ export default function ForgotPasswordPage() {
     </Card>
   );
 }
-

@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   Button,
   Card,
@@ -17,8 +17,7 @@ import {
   DropdownMenu,
   DropdownItem,
   Spinner,
-  useDisclosure,
-} from '@heroui/react';
+} from "@heroui/react";
 import {
   PlusIcon,
   MoreVerticalIcon,
@@ -28,8 +27,8 @@ import {
   UsersIcon,
   KeyIcon,
   CrownIcon,
-} from 'lucide-react';
-import ky from 'ky';
+} from "lucide-react";
+import ky from "ky";
 
 interface Role {
   id: number;
@@ -52,17 +51,21 @@ const ROLE_ICONS: Record<string, any> = {
 };
 
 const ROLE_COLORS: Record<string, any> = {
-  owner: 'danger',
-  admin: 'primary',
-  editor: 'secondary',
-  viewer: 'success',
-  guest: 'default',
+  owner: "danger",
+  admin: "primary",
+  editor: "secondary",
+  viewer: "success",
+  guest: "default",
 };
 
 export function RolesTab() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ total: 0, systemRoles: 0, customRoles: 0 });
+  const [stats, setStats] = useState({
+    total: 0,
+    systemRoles: 0,
+    customRoles: 0,
+  });
 
   useEffect(() => {
     loadRoles();
@@ -71,15 +74,17 @@ export function RolesTab() {
   const loadRoles = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const data = await ky.get('/api/rbac/roles', {
-        headers: { Authorization: `Bearer ${token}` },
-      }).json<{ roles: Role[]; stats: any }>();
+      const token = localStorage.getItem("token");
+      const data = await ky
+        .get("/api/rbac/roles", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .json<{ roles: Role[]; stats: any }>();
 
       setRoles(data.roles);
       setStats(data.stats);
     } catch (error) {
-      console.error('Failed to load roles:', error);
+      console.error("Failed to load roles:", error);
     } finally {
       setLoading(false);
     }
@@ -87,11 +92,12 @@ export function RolesTab() {
 
   const getRoleIcon = (roleName: string) => {
     const IconComponent = ROLE_ICONS[roleName.toLowerCase()] || ShieldIcon;
+
     return <IconComponent className="w-5 h-5" />;
   };
 
   const getRoleColor = (roleName: string): any => {
-    return ROLE_COLORS[roleName.toLowerCase()] || 'default';
+    return ROLE_COLORS[roleName.toLowerCase()] || "default";
   };
 
   return (
@@ -103,28 +109,25 @@ export function RolesTab() {
             角色列表
           </h3>
           <p className="text-sm text-default-500 mt-1">
-            共 {stats.total} 个角色，{stats.systemRoles} 个系统角色，{stats.customRoles} 个自定义角色
+            共 {stats.total} 个角色，{stats.systemRoles} 个系统角色，
+            {stats.customRoles} 个自定义角色
           </p>
         </div>
         <Button
+          className="hidden lg:flex"
           color="primary"
           startContent={<PlusIcon className="w-4 h-4" />}
-          className="hidden lg:flex"
         >
           创建角色
         </Button>
-        <Button
-          color="primary"
-          isIconOnly
-          className="lg:hidden"
-        >
+        <Button isIconOnly className="lg:hidden" color="primary">
           <PlusIcon className="w-5 h-5" />
         </Button>
       </div>
 
       {loading ? (
         <div className="flex justify-center items-center py-12">
-          <Spinner size="lg" color="primary" />
+          <Spinner color="primary" size="lg" />
         </div>
       ) : (
         <>
@@ -145,28 +148,34 @@ export function RolesTab() {
                   <TableRow key={role.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl bg-${getRoleColor(role.name)}-100 flex items-center justify-center`}>
-                          <div className={`text-${getRoleColor(role.name)}-600`}>
+                        <div
+                          className={`w-10 h-10 rounded-xl bg-${getRoleColor(role.name)}-100 flex items-center justify-center`}
+                        >
+                          <div
+                            className={`text-${getRoleColor(role.name)}-600`}
+                          >
                             {getRoleIcon(role.name)}
                           </div>
                         </div>
                         <div>
-                          <p className="font-medium text-dark-olive-800">{role.name}</p>
+                          <p className="font-medium text-dark-olive-800">
+                            {role.name}
+                          </p>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <p className="text-sm text-default-600 max-w-md truncate">
-                        {role.description || '-'}
+                        {role.description || "-"}
                       </p>
                     </TableCell>
                     <TableCell>
                       <Chip
+                        color={role.isSystem ? "primary" : "secondary"}
                         size="sm"
                         variant="flat"
-                        color={role.isSystem ? 'primary' : 'secondary'}
                       >
-                        {role.isSystem ? '系统角色' : '自定义角色'}
+                        {role.isSystem ? "系统角色" : "自定义角色"}
                       </Chip>
                     </TableCell>
                     <TableCell>
@@ -183,17 +192,13 @@ export function RolesTab() {
                     </TableCell>
                     <TableCell>
                       <p className="text-sm text-default-500">
-                        {new Date(role.createdAt).toLocaleDateString('zh-CN')}
+                        {new Date(role.createdAt).toLocaleDateString("zh-CN")}
                       </p>
                     </TableCell>
                     <TableCell>
                       <Dropdown>
                         <DropdownTrigger>
-                          <Button
-                            isIconOnly
-                            size="sm"
-                            variant="light"
-                          >
+                          <Button isIconOnly size="sm" variant="light">
                             <MoreVerticalIcon className="w-4 h-4" />
                           </Button>
                         </DropdownTrigger>
@@ -235,30 +240,30 @@ export function RolesTab() {
                 <CardBody className="p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 rounded-xl bg-${getRoleColor(role.name)}-100 flex items-center justify-center`}>
+                      <div
+                        className={`w-12 h-12 rounded-xl bg-${getRoleColor(role.name)}-100 flex items-center justify-center`}
+                      >
                         <div className={`text-${getRoleColor(role.name)}-600`}>
                           {getRoleIcon(role.name)}
                         </div>
                       </div>
                       <div>
-                        <h4 className="font-semibold text-dark-olive-800">{role.name}</h4>
+                        <h4 className="font-semibold text-dark-olive-800">
+                          {role.name}
+                        </h4>
                         <Chip
+                          className="mt-1"
+                          color={role.isSystem ? "primary" : "secondary"}
                           size="sm"
                           variant="flat"
-                          color={role.isSystem ? 'primary' : 'secondary'}
-                          className="mt-1"
                         >
-                          {role.isSystem ? '系统角色' : '自定义'}
+                          {role.isSystem ? "系统角色" : "自定义"}
                         </Chip>
                       </div>
                     </div>
                     <Dropdown>
                       <DropdownTrigger>
-                        <Button
-                          isIconOnly
-                          size="sm"
-                          variant="light"
-                        >
+                        <Button isIconOnly size="sm" variant="light">
                           <MoreVerticalIcon className="w-4 h-4" />
                         </Button>
                       </DropdownTrigger>
@@ -314,4 +319,3 @@ export function RolesTab() {
     </div>
   );
 }
-

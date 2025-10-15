@@ -5,9 +5,10 @@
 ### ✅ 完全支持（已实现）
 
 #### 🖼️ 图片文件
+
 - **格式**: JPG, JPEG, PNG, GIF, WebP, SVG, BMP, TIFF, AVIF, HEIC, HEIF
 - **大小限制**: 50MB
-- **功能**: 
+- **功能**:
   - 缩放（50% - 300%）
   - 旋转（90度增量）
   - 全屏查看
@@ -15,6 +16,7 @@
   - 重置视图
 
 #### 🎥 视频文件
+
 - **格式**: MP4, WebM, OGG, AVI, MOV, WMV, FLV, MKV, 3GP, M4V
 - **大小限制**: 200MB
 - **功能**:
@@ -24,6 +26,7 @@
   - 下载功能
 
 #### 🎵 音频文件
+
 - **格式**: MP3, WAV, OGG, AAC, FLAC, M4A, WMA
 - **大小限制**: 100MB
 - **功能**:
@@ -33,6 +36,7 @@
   - 下载功能
 
 #### 📄 PDF 文档
+
 - **格式**: PDF
 - **大小限制**: 50MB
 - **功能**:
@@ -43,6 +47,7 @@
   - 下载功能
 
 #### 📝 文本文件
+
 - **格式**: TXT, HTML, CSS, JS, XML, JSON, CSV, LOG
 - **大小限制**: 5MB
 - **功能**:
@@ -53,6 +58,7 @@
   - 下载功能
 
 #### 💻 代码文件
+
 - **格式**: Python, Java, C/C++, C#, PHP, Ruby, Go, Rust, Swift, Kotlin, TypeScript, SQL, Shell 脚本, YAML, TOML, INI, 配置文件等
 - **大小限制**: 2MB
 - **功能**:
@@ -63,6 +69,7 @@
   - 下载功能
 
 #### 📋 Markdown 文档
+
 - **格式**: MD, MARKDOWN, MDOWN, MKDN, MKD
 - **大小限制**: 1MB
 - **功能**:
@@ -75,9 +82,10 @@
 ### 🚧 计划支持（需要第三方服务）
 
 #### 📊 Office 文档
+
 - **格式**: DOC, DOCX, XLS, XLSX, PPT, PPTX
 - **大小限制**: 20MB
-- **实现方式**: 
+- **实现方式**:
   - Microsoft Office Online
   - OnlyOffice Document Server
   - Google Docs Viewer API
@@ -88,9 +96,10 @@
   - 版本历史
 
 #### 📦 压缩包
+
 - **格式**: ZIP, RAR, 7Z, GZ, TAR, BZ2
 - **大小限制**: 100MB
-- **实现方式**: 
+- **实现方式**:
   - 前端解压缩库（如 JSZip）
   - 后端解压缩服务
 - **功能**:
@@ -110,6 +119,7 @@
 ## 🔧 技术实现
 
 ### 前端组件架构
+
 ```
 lib/file-preview/
 ├── types.ts              # 类型定义和配置
@@ -118,12 +128,14 @@ lib/file-preview/
 ```
 
 ### 预览流程
+
 1. **文件类型检测**: 根据文件名和 MIME 类型判断支持情况
 2. **大小检查**: 验证文件是否超过预览大小限制
 3. **组件渲染**: 根据文件类型渲染对应的预览组件
 4. **错误处理**: 对于不支持的文件类型显示友好的错误信息
 
 ### 性能优化
+
 - **懒加载**: 预览组件按需加载
 - **大小限制**: 避免大文件影响性能
 - **缓存策略**: 浏览器缓存预览内容
@@ -132,13 +144,18 @@ lib/file-preview/
 ## 🎯 使用示例
 
 ### 在文件列表中添加预览功能
+
 ```tsx
-import { FilePreview, hasPreviewIcon, getPreviewIcon } from '@/lib/file-preview/preview-manager';
+import {
+  FilePreview,
+  hasPreviewIcon,
+  getPreviewIcon,
+} from "@/lib/file-preview/preview-manager";
 
 // 文件项组件
 function FileItem({ file }) {
   const [showPreview, setShowPreview] = useState(false);
-  
+
   return (
     <div className="file-item">
       {/* 文件图标 */}
@@ -146,24 +163,17 @@ function FileItem({ file }) {
         {getPreviewIcon(file.originalName, file.mimeType)}
         <span>{file.originalName}</span>
       </div>
-      
+
       {/* 预览按钮 */}
       {hasPreviewIcon(file.originalName, file.mimeType) && (
-        <Button
-          size="sm"
-          variant="light"
-          onPress={() => setShowPreview(true)}
-        >
+        <Button size="sm" variant="light" onPress={() => setShowPreview(true)}>
           预览
         </Button>
       )}
-      
+
       {/* 预览模态框 */}
       {showPreview && (
-        <FilePreview
-          file={file}
-          onClose={() => setShowPreview(false)}
-        />
+        <FilePreview file={file} onClose={() => setShowPreview(false)} />
       )}
     </div>
   );
@@ -173,18 +183,21 @@ function FileItem({ file }) {
 ## 📈 未来计划
 
 ### 短期目标
+
 - [ ] 完善 Markdown 预览（数学公式支持）
 - [ ] 添加代码文件的语法高亮
 - [ ] 优化大文件加载性能
 - [ ] 添加预览历史记录
 
 ### 中期目标
+
 - [ ] 集成 Office Online 预览
 - [ ] 实现压缩包预览
 - [ ] 添加文件注释功能
 - [ ] 支持文件版本对比
 
 ### 长期目标
+
 - [ ] 支持更多专业文件格式
 - [ ] 添加协作预览功能
 - [ ] 实现智能文件分析

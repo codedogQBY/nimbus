@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import prisma from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
-import { requirePermissions } from '@/lib/permissions';
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+import prisma from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
+import { requirePermissions } from "@/lib/permissions";
 
 // POST /api/folders - 创建文件夹
 const createFolderSchema = z.object({
@@ -13,13 +14,15 @@ const createFolderSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser(request);
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { authorized } = await requirePermissions(request, ['files.upload']);
+    const { authorized } = await requirePermissions(request, ["files.upload"]);
+
     if (!authorized) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -27,8 +30,8 @@ export async function POST(request: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { error: '参数错误', details: validation.error.issues },
-        { status: 400 }
+        { error: "参数错误", details: validation.error.issues },
+        { status: 400 },
       );
     }
 
@@ -43,15 +46,17 @@ export async function POST(request: NextRequest) {
     });
 
     if (existing) {
-      return NextResponse.json({ error: '文件夹已存在' }, { status: 400 });
+      return NextResponse.json({ error: "文件夹已存在" }, { status: 400 });
     }
 
     // 构建路径
     let folderPath = `/${name}`;
+
     if (parentId) {
       const parentFolder = await prisma.folder.findUnique({
         where: { id: parentId },
       });
+
       if (parentFolder) {
         folderPath = `${parentFolder.path}/${name}`;
       }
@@ -71,11 +76,14 @@ export async function POST(request: NextRequest) {
       folder,
     });
   } catch (error) {
-    console.error('Create folder error:', error);
+    console.error("Create folder error:", error);
+
     return NextResponse.json(
-      { error: '创建失败', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
+      {
+        error: "创建失败",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
     );
   }
 }
-

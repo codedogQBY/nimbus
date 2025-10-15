@@ -1,6 +1,7 @@
-import { StorageSource, StorageSourceConfig } from './base';
-import { R2StorageSource, R2Config } from './r2';
-import prisma from '../prisma';
+import prisma from "../prisma";
+
+import { StorageSource, StorageSourceConfig } from "./base";
+import { R2StorageSource, R2Config } from "./r2";
 
 /**
  * 存储源管理器
@@ -31,7 +32,7 @@ export class StorageSourceManager {
     const source = await this.createStorageSourceInstance(
       sourceRecord.type,
       sourceRecord.config as StorageSourceConfig,
-      sourceRecord.name
+      sourceRecord.name,
     );
 
     await source.connect();
@@ -48,7 +49,7 @@ export class StorageSourceManager {
   async getActiveStorageSources(): Promise<StorageSource[]> {
     const sources = await prisma.storageSource.findMany({
       where: { isActive: true },
-      orderBy: { priority: 'desc' },
+      orderBy: { priority: "desc" },
     });
 
     const instances: StorageSource[] = [];
@@ -56,6 +57,7 @@ export class StorageSourceManager {
     for (const source of sources) {
       try {
         const instance = await this.getStorageSource(source.id);
+
         instances.push(instance);
       } catch (error) {
         console.error(`Failed to load storage source ${source.id}:`, error);
@@ -70,25 +72,26 @@ export class StorageSourceManager {
    */
   async selectStorageSource(
     fileSize: number,
-    fileType: string
+    fileType: string,
   ): Promise<{ source: StorageSource; sourceId: number }> {
     const sources = await prisma.storageSource.findMany({
       where: {
         isActive: true,
       },
       orderBy: {
-        priority: 'desc',
+        priority: "desc",
       },
     });
 
     // 筛选有足够空间的存储源
-    const availableSources = sources.filter(source => {
+    const availableSources = sources.filter((source) => {
       const available = Number(source.quotaLimit) - Number(source.quotaUsed);
+
       return available >= fileSize;
     });
 
     if (availableSources.length === 0) {
-      throw new Error('没有可用的存储源，空间不足');
+      throw new Error("没有可用的存储源，空间不足");
     }
 
     // 选择策略
@@ -97,18 +100,20 @@ export class StorageSourceManager {
     // 大文件优先选择R2/七牛云
     if (fileSize > 100 * 1024 * 1024) {
       const preferredSources = availableSources.filter(
-        s => s.type === 'r2' || s.type === 'qiniu'
+        (s) => s.type === "r2" || s.type === "qiniu",
       );
+
       if (preferredSources.length > 0) {
         selectedSource = preferredSources[0];
       }
     }
 
     // 图片/视频优先选择有CDN的源
-    if (fileType.startsWith('image/') || fileType.startsWith('video/')) {
+    if (fileType.startsWith("image/") || fileType.startsWith("video/")) {
       const cdnSources = availableSources.filter(
-        s => s.type === 'r2' || s.type === 'qiniu'
+        (s) => s.type === "r2" || s.type === "qiniu",
       );
+
       if (cdnSources.length > 0) {
         selectedSource = cdnSources[0];
       }
@@ -128,10 +133,10 @@ export class StorageSourceManager {
   private async createStorageSourceInstance(
     type: string,
     config: StorageSourceConfig,
-    name: string
+    name: string,
   ): Promise<StorageSource> {
     switch (type) {
-      case 'r2':
+      case "r2":
         return new R2StorageSource(config as R2Config, name);
       // 后续添加其他存储源
       // case 'qiniu':
@@ -148,7 +153,10 @@ export class StorageSourceManager {
   /**
    * 更新存储源使用量
    */
-  async updateStorageUsage(sourceId: number, sizeChange: number): Promise<void> {
+  async updateStorageUsage(
+    sourceId: number,
+    sizeChange: number,
+  ): Promise<void> {
     await prisma.storageSource.update({
       where: { id: sourceId },
       data: {
@@ -173,4 +181,3 @@ export class StorageSourceManager {
 
 // 单例实例
 export const storageManager = new StorageSourceManager();
-

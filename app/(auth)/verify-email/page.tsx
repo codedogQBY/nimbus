@@ -1,19 +1,26 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Card, CardBody, CardHeader, Button, Divider, Link } from '@heroui/react';
-import { MailIcon, TimerIcon } from 'lucide-react';
-import ky from 'ky';
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  Button,
+  Divider,
+  Link,
+} from "@heroui/react";
+import { MailIcon, TimerIcon } from "lucide-react";
+import ky from "ky";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const email = searchParams.get('email') || '';
-  
-  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const email = searchParams.get("email") || "";
+
+  const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [canResend, setCanResend] = useState(false);
   const [countdown, setCountdown] = useState(60);
 
@@ -21,6 +28,7 @@ export default function VerifyEmailPage() {
   useEffect(() => {
     if (countdown > 0 && !canResend) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+
       return () => clearTimeout(timer);
     } else if (countdown === 0) {
       setCanResend(true);
@@ -32,55 +40,62 @@ export default function VerifyEmailPage() {
     if (!/^\d*$/.test(value)) return; // 只允许数字
 
     const newCode = [...code];
+
     newCode[index] = value.slice(-1); // 只取最后一位
     setCode(newCode);
 
     // 自动聚焦下一个输入框
     if (value && index < 5) {
       const nextInput = document.getElementById(`code-${index + 1}`);
+
       nextInput?.focus();
     }
 
     // 如果所有输入框都已填写，自动提交
-    if (newCode.every(c => c) && newCode.join('').length === 6) {
-      handleVerify(newCode.join(''));
+    if (newCode.every((c) => c) && newCode.join("").length === 6) {
+      handleVerify(newCode.join(""));
     }
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !code[index] && index > 0) {
+    if (e.key === "Backspace" && !code[index] && index > 0) {
       const prevInput = document.getElementById(`code-${index - 1}`);
+
       prevInput?.focus();
     }
   };
 
   const handleVerify = async (verificationCode?: string) => {
-    const codeToVerify = verificationCode || code.join('');
-    
+    const codeToVerify = verificationCode || code.join("");
+
     if (codeToVerify.length !== 6) {
-      setError('请输入完整的6位验证码');
+      setError("请输入完整的6位验证码");
+
       return;
     }
 
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
-      const response = await ky.post('/api/auth/verify-email', {
-        json: { email, code: codeToVerify },
-      }).json<any>();
+      const response = await ky
+        .post("/api/auth/verify-email", {
+          json: { email, code: codeToVerify },
+        })
+        .json<any>();
 
       if (response.success) {
         // 保存 token
-        localStorage.setItem('token', response.token);
-        
+        localStorage.setItem("token", response.token);
+
         // 跳转到文件管理页面
-        router.push('/files');
+        router.push("/files");
       }
     } catch (err: any) {
       const errorData = await err.response?.json();
-      setError(errorData?.error || '验证失败，请重试');
-      setCode(['', '', '', '', '', '']); // 清空输入
+
+      setError(errorData?.error || "验证失败，请重试");
+      setCode(["", "", "", "", "", ""]); // 清空输入
     } finally {
       setLoading(false);
     }
@@ -90,20 +105,23 @@ export default function VerifyEmailPage() {
     if (!canResend) return;
 
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
-      await ky.post('/api/auth/resend-code', {
-        json: { email, type: 'register' },
-      }).json();
+      await ky
+        .post("/api/auth/resend-code", {
+          json: { email, type: "register" },
+        })
+        .json();
 
       setCanResend(false);
       setCountdown(60);
-      setError('');
-      setCode(['', '', '', '', '', '']);
+      setError("");
+      setCode(["", "", "", "", "", ""]);
     } catch (err: any) {
       const errorData = await err.response?.json();
-      setError(errorData?.error || '发送失败，请重试');
+
+      setError(errorData?.error || "发送失败，请重试");
     } finally {
       setLoading(false);
     }
@@ -116,7 +134,9 @@ export default function VerifyEmailPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-full mb-4">
             <MailIcon className="w-8 h-8 text-amber-brown-500" />
           </div>
-          <h1 className="text-2xl font-bold text-dark-olive-800">验证您的邮箱</h1>
+          <h1 className="text-2xl font-bold text-dark-olive-800">
+            验证您的邮箱
+          </h1>
           <p className="text-sm text-dark-olive-600 mt-2">
             我们已向 <span className="font-medium">{email}</span> 发送了验证码
           </p>
@@ -136,15 +156,15 @@ export default function VerifyEmailPage() {
             {code.map((digit, index) => (
               <input
                 key={index}
+                className="w-12 h-14 text-center text-2xl font-bold border-2 border-default-200 rounded-lg focus:border-amber-brown-500 focus:outline-none transition-colors"
+                disabled={loading}
                 id={`code-${index}`}
-                type="text"
                 inputMode="numeric"
                 maxLength={1}
+                type="text"
                 value={digit}
                 onChange={(e) => handleCodeChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
-                className="w-12 h-14 text-center text-2xl font-bold border-2 border-default-200 rounded-lg focus:border-amber-brown-500 focus:outline-none transition-colors"
-                disabled={loading}
               />
             ))}
           </div>
@@ -155,11 +175,11 @@ export default function VerifyEmailPage() {
           </div>
 
           <Button
-            color="primary"
-            size="lg"
-            isLoading={loading}
-            onClick={() => handleVerify()}
             className="w-full bg-amber-brown-500 hover:bg-amber-brown-600 text-white font-medium"
+            color="primary"
+            isLoading={loading}
+            size="lg"
+            onClick={() => handleVerify()}
           >
             验证
           </Button>
@@ -169,11 +189,11 @@ export default function VerifyEmailPage() {
           <div className="text-center">
             {canResend ? (
               <Button
-                variant="light"
-                size="sm"
-                onClick={handleResend}
-                isLoading={loading}
                 className="text-amber-brown-500"
+                isLoading={loading}
+                size="sm"
+                variant="light"
+                onClick={handleResend}
               >
                 重新发送验证码
               </Button>
@@ -185,7 +205,7 @@ export default function VerifyEmailPage() {
           </div>
 
           <div className="text-center text-sm text-dark-olive-600">
-            <Link href="/login" className="text-amber-brown-500">
+            <Link className="text-amber-brown-500" href="/login">
               返回登录
             </Link>
           </div>
@@ -194,4 +214,3 @@ export default function VerifyEmailPage() {
     </Card>
   );
 }
-

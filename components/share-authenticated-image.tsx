@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 interface ShareAuthenticatedImageProps {
   src: string;
@@ -31,9 +31,9 @@ export function ShareAuthenticatedImage({
   onMouseUp,
   onMouseLeave,
   onClick,
-  draggable = false
+  draggable = false,
 }: ShareAuthenticatedImageProps) {
-  const [imageSrc, setImageSrc] = useState<string>('');
+  const [imageSrc, setImageSrc] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -44,7 +44,7 @@ export function ShareAuthenticatedImage({
         setError(false);
 
         // 使用分享token访问图片
-        const imageUrl = `${src}${src.includes('?') ? '&' : '?'}share=${shareToken}`;
+        const imageUrl = `${src}${src.includes("?") ? "&" : "?"}share=${shareToken}`;
         const response = await fetch(imageUrl);
 
         if (!response.ok) {
@@ -53,11 +53,12 @@ export function ShareAuthenticatedImage({
 
         const blob = await response.blob();
         const blobUrl = URL.createObjectURL(blob);
+
         setImageSrc(blobUrl);
         setLoading(false);
         onLoad?.();
       } catch (err) {
-        console.error('Failed to load share authenticated image:', err);
+        console.error("Failed to load share authenticated image:", err);
         setError(true);
         setLoading(false);
         onError?.();
@@ -82,21 +83,32 @@ export function ShareAuthenticatedImage({
   }
 
   return (
-    <img
-      src={imageSrc}
-      alt={alt}
+    <div
       className={className}
+      role="button"
       style={style}
-      onError={() => {
-        setError(true);
-        onError?.();
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          onClick?.(e as any);
+        }
       }}
       onMouseDown={onMouseDown}
+      onMouseLeave={onMouseLeave}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
-      onMouseLeave={onMouseLeave}
-      onClick={onClick}
-      draggable={draggable}
-    />
+    >
+      <img
+        alt={alt}
+        draggable={draggable}
+        src={imageSrc}
+        style={{ width: "100%", height: "100%" }}
+        onError={() => {
+          setError(true);
+          onError?.();
+        }}
+      />
+    </div>
   );
 }

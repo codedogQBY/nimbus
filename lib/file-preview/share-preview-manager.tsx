@@ -1,25 +1,15 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { PreviewType, canPreview, getPreviewType } from './types';
-import {
-  ShareImagePreview as ShareImagePreviewComponent,
-  ShareVideoPreview as ShareVideoPreviewComponent,
-  ShareAudioPreview as ShareAudioPreviewComponent,
-  SharePDFPreview as SharePDFPreviewComponent
-} from './share-preview-components';
+import React from "react";
 import {
   Modal,
   ModalContent,
   ModalHeader,
   ModalBody,
   Button,
-  Chip,
-  Divider
-} from '@heroui/react';
+} from "@heroui/react";
 import {
   DownloadIcon,
-  ExternalLinkIcon,
   XIcon,
   FileIcon,
   ImageIcon,
@@ -28,8 +18,16 @@ import {
   FileTextIcon,
   CodeIcon,
   ArchiveIcon,
-  AlertTriangleIcon
-} from 'lucide-react';
+  AlertTriangleIcon,
+} from "lucide-react";
+
+import { PreviewType, canPreview, getPreviewType } from "./types";
+import {
+  ShareImagePreview as ShareImagePreviewComponent,
+  ShareVideoPreview as ShareVideoPreviewComponent,
+  ShareAudioPreview as ShareAudioPreviewComponent,
+  SharePDFPreview as SharePDFPreviewComponent,
+} from "./share-preview-components";
 
 export interface ShareFilePreviewProps {
   file: {
@@ -47,22 +45,27 @@ export interface ShareFilePreviewProps {
 
 // 从storagePath中提取分享token
 function extractShareToken(storagePath: string): string | null {
-  const urlParams = new URLSearchParams(storagePath.split('?')[1] || '');
-  return urlParams.get('share');
+  const urlParams = new URLSearchParams(storagePath.split("?")[1] || "");
+
+  return urlParams.get("share");
 }
 
 // 分享版本的预览组件（使用分享token而不是用户token）
-function ShareImagePreview({ file, shareToken, onClose }: ShareFilePreviewProps) {
+function ShareImagePreview({
+  file,
+  shareToken,
+  onClose,
+}: ShareFilePreviewProps) {
   return (
     <Modal
-      isOpen={true}
-      onClose={onClose}
-      size="5xl"
       classNames={{
         base: "max-w-7xl",
-        backdrop: "bg-black/80"
+        backdrop: "bg-black/80",
       }}
       hideCloseButton={true}
+      isOpen={true}
+      size="5xl"
+      onClose={onClose}
     >
       <ModalContent>
         <ModalHeader className="flex justify-between items-center">
@@ -74,17 +77,10 @@ function ShareImagePreview({ file, shareToken, onClose }: ShareFilePreviewProps)
               <h3 className="text-lg font-semibold text-dark-olive-800">
                 图片预览
               </h3>
-              <p className="text-sm text-default-500">
-                {file.originalName}
-              </p>
+              <p className="text-sm text-default-500">{file.originalName}</p>
             </div>
           </div>
-          <Button
-            isIconOnly
-            size="sm"
-            variant="light"
-            onPress={onClose}
-          >
+          <Button isIconOnly size="sm" variant="light" onPress={onClose}>
             <XIcon className="w-4 h-4" />
           </Button>
         </ModalHeader>
@@ -94,7 +90,10 @@ function ShareImagePreview({ file, shareToken, onClose }: ShareFilePreviewProps)
             file={file}
             shareToken={shareToken}
             onDownload={() => {
-              window.open(`/api/files/${file.id}/serve?share=${shareToken}&download=1`, '_blank');
+              window.open(
+                `/api/files/${file.id}/serve?share=${shareToken}&download=1`,
+                "_blank",
+              );
             }}
           />
         </ModalBody>
@@ -103,17 +102,21 @@ function ShareImagePreview({ file, shareToken, onClose }: ShareFilePreviewProps)
   );
 }
 
-function ShareVideoPreview({ file, shareToken, onClose }: ShareFilePreviewProps) {
+function ShareVideoPreview({
+  file,
+  shareToken,
+  onClose,
+}: ShareFilePreviewProps) {
   return (
     <Modal
-      isOpen={true}
-      onClose={onClose}
-      size="5xl"
       classNames={{
         base: "max-w-7xl",
-        backdrop: "bg-black/80"
+        backdrop: "bg-black/80",
       }}
       hideCloseButton={true}
+      isOpen={true}
+      size="5xl"
+      onClose={onClose}
     >
       <ModalContent>
         <ModalHeader className="flex justify-between items-center">
@@ -125,17 +128,10 @@ function ShareVideoPreview({ file, shareToken, onClose }: ShareFilePreviewProps)
               <h3 className="text-lg font-semibold text-dark-olive-800">
                 视频预览
               </h3>
-              <p className="text-sm text-default-500">
-                {file.originalName}
-              </p>
+              <p className="text-sm text-default-500">{file.originalName}</p>
             </div>
           </div>
-          <Button
-            isIconOnly
-            size="sm"
-            variant="light"
-            onPress={onClose}
-          >
+          <Button isIconOnly size="sm" variant="light" onPress={onClose}>
             <XIcon className="w-4 h-4" />
           </Button>
         </ModalHeader>
@@ -145,7 +141,10 @@ function ShareVideoPreview({ file, shareToken, onClose }: ShareFilePreviewProps)
             file={file}
             shareToken={shareToken}
             onDownload={() => {
-              window.open(`/api/files/${file.id}/serve?share=${shareToken}&download=1`, '_blank');
+              window.open(
+                `/api/files/${file.id}/serve?share=${shareToken}&download=1`,
+                "_blank",
+              );
             }}
           />
         </ModalBody>
@@ -154,14 +153,13 @@ function ShareVideoPreview({ file, shareToken, onClose }: ShareFilePreviewProps)
   );
 }
 
-function ShareAudioPreview({ file, shareToken, onClose }: ShareFilePreviewProps) {
+function ShareAudioPreview({
+  file,
+  shareToken,
+  onClose,
+}: ShareFilePreviewProps) {
   return (
-    <Modal
-      isOpen={true}
-      onClose={onClose}
-      size="2xl"
-      hideCloseButton={true}
-    >
+    <Modal hideCloseButton={true} isOpen={true} size="2xl" onClose={onClose}>
       <ModalContent>
         <ModalHeader className="flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -172,17 +170,10 @@ function ShareAudioPreview({ file, shareToken, onClose }: ShareFilePreviewProps)
               <h3 className="text-lg font-semibold text-dark-olive-800">
                 音频预览
               </h3>
-              <p className="text-sm text-default-500">
-                {file.originalName}
-              </p>
+              <p className="text-sm text-default-500">{file.originalName}</p>
             </div>
           </div>
-          <Button
-            isIconOnly
-            size="sm"
-            variant="light"
-            onPress={onClose}
-          >
+          <Button isIconOnly size="sm" variant="light" onPress={onClose}>
             <XIcon className="w-4 h-4" />
           </Button>
         </ModalHeader>
@@ -192,7 +183,10 @@ function ShareAudioPreview({ file, shareToken, onClose }: ShareFilePreviewProps)
             file={file}
             shareToken={shareToken}
             onDownload={() => {
-              window.open(`/api/files/${file.id}/serve?share=${shareToken}&download=1`, '_blank');
+              window.open(
+                `/api/files/${file.id}/serve?share=${shareToken}&download=1`,
+                "_blank",
+              );
             }}
           />
         </ModalBody>
@@ -204,14 +198,14 @@ function ShareAudioPreview({ file, shareToken, onClose }: ShareFilePreviewProps)
 function SharePDFPreview({ file, shareToken, onClose }: ShareFilePreviewProps) {
   return (
     <Modal
-      isOpen={true}
-      onClose={onClose}
-      size="5xl"
       classNames={{
         base: "max-w-7xl",
-        backdrop: "bg-black/80"
+        backdrop: "bg-black/80",
       }}
       hideCloseButton={true}
+      isOpen={true}
+      size="5xl"
+      onClose={onClose}
     >
       <ModalContent>
         <ModalHeader className="flex justify-between items-center">
@@ -223,17 +217,10 @@ function SharePDFPreview({ file, shareToken, onClose }: ShareFilePreviewProps) {
               <h3 className="text-lg font-semibold text-dark-olive-800">
                 PDF预览
               </h3>
-              <p className="text-sm text-default-500">
-                {file.originalName}
-              </p>
+              <p className="text-sm text-default-500">{file.originalName}</p>
             </div>
           </div>
-          <Button
-            isIconOnly
-            size="sm"
-            variant="light"
-            onPress={onClose}
-          >
+          <Button isIconOnly size="sm" variant="light" onPress={onClose}>
             <XIcon className="w-4 h-4" />
           </Button>
         </ModalHeader>
@@ -243,7 +230,10 @@ function SharePDFPreview({ file, shareToken, onClose }: ShareFilePreviewProps) {
             file={file}
             shareToken={shareToken}
             onDownload={() => {
-              window.open(`/api/files/${file.id}/serve?share=${shareToken}&download=1`, '_blank');
+              window.open(
+                `/api/files/${file.id}/serve?share=${shareToken}&download=1`,
+                "_blank",
+              );
             }}
           />
         </ModalBody>
@@ -263,60 +253,59 @@ const FILE_TYPE_ICONS = {
   [PreviewType.MARKDOWN]: FileTextIcon,
   [PreviewType.OFFICE]: FileTextIcon,
   [PreviewType.ARCHIVE]: ArchiveIcon,
-  [PreviewType.NOT_SUPPORTED]: FileIcon
+  [PreviewType.NOT_SUPPORTED]: FileIcon,
 };
 
 // 文件类型颜色映射
 const FILE_TYPE_COLORS = {
-  [PreviewType.IMAGE]: 'text-green-500',
-  [PreviewType.VIDEO]: 'text-blue-500',
-  [PreviewType.AUDIO]: 'text-purple-500',
-  [PreviewType.PDF]: 'text-red-500',
-  [PreviewType.TEXT]: 'text-gray-500',
-  [PreviewType.CODE]: 'text-orange-500',
-  [PreviewType.MARKDOWN]: 'text-blue-600',
-  [PreviewType.OFFICE]: 'text-indigo-500',
-  [PreviewType.ARCHIVE]: 'text-yellow-500',
-  [PreviewType.NOT_SUPPORTED]: 'text-gray-400'
+  [PreviewType.IMAGE]: "text-green-500",
+  [PreviewType.VIDEO]: "text-blue-500",
+  [PreviewType.AUDIO]: "text-purple-500",
+  [PreviewType.PDF]: "text-red-500",
+  [PreviewType.TEXT]: "text-gray-500",
+  [PreviewType.CODE]: "text-orange-500",
+  [PreviewType.MARKDOWN]: "text-blue-600",
+  [PreviewType.OFFICE]: "text-indigo-500",
+  [PreviewType.ARCHIVE]: "text-yellow-500",
+  [PreviewType.NOT_SUPPORTED]: "text-gray-400",
 };
 
 // 不支持预览的组件（分享版本）
-function ShareUnsupportedPreview({ file, shareToken, onClose }: ShareFilePreviewProps) {
+function ShareUnsupportedPreview({
+  file,
+  shareToken,
+  onClose,
+}: ShareFilePreviewProps) {
   const previewType = getPreviewType(file.originalName, file.mimeType);
   const Icon = FILE_TYPE_ICONS[previewType] || FileIcon;
-  const iconColor = FILE_TYPE_COLORS[previewType] || 'text-gray-400';
+  const iconColor = FILE_TYPE_COLORS[previewType] || "text-gray-400";
 
   return (
     <Modal
-      isOpen={true}
-      onClose={onClose}
-      size="md"
       classNames={{
-        base: "max-w-lg"
+        base: "max-w-lg",
       }}
       hideCloseButton={true}
+      isOpen={true}
+      size="md"
+      onClose={onClose}
     >
       <ModalContent>
         <ModalHeader className="flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br from-default-100 to-default-200 flex items-center justify-center`}>
+            <div
+              className={`w-10 h-10 rounded-xl bg-gradient-to-br from-default-100 to-default-200 flex items-center justify-center`}
+            >
               <Icon className={`w-5 h-5 ${iconColor}`} />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-dark-olive-800">
                 不支持预览
               </h3>
-              <p className="text-sm text-default-500">
-                {file.originalName}
-              </p>
+              <p className="text-sm text-default-500">{file.originalName}</p>
             </div>
           </div>
-          <Button
-            isIconOnly
-            size="sm"
-            variant="light"
-            onPress={onClose}
-          >
+          <Button isIconOnly size="sm" variant="light" onPress={onClose}>
             <XIcon className="w-4 h-4" />
           </Button>
         </ModalHeader>
@@ -336,11 +325,14 @@ function ShareUnsupportedPreview({ file, shareToken, onClose }: ShareFilePreview
 
           <div className="space-y-3">
             <Button
-              color="primary"
               className="w-full"
+              color="primary"
               startContent={<DownloadIcon className="w-4 h-4" />}
               onPress={() => {
-                window.open(`/api/files/${file.id}/serve?share=${shareToken}&download=1`, '_blank');
+                window.open(
+                  `/api/files/${file.id}/serve?share=${shareToken}&download=1`,
+                  "_blank",
+                );
               }}
             >
               下载文件
@@ -353,29 +345,69 @@ function ShareUnsupportedPreview({ file, shareToken, onClose }: ShareFilePreview
 }
 
 // 主分享预览管理器
-export function ShareFilePreviewModal({ file, shareToken, onClose }: ShareFilePreviewProps) {
+export function ShareFilePreviewModal({
+  file,
+  shareToken,
+  onClose,
+}: ShareFilePreviewProps) {
   const previewType = getPreviewType(file.originalName, file.mimeType);
 
   // 检查是否支持预览
   if (!canPreview(file.originalName, file.mimeType, file.size)) {
-    return <ShareUnsupportedPreview file={file} shareToken={shareToken} onClose={onClose} />;
+    return (
+      <ShareUnsupportedPreview
+        file={file}
+        shareToken={shareToken}
+        onClose={onClose}
+      />
+    );
   }
 
   // 根据文件类型渲染对应的预览组件
   switch (previewType) {
     case PreviewType.IMAGE:
-      return <ShareImagePreview file={file} shareToken={shareToken} onClose={onClose} />;
+      return (
+        <ShareImagePreview
+          file={file}
+          shareToken={shareToken}
+          onClose={onClose}
+        />
+      );
 
     case PreviewType.VIDEO:
-      return <ShareVideoPreview file={file} shareToken={shareToken} onClose={onClose} />;
+      return (
+        <ShareVideoPreview
+          file={file}
+          shareToken={shareToken}
+          onClose={onClose}
+        />
+      );
 
     case PreviewType.AUDIO:
-      return <ShareAudioPreview file={file} shareToken={shareToken} onClose={onClose} />;
+      return (
+        <ShareAudioPreview
+          file={file}
+          shareToken={shareToken}
+          onClose={onClose}
+        />
+      );
 
     case PreviewType.PDF:
-      return <SharePDFPreview file={file} shareToken={shareToken} onClose={onClose} />;
+      return (
+        <SharePDFPreview
+          file={file}
+          shareToken={shareToken}
+          onClose={onClose}
+        />
+      );
 
     default:
-      return <ShareUnsupportedPreview file={file} shareToken={shareToken} onClose={onClose} />;
+      return (
+        <ShareUnsupportedPreview
+          file={file}
+          shareToken={shareToken}
+          onClose={onClose}
+        />
+      );
   }
 }

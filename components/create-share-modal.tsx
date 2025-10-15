@@ -1,79 +1,84 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { 
-  Modal, 
-  ModalContent, 
-  ModalHeader, 
-  ModalBody, 
-  ModalFooter, 
-  Button, 
+import { useState } from "react";
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
   Input,
   Switch,
   Select,
   SelectItem,
   Divider,
-} from '@heroui/react';
-import { Share2Icon, CopyIcon, CheckCircle2Icon } from 'lucide-react';
-import ky from 'ky';
+} from "@heroui/react";
+import { Share2Icon, CopyIcon, CheckCircle2Icon } from "lucide-react";
+import ky from "ky";
 
 interface CreateShareModalProps {
   isOpen: boolean;
   onClose: () => void;
   itemId: number;
   itemName: string;
-  type: 'file' | 'folder';
+  type: "file" | "folder";
   onSuccess?: () => void;
 }
 
-export function CreateShareModal({ 
-  isOpen, 
-  onClose, 
-  itemId, 
-  itemName, 
-  type, 
-  onSuccess 
+export function CreateShareModal({
+  isOpen,
+  onClose,
+  itemId,
+  itemName,
+  type,
+  onSuccess,
 }: CreateShareModalProps) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [shareUrl, setShareUrl] = useState('');
+  const [error, setError] = useState("");
+  const [shareUrl, setShareUrl] = useState("");
   const [copied, setCopied] = useState(false);
-  
+
   // 分享设置
   const [enablePassword, setEnablePassword] = useState(false);
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState("");
   const [enableExpiry, setEnableExpiry] = useState(false);
-  const [expiryDays, setExpiryDays] = useState('7');
+  const [expiryDays, setExpiryDays] = useState("7");
 
   const handleCreate = async () => {
     if (enablePassword && !password.trim()) {
-      setError('请输入分享密码');
+      setError("请输入分享密码");
+
       return;
     }
 
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
-      const token = localStorage.getItem('token');
-      
+      const token = localStorage.getItem("token");
+
       // 计算过期时间
       let expiresAt = undefined;
+
       if (enableExpiry) {
         const days = parseInt(expiryDays);
         const date = new Date();
+
         date.setDate(date.getDate() + days);
         expiresAt = date.toISOString();
       }
 
-      const response = await ky.post('/api/shares/create', {
-        headers: { Authorization: `Bearer ${token}` },
-        json: {
-          [type === 'file' ? 'fileId' : 'folderId']: itemId,
-          password: enablePassword ? password.trim() : undefined,
-          expiresAt,
-        },
-      }).json<any>();
+      const response = await ky
+        .post("/api/shares/create", {
+          headers: { Authorization: `Bearer ${token}` },
+          json: {
+            [type === "file" ? "fileId" : "folderId"]: itemId,
+            password: enablePassword ? password.trim() : undefined,
+            expiresAt,
+          },
+        })
+        .json<any>();
 
       setShareUrl(response.share.shareUrl);
 
@@ -86,7 +91,7 @@ export function CreateShareModal({
 
       onSuccess?.();
     } catch (err: any) {
-      setError(err.message || '创建分享失败');
+      setError(err.message || "创建分享失败");
     } finally {
       setLoading(false);
     }
@@ -100,24 +105,24 @@ export function CreateShareModal({
 
   const handleClose = () => {
     if (!loading) {
-      setError('');
-      setShareUrl('');
-      setPassword('');
+      setError("");
+      setShareUrl("");
+      setPassword("");
       setEnablePassword(false);
       setEnableExpiry(false);
-      setExpiryDays('7');
+      setExpiryDays("7");
       setCopied(false);
       onClose();
     }
   };
 
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={handleClose}
-      size="md"
+    <Modal
       isDismissable={!loading}
+      isOpen={isOpen}
       scrollBehavior="inside"
+      size="md"
+      onClose={handleClose}
     >
       <ModalContent>
         <ModalHeader className="flex gap-2 items-center">
@@ -130,7 +135,7 @@ export function CreateShareModal({
               {/* 文件信息 */}
               <div className="bg-secondary-50 rounded-lg p-3">
                 <p className="text-xs text-default-500 mb-1">
-                  {type === 'file' ? '文件' : '文件夹'}
+                  {type === "file" ? "文件" : "文件夹"}
                 </p>
                 <p className="text-sm font-semibold text-dark-olive-800 truncate">
                   {itemName}
@@ -143,26 +148,28 @@ export function CreateShareModal({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-dark-olive-800">密码保护</p>
+                    <p className="text-sm font-medium text-dark-olive-800">
+                      密码保护
+                    </p>
                     <p className="text-xs text-default-500">需要密码才能访问</p>
                   </div>
                   <Switch
-                    size="sm"
                     isSelected={enablePassword}
+                    size="sm"
                     onValueChange={setEnablePassword}
                   />
                 </div>
-                
+
                 {enablePassword && (
                   <Input
                     label="分享密码"
+                    maxLength={16}
+                    minLength={4}
                     placeholder="输入4-16位密码"
+                    size="sm"
+                    type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    type="password"
-                    size="sm"
-                    minLength={4}
-                    maxLength={16}
                   />
                 )}
               </div>
@@ -173,21 +180,23 @@ export function CreateShareModal({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-dark-olive-800">设置有效期</p>
+                    <p className="text-sm font-medium text-dark-olive-800">
+                      设置有效期
+                    </p>
                     <p className="text-xs text-default-500">过期后自动失效</p>
                   </div>
                   <Switch
-                    size="sm"
                     isSelected={enableExpiry}
+                    size="sm"
                     onValueChange={setEnableExpiry}
                   />
                 </div>
-                
+
                 {enableExpiry && (
                   <Select
                     label="有效期"
-                    size="sm"
                     selectedKeys={[expiryDays]}
+                    size="sm"
                     onChange={(e) => setExpiryDays(e.target.value)}
                   >
                     <SelectItem key="1">1天</SelectItem>
@@ -199,16 +208,16 @@ export function CreateShareModal({
                 )}
               </div>
 
-              {error && (
-                <p className="text-xs text-danger">{error}</p>
-              )}
+              {error && <p className="text-xs text-danger">{error}</p>}
             </div>
           ) : (
             // 分享成功
             <div className="space-y-4">
               <div className="flex flex-col items-center gap-3 py-4">
                 <CheckCircle2Icon className="w-12 h-12 text-success" />
-                <p className="text-sm text-default-600">分享链接已创建并复制到剪贴板！</p>
+                <p className="text-sm text-default-600">
+                  分享链接已创建并复制到剪贴板！
+                </p>
                 <p className="text-xs text-default-500">2秒后自动关闭</p>
               </div>
 
@@ -220,12 +229,16 @@ export function CreateShareModal({
                   </code>
                   <Button
                     isIconOnly
+                    color={copied ? "success" : "default"}
                     size="sm"
                     variant="flat"
-                    color={copied ? 'success' : 'default'}
                     onPress={handleCopy}
                   >
-                    {copied ? <CheckCircle2Icon className="w-4 h-4" /> : <CopyIcon className="w-4 h-4" />}
+                    {copied ? (
+                      <CheckCircle2Icon className="w-4 h-4" />
+                    ) : (
+                      <CopyIcon className="w-4 h-4" />
+                    )}
                   </Button>
                 </div>
               </div>
@@ -233,8 +246,12 @@ export function CreateShareModal({
               {enablePassword && (
                 <div className="bg-warning-50 rounded-lg p-3">
                   <p className="text-xs text-warning-700 mb-1">⚠️ 分享密码</p>
-                  <code className="text-sm font-mono text-warning-800">{password}</code>
-                  <p className="text-xs text-warning-600 mt-1">请妥善保存，此密码不会再次显示</p>
+                  <code className="text-sm font-mono text-warning-800">
+                    {password}
+                  </code>
+                  <p className="text-xs text-warning-600 mt-1">
+                    请妥善保存，此密码不会再次显示
+                  </p>
                 </div>
               )}
             </div>
@@ -243,27 +260,23 @@ export function CreateShareModal({
         <ModalFooter>
           {!shareUrl ? (
             <>
-              <Button 
-                variant="flat" 
-                onPress={handleClose}
-                isDisabled={loading}
-              >
+              <Button isDisabled={loading} variant="flat" onPress={handleClose}>
                 取消
               </Button>
-              <Button 
-                color="primary" 
-                onPress={handleCreate}
-                isLoading={loading}
+              <Button
                 className="bg-amber-brown-500"
+                color="primary"
+                isLoading={loading}
+                onPress={handleCreate}
               >
                 创建
               </Button>
             </>
           ) : (
-            <Button 
-              color="primary" 
-              onPress={handleClose}
+            <Button
               className="bg-amber-brown-500"
+              color="primary"
+              onPress={handleClose}
             >
               完成
             </Button>
@@ -273,4 +286,3 @@ export function CreateShareModal({
     </Modal>
   );
 }
-

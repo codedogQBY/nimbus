@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   Button,
   Card,
@@ -25,15 +25,11 @@ import {
   useDisclosure,
   RadioGroup,
   Radio,
-} from '@heroui/react';
-import {
-  SearchIcon,
-  UserIcon,
-  ShieldIcon,
-  CrownIcon,
-} from 'lucide-react';
-import ky from 'ky';
-import { useToast } from '@/components/toast-provider';
+} from "@heroui/react";
+import { SearchIcon, UserIcon, ShieldIcon, CrownIcon } from "lucide-react";
+import ky from "ky";
+
+import { useToast } from "@/components/toast-provider";
 
 interface User {
   id: number;
@@ -51,20 +47,22 @@ interface User {
 }
 
 const ROLE_COLORS: Record<string, any> = {
-  owner: 'danger',
-  admin: 'primary',
-  editor: 'secondary',
-  viewer: 'success',
-  guest: 'default',
+  owner: "danger",
+  admin: "primary",
+  editor: "secondary",
+  viewer: "success",
+  guest: "default",
 };
 
 export function AssignmentsTab() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRoles, setSelectedRoles] = useState<Record<number, Set<string>>>({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRoles, setSelectedRoles] = useState<
+    Record<number, Set<string>>
+  >({});
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [selectedRole, setSelectedRole] = useState('');
+  const [selectedRole, setSelectedRole] = useState("");
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { showError, showSuccess, showWarning } = useToast();
 
@@ -75,95 +73,107 @@ export function AssignmentsTab() {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const data = await ky.get('/api/users', {
-        headers: { Authorization: `Bearer ${token}` },
-      }).json<{ users: User[] }>();
+      const token = localStorage.getItem("token");
+      const data = await ky
+        .get("/api/users", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .json<{ users: User[] }>();
 
       setUsers(data.users);
     } catch (error) {
-      console.error('Failed to load users:', error);
+      console.error("Failed to load users:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleRoleChange = (userId: number, keys: any) => {
-    setSelectedRoles(prev => ({
+    setSelectedRoles((prev) => ({
       ...prev,
-      [userId]: new Set(Array.from(keys))
+      [userId]: new Set(Array.from(keys)),
     }));
   };
 
   const openAssignModal = (user: User) => {
     setCurrentUser(user);
-    setSelectedRole('');
+    setSelectedRole("");
     onOpen();
   };
 
   const handleAssignRole = async (userId: number) => {
     const roleKeys = selectedRoles[userId];
+
     if (!roleKeys || roleKeys.size === 0) {
-      showWarning('请选择角色', '请先选择要分配的角色');
+      showWarning("请选择角色", "请先选择要分配的角色");
+
       return;
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const roleKey = Array.from(roleKeys)[0]; // 取第一个（单选）
 
-      await ky.post('/api/rbac/assign', {
-        headers: { Authorization: `Bearer ${token}` },
-        json: {
-          userId,
-          roleName: roleKey,
-        },
-      }).json();
+      await ky
+        .post("/api/rbac/assign", {
+          headers: { Authorization: `Bearer ${token}` },
+          json: {
+            userId,
+            roleName: roleKey,
+          },
+        })
+        .json();
 
-      showSuccess('角色分配成功');
+      showSuccess("角色分配成功");
       loadUsers(); // 重新加载用户列表
 
       // 清除选择
-      setSelectedRoles(prev => {
+      setSelectedRoles((prev) => {
         const newState = { ...prev };
+
         delete newState[userId];
+
         return newState;
       });
     } catch (error: any) {
-      console.error('Assign role error:', error);
-      showError('角色分配失败', error.message || '未知错误');
+      console.error("Assign role error:", error);
+      showError("角色分配失败", error.message || "未知错误");
     }
   };
 
   const handleModalAssign = async () => {
     if (!currentUser || !selectedRole) {
-      showWarning('请选择角色', '请选择要分配的角色');
+      showWarning("请选择角色", "请选择要分配的角色");
+
       return;
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
 
-      await ky.post('/api/rbac/assign', {
-        headers: { Authorization: `Bearer ${token}` },
-        json: {
-          userId: currentUser.id,
-          roleName: selectedRole,
-        },
-      }).json();
+      await ky
+        .post("/api/rbac/assign", {
+          headers: { Authorization: `Bearer ${token}` },
+          json: {
+            userId: currentUser.id,
+            roleName: selectedRole,
+          },
+        })
+        .json();
 
-      showSuccess('角色分配成功');
+      showSuccess("角色分配成功");
       onClose();
       loadUsers(); // 重新加载用户列表
     } catch (error: any) {
-      console.error('Assign role error:', error);
-      showError('角色分配失败', error.message || '未知错误');
+      console.error("Assign role error:", error);
+      showError("角色分配失败", error.message || "未知错误");
     }
   };
 
-  const filteredUsers = users.filter(user =>
-    user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredUsers = users.filter(
+    (user) =>
+      user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -172,21 +182,21 @@ export function AssignmentsTab() {
       <div className="flex items-center gap-4">
         <div className="flex-1 max-w-md">
           <Input
+            classNames={{
+              input: "text-sm",
+              inputWrapper: "h-10",
+            }}
             placeholder="搜索用户..."
             startContent={<SearchIcon className="w-4 h-4 text-default-400" />}
             value={searchQuery}
             onValueChange={setSearchQuery}
-            classNames={{
-              input: "text-sm",
-              inputWrapper: "h-10"
-            }}
           />
         </div>
       </div>
 
       {loading ? (
         <div className="flex justify-center items-center py-12">
-          <Spinner size="lg" color="primary" />
+          <Spinner color="primary" size="lg" />
         </div>
       ) : (
         <>
@@ -206,10 +216,10 @@ export function AssignmentsTab() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar
-                          src={user.avatar_url || undefined}
+                          className="flex-shrink-0"
                           name={user.username}
                           size="sm"
-                          className="flex-shrink-0"
+                          src={user.avatar_url || undefined}
                         />
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-dark-olive-800">
@@ -229,15 +239,18 @@ export function AssignmentsTab() {
                         {(user.userRoles || []).map((ur) => (
                           <Chip
                             key={ur.role.id}
+                            color={
+                              ROLE_COLORS[ur.role.name.toLowerCase()] ||
+                              "default"
+                            }
                             size="sm"
                             variant="flat"
-                            color={ROLE_COLORS[ur.role.name.toLowerCase()] || 'default'}
                           >
                             {ur.role.name}
                           </Chip>
                         ))}
                         {(!user.userRoles || user.userRoles.length === 0) && (
-                          <Chip size="sm" variant="flat" color="default">
+                          <Chip color="default" size="sm" variant="flat">
                             无角色
                           </Chip>
                         )}
@@ -245,24 +258,26 @@ export function AssignmentsTab() {
                     </TableCell>
                     <TableCell>
                       <Chip
+                        color={user.is_active ? "success" : "default"}
                         size="sm"
                         variant="flat"
-                        color={user.is_active ? 'success' : 'default'}
                       >
-                        {user.is_active ? '活跃' : '未激活'}
+                        {user.is_active ? "活跃" : "未激活"}
                       </Chip>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Select
-                          placeholder="分配角色"
-                          size="sm"
+                          aria-label="选择角色"
                           className="w-40"
                           disabled={user.is_owner}
-                          aria-label="选择角色"
-                          selectionMode="single"
+                          placeholder="分配角色"
                           selectedKeys={selectedRoles[user.id] || new Set()}
-                          onSelectionChange={(keys) => handleRoleChange(user.id, keys)}
+                          selectionMode="single"
+                          size="sm"
+                          onSelectionChange={(keys) =>
+                            handleRoleChange(user.id, keys)
+                          }
                         >
                           <SelectItem key="admin">管理员</SelectItem>
                           <SelectItem key="editor">编辑者</SelectItem>
@@ -270,10 +285,14 @@ export function AssignmentsTab() {
                           <SelectItem key="guest">访客</SelectItem>
                         </Select>
                         <Button
-                          size="sm"
                           color="primary"
+                          disabled={
+                            user.is_owner ||
+                            !selectedRoles[user.id] ||
+                            selectedRoles[user.id].size === 0
+                          }
+                          size="sm"
                           variant="flat"
-                          disabled={user.is_owner || !selectedRoles[user.id] || selectedRoles[user.id].size === 0}
                           onPress={() => handleAssignRole(user.id)}
                         >
                           分配
@@ -293,10 +312,10 @@ export function AssignmentsTab() {
                 <CardBody className="p-4">
                   <div className="flex items-start gap-3 mb-3">
                     <Avatar
-                      src={user.avatar_url || undefined}
+                      className="flex-shrink-0"
                       name={user.username}
                       size="md"
-                      className="flex-shrink-0"
+                      src={user.avatar_url || undefined}
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -307,14 +326,16 @@ export function AssignmentsTab() {
                           <CrownIcon className="w-4 h-4 text-warning-500 flex-shrink-0" />
                         )}
                       </div>
-                      <p className="text-sm text-default-600 truncate">{user.email}</p>
+                      <p className="text-sm text-default-600 truncate">
+                        {user.email}
+                      </p>
                       <Chip
+                        className="mt-2"
+                        color={user.is_active ? "success" : "default"}
                         size="sm"
                         variant="flat"
-                        color={user.is_active ? 'success' : 'default'}
-                        className="mt-2"
                       >
-                        {user.is_active ? '活跃' : '未激活'}
+                        {user.is_active ? "活跃" : "未激活"}
                       </Chip>
                     </div>
                   </div>
@@ -325,15 +346,17 @@ export function AssignmentsTab() {
                       {(user.userRoles || []).map((ur) => (
                         <Chip
                           key={ur.role.id}
+                          color={
+                            ROLE_COLORS[ur.role.name.toLowerCase()] || "default"
+                          }
                           size="sm"
                           variant="flat"
-                          color={ROLE_COLORS[ur.role.name.toLowerCase()] || 'default'}
                         >
                           {ur.role.name}
                         </Chip>
                       ))}
                       {(!user.userRoles || user.userRoles.length === 0) && (
-                        <Chip size="sm" variant="flat" color="default">
+                        <Chip color="default" size="sm" variant="flat">
                           无角色
                         </Chip>
                       )}
@@ -342,9 +365,9 @@ export function AssignmentsTab() {
 
                   {!user.is_owner && (
                     <Button
-                      size="sm"
-                      color="primary"
                       fullWidth
+                      color="primary"
+                      size="sm"
                       onPress={() => openAssignModal(user)}
                     >
                       分配角色
@@ -361,16 +384,14 @@ export function AssignmentsTab() {
               <h3 className="text-lg font-semibold text-dark-olive-800 mb-2">
                 没有找到用户
               </h3>
-              <p className="text-sm text-default-500">
-                请尝试其他搜索关键词
-              </p>
+              <p className="text-sm text-default-500">请尝试其他搜索关键词</p>
             </div>
           )}
         </>
       )}
 
       {/* 角色分配Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="md">
+      <Modal isOpen={isOpen} size="md" onClose={onClose}>
         <ModalContent>
           <ModalHeader>
             <div className="flex items-center gap-3">
@@ -383,31 +404,40 @@ export function AssignmentsTab() {
               <div className="space-y-4">
                 <div className="flex items-center gap-3 p-3 bg-default-50 rounded-lg">
                   <Avatar
-                    src={currentUser.avatar_url || undefined}
                     name={currentUser.username}
                     size="md"
+                    src={currentUser.avatar_url || undefined}
                   />
                   <div>
-                    <p className="font-semibold text-dark-olive-800">{currentUser.username}</p>
-                    <p className="text-sm text-default-500">{currentUser.email}</p>
+                    <p className="font-semibold text-dark-olive-800">
+                      {currentUser.username}
+                    </p>
+                    <p className="text-sm text-default-500">
+                      {currentUser.email}
+                    </p>
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-dark-olive-800 mb-2">当前角色：</p>
+                  <p className="text-sm font-medium text-dark-olive-800 mb-2">
+                    当前角色：
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {(currentUser.userRoles || []).map((ur) => (
                       <Chip
                         key={ur.role.id}
+                        color={
+                          ROLE_COLORS[ur.role.name.toLowerCase()] || "default"
+                        }
                         size="sm"
                         variant="flat"
-                        color={ROLE_COLORS[ur.role.name.toLowerCase()] || 'default'}
                       >
                         {ur.role.name}
                       </Chip>
                     ))}
-                    {(!currentUser.userRoles || currentUser.userRoles.length === 0) && (
-                      <Chip size="sm" variant="flat" color="default">
+                    {(!currentUser.userRoles ||
+                      currentUser.userRoles.length === 0) && (
+                      <Chip color="default" size="sm" variant="flat">
                         无角色
                       </Chip>
                     )}
@@ -415,21 +445,23 @@ export function AssignmentsTab() {
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-dark-olive-800 mb-3">选择新角色：</p>
+                  <p className="text-sm font-medium text-dark-olive-800 mb-3">
+                    选择新角色：
+                  </p>
                   <RadioGroup
                     value={selectedRole}
                     onValueChange={setSelectedRole}
                   >
-                    <Radio value="admin" description="拥有管理权限">
+                    <Radio description="拥有管理权限" value="admin">
                       管理员
                     </Radio>
-                    <Radio value="editor" description="可编辑文件和分享">
+                    <Radio description="可编辑文件和分享" value="editor">
                       编辑者
                     </Radio>
-                    <Radio value="viewer" description="只读权限">
+                    <Radio description="只读权限" value="viewer">
                       查看者
                     </Radio>
-                    <Radio value="guest" description="临时访问权限">
+                    <Radio description="临时访问权限" value="guest">
                       访客
                     </Radio>
                   </RadioGroup>
@@ -438,16 +470,13 @@ export function AssignmentsTab() {
             )}
           </ModalBody>
           <ModalFooter>
-            <Button
-              variant="light"
-              onPress={onClose}
-            >
+            <Button variant="light" onPress={onClose}>
               取消
             </Button>
             <Button
               color="primary"
-              onPress={handleModalAssign}
               isDisabled={!selectedRole}
+              onPress={handleModalAssign}
             >
               确认分配
             </Button>
@@ -457,4 +486,3 @@ export function AssignmentsTab() {
     </div>
   );
 }
-

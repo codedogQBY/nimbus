@@ -1,7 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useToast } from '@/components/toast-provider';
+import { useState, useEffect } from "react";
 import {
   Card,
   CardBody,
@@ -17,8 +16,8 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  useDisclosure
-} from '@heroui/react';
+  useDisclosure,
+} from "@heroui/react";
 import {
   Share2Icon,
   LinkIcon,
@@ -33,12 +32,12 @@ import {
   FileIcon,
   FolderIcon,
   CalendarIcon,
-  CheckCircle2Icon,
-  EditIcon,
   SettingsIcon,
-  TrendingUpIcon
-} from 'lucide-react';
-import ky from 'ky';
+  TrendingUpIcon,
+} from "lucide-react";
+import ky from "ky";
+
+import { useToast } from "@/components/toast-provider";
 
 export default function SharesPage() {
   const { showSuccess, showError } = useToast();
@@ -48,8 +47,16 @@ export default function SharesPage() {
   const [selectedShare, setSelectedShare] = useState<any>(null);
 
   // Modals
-  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
-  const { isOpen: isStatsOpen, onOpen: onStatsOpen, onClose: onStatsClose } = useDisclosure();
+  const {
+    isOpen: isDeleteOpen,
+    onOpen: onDeleteOpen,
+    onClose: onDeleteClose,
+  } = useDisclosure();
+  const {
+    isOpen: isStatsOpen,
+    onOpen: onStatsOpen,
+    onClose: onStatsClose,
+  } = useDisclosure();
 
   useEffect(() => {
     loadShares();
@@ -57,15 +64,17 @@ export default function SharesPage() {
 
   const loadShares = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await ky.get('/api/shares', {
-        headers: { Authorization: `Bearer ${token}` },
-      }).json<any>();
+      const token = localStorage.getItem("token");
+      const response = await ky
+        .get("/api/shares", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .json<any>();
 
       setShares(response.shares);
       setStats(response.stats);
     } catch (err) {
-      console.error('加载分享失败:', err);
+      console.error("加载分享失败:", err);
     } finally {
       setLoading(false);
     }
@@ -74,10 +83,12 @@ export default function SharesPage() {
   const copyShareLink = async (token: string) => {
     try {
       const link = `${window.location.origin}/s/${token}`;
+
       await navigator.clipboard.writeText(link);
-      showSuccess('复制成功', '分享链接已复制到剪贴板');
+      showSuccess("复制成功", "分享链接已复制到剪贴板");
     } catch (error) {
-      showError('复制失败', '无法复制分享链接');
+      console.error("Failed to copy share link:", error);
+      showError("复制失败", "无法复制分享链接");
     }
   };
 
@@ -95,25 +106,26 @@ export default function SharesPage() {
     if (!selectedShare) return;
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
+
       await ky.delete(`/api/shares/delete/${selectedShare.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setShares(shares.filter(s => s.id !== selectedShare.id));
-      showSuccess('删除成功', '分享链接已删除');
+      setShares(shares.filter((s) => s.id !== selectedShare.id));
+      showSuccess("删除成功", "分享链接已删除");
       onDeleteClose();
       setSelectedShare(null);
     } catch (error) {
-      console.error('Delete share error:', error);
-      showError('删除失败', '无法删除分享链接');
+      console.error("Delete share error:", error);
+      showError("删除失败", "无法删除分享链接");
     }
   };
 
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <Spinner size="lg" color="primary" />
+        <Spinner color="primary" size="lg" />
       </div>
     );
   }
@@ -124,8 +136,12 @@ export default function SharesPage() {
         {/* 页面标题 */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl lg:text-2xl font-bold text-dark-olive-800">我的分享</h1>
-            <p className="text-xs lg:text-sm text-default-500 mt-1">管理您的分享链接</p>
+            <h1 className="text-xl lg:text-2xl font-bold text-dark-olive-800">
+              我的分享
+            </h1>
+            <p className="text-xs lg:text-sm text-default-500 mt-1">
+              管理您的分享链接
+            </p>
           </div>
         </div>
 
@@ -140,7 +156,9 @@ export default function SharesPage() {
                   </div>
                   <div className="text-center lg:text-left">
                     <p className="text-xs text-default-500">分享</p>
-                    <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">{stats.total}</p>
+                    <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">
+                      {stats.total}
+                    </p>
                   </div>
                 </div>
               </CardBody>
@@ -154,7 +172,9 @@ export default function SharesPage() {
                   </div>
                   <div className="text-center lg:text-left">
                     <p className="text-xs text-default-500">浏览</p>
-                    <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">{stats.totalViews}</p>
+                    <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">
+                      {stats.totalViews}
+                    </p>
                   </div>
                 </div>
               </CardBody>
@@ -168,7 +188,9 @@ export default function SharesPage() {
                   </div>
                   <div className="text-center lg:text-left">
                     <p className="text-xs text-default-500">下载</p>
-                    <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">{stats.totalDownloads}</p>
+                    <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">
+                      {stats.totalDownloads}
+                    </p>
                   </div>
                 </div>
               </CardBody>
@@ -182,7 +204,9 @@ export default function SharesPage() {
                   </div>
                   <div className="text-center lg:text-left">
                     <p className="text-xs text-default-500">受保护</p>
-                    <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">{stats.protected}</p>
+                    <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">
+                      {stats.protected}
+                    </p>
                   </div>
                 </div>
               </CardBody>
@@ -204,10 +228,10 @@ export default function SharesPage() {
                 分享文件给朋友，让协作更简单
               </p>
               <Button
+                className="bg-amber-brown-500 hover:bg-amber-brown-600 text-white"
                 size="lg"
                 startContent={<Share2Icon className="w-5 h-5" />}
-                className="bg-amber-brown-500 hover:bg-amber-brown-600 text-white"
-                onClick={() => window.location.href = '/files'}
+                onClick={() => (window.location.href = "/files")}
               >
                 前往文件管理
               </Button>
@@ -221,7 +245,7 @@ export default function SharesPage() {
                   <div className="flex flex-col lg:flex-row lg:items-start gap-3 lg:gap-4">
                     {/* 文件/文件夹图标 */}
                     <div className="w-12 h-12 lg:w-14 lg:h-14 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      {share.type === 'folder' ? (
+                      {share.type === "folder" ? (
                         <FolderIcon className="w-6 h-6 lg:w-7 lg:h-7 text-amber-brown-500" />
                       ) : (
                         <FileIcon className="w-6 h-6 lg:w-7 lg:h-7 text-primary" />
@@ -236,17 +260,31 @@ export default function SharesPage() {
                           {share.name}
                         </h4>
                         {share.hasPassword && (
-                          <Chip size="sm" startContent={<LockIcon className="w-3 h-3" />} variant="flat" color="warning">
+                          <Chip
+                            color="warning"
+                            size="sm"
+                            startContent={<LockIcon className="w-3 h-3" />}
+                            variant="flat"
+                          >
                             密码
                           </Chip>
                         )}
                         {share.expiresAt && (
-                          <Chip size="sm" startContent={<ClockIcon className="w-3 h-3" />} variant="flat">
-                            {Math.ceil((new Date(share.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))}天
+                          <Chip
+                            size="sm"
+                            startContent={<ClockIcon className="w-3 h-3" />}
+                            variant="flat"
+                          >
+                            {Math.ceil(
+                              (new Date(share.expiresAt).getTime() -
+                                Date.now()) /
+                                (1000 * 60 * 60 * 24),
+                            )}
+                            天
                           </Chip>
                         )}
                         {!share.isActive && (
-                          <Chip size="sm" color="danger" variant="flat">
+                          <Chip color="danger" size="sm" variant="flat">
                             已失效
                           </Chip>
                         )}
@@ -261,11 +299,11 @@ export default function SharesPage() {
                           </code>
                         </div>
                         <Button
-                          size="sm"
-                          variant="flat"
-                          startContent={<CopyIcon className="w-4 h-4" />}
-                          onClick={() => copyShareLink(share.shareToken)}
                           className="bg-secondary-100 sm:w-auto"
+                          size="sm"
+                          startContent={<CopyIcon className="w-4 h-4" />}
+                          variant="flat"
+                          onClick={() => copyShareLink(share.shareToken)}
                         >
                           复制
                         </Button>
@@ -283,7 +321,11 @@ export default function SharesPage() {
                         </div>
                         <div className="flex items-center gap-1.5 col-span-3 lg:col-span-1">
                           <CalendarIcon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
-                          <span>{new Date(share.createdAt).toLocaleDateString('zh-CN')}</span>
+                          <span>
+                            {new Date(share.createdAt).toLocaleDateString(
+                              "zh-CN",
+                            )}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -291,10 +333,10 @@ export default function SharesPage() {
                     {/* 操作按钮 */}
                     <div className="flex lg:flex-col gap-2 lg:items-end">
                       <Button
-                        size="sm"
-                        variant="flat"
-                        startContent={<BarChart3Icon className="w-4 h-4" />}
                         className="flex-1 lg:flex-none bg-secondary-100"
+                        size="sm"
+                        startContent={<BarChart3Icon className="w-4 h-4" />}
+                        variant="flat"
                         onPress={() => handleShowStats(share)}
                       >
                         统计
@@ -302,10 +344,10 @@ export default function SharesPage() {
                       <Dropdown>
                         <DropdownTrigger>
                           <Button
-                            size="sm"
-                            variant="flat"
                             isIconOnly
                             className="bg-secondary-100"
+                            size="sm"
+                            variant="flat"
                           >
                             <MoreVerticalIcon className="w-4 h-4" />
                           </Button>
@@ -323,7 +365,7 @@ export default function SharesPage() {
                             startContent={<SettingsIcon className="w-4 h-4" />}
                             onPress={() => {
                               // TODO: 实现编辑设置功能
-                              showError('功能开发中', '编辑设置功能正在开发中');
+                              showError("功能开发中", "编辑设置功能正在开发中");
                             }}
                           >
                             编辑设置
@@ -352,7 +394,9 @@ export default function SharesPage() {
         <ModalContent>
           <ModalHeader>删除分享</ModalHeader>
           <ModalBody>
-            <p>确定要删除分享 <strong>{selectedShare?.name}</strong> 吗？</p>
+            <p>
+              确定要删除分享 <strong>{selectedShare?.name}</strong> 吗？
+            </p>
             <p className="text-danger text-sm mt-2">
               此操作不可撤销，分享链接将立即失效。
             </p>
@@ -369,7 +413,7 @@ export default function SharesPage() {
       </Modal>
 
       {/* 统计信息模态框 */}
-      <Modal isOpen={isStatsOpen} onClose={onStatsClose} size="lg">
+      <Modal isOpen={isStatsOpen} size="lg" onClose={onStatsClose}>
         <ModalContent>
           <ModalHeader className="flex items-center gap-2">
             <TrendingUpIcon className="w-5 h-5 text-primary" />
@@ -414,7 +458,10 @@ export default function SharesPage() {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-default-600">创建时间</span>
                 <span className="text-sm font-medium">
-                  {selectedShare?.createdAt && new Date(selectedShare.createdAt).toLocaleDateString('zh-CN')}
+                  {selectedShare?.createdAt &&
+                    new Date(selectedShare.createdAt).toLocaleDateString(
+                      "zh-CN",
+                    )}
                 </span>
               </div>
 
@@ -422,7 +469,9 @@ export default function SharesPage() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-default-600">过期时间</span>
                   <span className="text-sm font-medium">
-                    {new Date(selectedShare.expiresAt).toLocaleDateString('zh-CN')}
+                    {new Date(selectedShare.expiresAt).toLocaleDateString(
+                      "zh-CN",
+                    )}
                   </span>
                 </div>
               )}
@@ -430,14 +479,19 @@ export default function SharesPage() {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-default-600">分享类型</span>
                 <Chip size="sm" variant="flat">
-                  {selectedShare?.type === 'folder' ? '文件夹' : '文件'}
+                  {selectedShare?.type === "folder" ? "文件夹" : "文件"}
                 </Chip>
               </div>
 
               {selectedShare?.hasPassword && (
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-default-600">访问控制</span>
-                  <Chip size="sm" color="warning" variant="flat" startContent={<LockIcon className="w-3 h-3" />}>
+                  <Chip
+                    color="warning"
+                    size="sm"
+                    startContent={<LockIcon className="w-3 h-3" />}
+                    variant="flat"
+                  >
                     密码保护
                   </Chip>
                 </div>
@@ -445,9 +499,7 @@ export default function SharesPage() {
             </div>
           </ModalBody>
           <ModalFooter>
-            <Button onPress={onStatsClose}>
-              关闭
-            </Button>
+            <Button onPress={onStatsClose}>关闭</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

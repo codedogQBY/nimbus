@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   Card,
   CardBody,
@@ -9,7 +9,7 @@ import {
   Spinner,
   Accordion,
   AccordionItem,
-} from '@heroui/react';
+} from "@heroui/react";
 import {
   SearchIcon,
   FileIcon,
@@ -18,8 +18,8 @@ import {
   HardDriveIcon,
   KeyIcon,
   ShieldIcon,
-} from 'lucide-react';
-import ky from 'ky';
+} from "lucide-react";
+import ky from "ky";
 
 interface Permission {
   id: number;
@@ -50,28 +50,30 @@ const RESOURCE_ICONS: Record<string, any> = {
 };
 
 const RESOURCE_COLORS: Record<string, string> = {
-  files: 'primary',
-  users: 'secondary',
-  shares: 'success',
-  storage: 'warning',
-  permissions: 'danger',
-  system: 'default',
+  files: "primary",
+  users: "secondary",
+  shares: "success",
+  storage: "warning",
+  permissions: "danger",
+  system: "default",
 };
 
 const RESOURCE_NAMES: Record<string, string> = {
-  files: '文件管理',
-  users: '用户管理',
-  shares: '分享管理',
-  storage: '存储管理',
-  permissions: '权限管理',
-  system: '系统管理',
+  files: "文件管理",
+  users: "用户管理",
+  shares: "分享管理",
+  storage: "存储管理",
+  permissions: "权限管理",
+  system: "系统管理",
 };
 
 export function PermissionsTab() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [permissionGroups, setPermissionGroups] = useState<PermissionGroup[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [permissionGroups, setPermissionGroups] = useState<PermissionGroup[]>(
+    [],
+  );
 
   useEffect(() => {
     loadPermissions();
@@ -80,7 +82,7 @@ export function PermissionsTab() {
   useEffect(() => {
     // 按资源分组
     const groups: Record<string, Permission[]> = {};
-    
+
     permissions.forEach((permission) => {
       if (!groups[permission.resource]) {
         groups[permission.resource] = [];
@@ -88,12 +90,14 @@ export function PermissionsTab() {
       groups[permission.resource].push(permission);
     });
 
-    const groupedPermissions: PermissionGroup[] = Object.entries(groups).map(([resource, perms]) => ({
-      resource,
-      icon: RESOURCE_ICONS[resource] || KeyIcon,
-      color: RESOURCE_COLORS[resource] || 'default',
-      permissions: perms,
-    }));
+    const groupedPermissions: PermissionGroup[] = Object.entries(groups).map(
+      ([resource, perms]) => ({
+        resource,
+        icon: RESOURCE_ICONS[resource] || KeyIcon,
+        color: RESOURCE_COLORS[resource] || "default",
+        permissions: perms,
+      }),
+    );
 
     setPermissionGroups(groupedPermissions);
   }, [permissions]);
@@ -101,26 +105,32 @@ export function PermissionsTab() {
   const loadPermissions = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const data = await ky.get('/api/rbac/permissions', {
-        headers: { Authorization: `Bearer ${token}` },
-      }).json<{ permissions: Permission[] }>();
+      const token = localStorage.getItem("token");
+      const data = await ky
+        .get("/api/rbac/permissions", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .json<{ permissions: Permission[] }>();
 
       setPermissions(data.permissions);
     } catch (error) {
-      console.error('Failed to load permissions:', error);
+      console.error("Failed to load permissions:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredGroups = permissionGroups.map(group => ({
-    ...group,
-    permissions: group.permissions.filter(p =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()))
-    ),
-  })).filter(group => group.permissions.length > 0);
+  const filteredGroups = permissionGroups
+    .map((group) => ({
+      ...group,
+      permissions: group.permissions.filter(
+        (p) =>
+          p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (p.description &&
+            p.description.toLowerCase().includes(searchQuery.toLowerCase())),
+      ),
+    }))
+    .filter((group) => group.permissions.length > 0);
 
   return (
     <div className="space-y-4 lg:space-y-6">
@@ -128,44 +138,52 @@ export function PermissionsTab() {
       <div className="flex items-center justify-between gap-4">
         <div className="flex-1 max-w-md">
           <Input
+            classNames={{
+              input: "text-sm",
+              inputWrapper: "h-10",
+            }}
             placeholder="搜索权限..."
             startContent={<SearchIcon className="w-4 h-4 text-default-400" />}
             value={searchQuery}
             onValueChange={setSearchQuery}
-            classNames={{
-              input: "text-sm",
-              inputWrapper: "h-10"
-            }}
           />
         </div>
-        <Chip color="primary" variant="flat" size="lg">
+        <Chip color="primary" size="lg" variant="flat">
           共 {permissions.length} 个权限
         </Chip>
       </div>
 
       {loading ? (
         <div className="flex justify-center items-center py-12">
-          <Spinner size="lg" color="primary" />
+          <Spinner color="primary" size="lg" />
         </div>
       ) : (
         <div className="space-y-4">
           {/* 桌面端 - 使用手风琴 */}
           <div className="hidden lg:block">
-            <Accordion 
-              variant="splitted"
+            <Accordion
+              defaultExpandedKeys={filteredGroups.map((g) => g.resource)}
               selectionMode="multiple"
-              defaultExpandedKeys={filteredGroups.map(g => g.resource)}
+              variant="splitted"
             >
               {filteredGroups.map((group) => {
                 const IconComponent = group.icon;
+
                 return (
                   <AccordionItem
                     key={group.resource}
-                    aria-label={RESOURCE_NAMES[group.resource] || group.resource}
+                    aria-label={
+                      RESOURCE_NAMES[group.resource] || group.resource
+                    }
+                    className="bg-white"
                     title={
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl bg-${group.color}-100 flex items-center justify-center`}>
-                          <IconComponent className={`w-5 h-5 text-${group.color}-600`} />
+                        <div
+                          className={`w-10 h-10 rounded-xl bg-${group.color}-100 flex items-center justify-center`}
+                        >
+                          <IconComponent
+                            className={`w-5 h-5 text-${group.color}-600`}
+                          />
                         </div>
                         <div>
                           <h4 className="font-semibold text-dark-olive-800">
@@ -177,7 +195,6 @@ export function PermissionsTab() {
                         </div>
                       </div>
                     }
-                    className="bg-white"
                   >
                     <div className="space-y-2 pb-4">
                       {group.permissions.map((permission) => (
@@ -190,7 +207,11 @@ export function PermissionsTab() {
                               <code className="text-sm font-mono text-primary-600 bg-primary-50 px-2 py-1 rounded">
                                 {permission.name}
                               </code>
-                              <Chip size="sm" variant="flat" color={group.color as any}>
+                              <Chip
+                                color={group.color as any}
+                                size="sm"
+                                variant="flat"
+                              >
                                 {permission.action}
                               </Chip>
                             </div>
@@ -218,12 +239,17 @@ export function PermissionsTab() {
           <div className="lg:hidden space-y-4">
             {filteredGroups.map((group) => {
               const IconComponent = group.icon;
+
               return (
                 <Card key={group.resource} className="bg-white">
                   <CardBody className="p-4">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className={`w-10 h-10 rounded-xl bg-${group.color}-100 flex items-center justify-center`}>
-                        <IconComponent className={`w-5 h-5 text-${group.color}-600`} />
+                      <div
+                        className={`w-10 h-10 rounded-xl bg-${group.color}-100 flex items-center justify-center`}
+                      >
+                        <IconComponent
+                          className={`w-5 h-5 text-${group.color}-600`}
+                        />
                       </div>
                       <div>
                         <h4 className="font-semibold text-dark-olive-800">
@@ -245,7 +271,11 @@ export function PermissionsTab() {
                             <code className="text-xs font-mono text-primary-600 bg-primary-50 px-2 py-1 rounded">
                               {permission.name}
                             </code>
-                            <Chip size="sm" variant="flat" color={group.color as any}>
+                            <Chip
+                              color={group.color as any}
+                              size="sm"
+                              variant="flat"
+                            >
                               {permission.action}
                             </Chip>
                           </div>
@@ -272,9 +302,7 @@ export function PermissionsTab() {
               <h3 className="text-lg font-semibold text-dark-olive-800 mb-2">
                 没有找到权限
               </h3>
-              <p className="text-sm text-default-500">
-                请尝试其他搜索关键词
-              </p>
+              <p className="text-sm text-default-500">请尝试其他搜索关键词</p>
             </div>
           )}
         </div>
@@ -282,4 +310,3 @@ export function PermissionsTab() {
     </div>
   );
 }
-

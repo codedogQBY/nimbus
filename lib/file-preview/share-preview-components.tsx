@@ -1,29 +1,21 @@
-'use client';
+"use client";
 
-import React, { useState, useRef, useEffect } from 'react';
-import {
-  Button,
-  Spinner,
-  Chip,
-  Tooltip
-} from '@heroui/react';
+import React, { useState, useEffect } from "react";
+import { Button, Spinner } from "@heroui/react";
 import {
   DownloadIcon,
-  ExternalLinkIcon,
   RotateCwIcon,
   ZoomInIcon,
   ZoomOutIcon,
-  MaximizeIcon,
-  MinimizeIcon,
   RefreshCwIcon,
-  FileIcon,
   ImageIcon,
   VideoIcon,
   MusicIcon,
-  FileTextIcon
-} from 'lucide-react';
-import { ShareAuthenticatedImage } from '@/components/share-authenticated-image';
-import { getPreviewType, PreviewType } from '@/lib/file-preview/types';
+  FileTextIcon,
+} from "lucide-react";
+
+import { ShareAuthenticatedImage } from "@/components/share-authenticated-image";
+import { getPreviewType, PreviewType } from "@/lib/file-preview/types";
 
 export interface SharePreviewComponentProps {
   file: {
@@ -38,7 +30,11 @@ export interface SharePreviewComponentProps {
 }
 
 // 图片预览组件（分享版本）
-export function ShareImagePreview({ file, shareToken, onDownload }: SharePreviewComponentProps) {
+export function ShareImagePreview({
+  file,
+  shareToken,
+  onDownload,
+}: SharePreviewComponentProps) {
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -47,9 +43,9 @@ export function ShareImagePreview({ file, shareToken, onDownload }: SharePreview
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
-  const handleZoomIn = () => setScale(prev => Math.min(prev + 0.25, 5));
-  const handleZoomOut = () => setScale(prev => Math.max(prev - 0.25, 0.25));
-  const handleRotate = () => setRotation(prev => (prev + 90) % 360);
+  const handleZoomIn = () => setScale((prev) => Math.min(prev + 0.25, 5));
+  const handleZoomOut = () => setScale((prev) => Math.max(prev - 0.25, 0.25));
+  const handleRotate = () => setRotation((prev) => (prev + 90) % 360);
   const handleReset = () => {
     setScale(1);
     setRotation(0);
@@ -67,7 +63,7 @@ export function ShareImagePreview({ file, shareToken, onDownload }: SharePreview
     if (isDragging && scale > 1) {
       setPosition({
         x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y
+        y: e.clientY - dragStart.y,
       });
     }
   };
@@ -92,10 +88,10 @@ export function ShareImagePreview({ file, shareToken, onDownload }: SharePreview
         <div className="flex items-center gap-2 overflow-x-auto">
           <Button
             isIconOnly
+            isDisabled={scale <= 0.25}
             size="sm"
             variant="light"
             onPress={handleZoomOut}
-            isDisabled={scale <= 0.25}
           >
             <ZoomOutIcon className="w-4 h-4" />
           </Button>
@@ -106,42 +102,27 @@ export function ShareImagePreview({ file, shareToken, onDownload }: SharePreview
 
           <Button
             isIconOnly
+            isDisabled={scale >= 5}
             size="sm"
             variant="light"
             onPress={handleZoomIn}
-            isDisabled={scale >= 5}
           >
             <ZoomInIcon className="w-4 h-4" />
           </Button>
 
           <div className="w-px h-6 bg-divider mx-2" />
 
-          <Button
-            isIconOnly
-            size="sm"
-            variant="light"
-            onPress={handleRotate}
-          >
+          <Button isIconOnly size="sm" variant="light" onPress={handleRotate}>
             <RotateCwIcon className="w-4 h-4" />
           </Button>
 
-          <Button
-            isIconOnly
-            size="sm"
-            variant="light"
-            onPress={handleReset}
-          >
+          <Button isIconOnly size="sm" variant="light" onPress={handleReset}>
             <RefreshCwIcon className="w-4 h-4" />
           </Button>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            isIconOnly
-            size="sm"
-            variant="light"
-            onPress={onDownload}
-          >
+          <Button isIconOnly size="sm" variant="light" onPress={onDownload}>
             <DownloadIcon className="w-4 h-4" />
           </Button>
         </div>
@@ -155,7 +136,7 @@ export function ShareImagePreview({ file, shareToken, onDownload }: SharePreview
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
             <div className="flex flex-col items-center gap-3">
-              <Spinner size="lg" color="primary" />
+              <Spinner color="primary" size="lg" />
               <p className="text-sm text-default-500">加载图片中...</p>
             </div>
           </div>
@@ -167,8 +148,12 @@ export function ShareImagePreview({ file, shareToken, onDownload }: SharePreview
               <ImageIcon className="w-8 h-8 text-danger-500" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-danger-700">图片加载失败</h3>
-              <p className="text-sm text-danger-500">无法显示此图片，请检查文件是否损坏</p>
+              <h3 className="text-lg font-semibold text-danger-700">
+                图片加载失败
+              </h3>
+              <p className="text-sm text-danger-500">
+                无法显示此图片，请检查文件是否损坏
+              </p>
             </div>
             <Button
               color="danger"
@@ -183,29 +168,30 @@ export function ShareImagePreview({ file, shareToken, onDownload }: SharePreview
           </div>
         ) : (
           <ShareAuthenticatedImage
-            src={`/api/files/${file.id}/serve?share=${shareToken}`}
-            shareToken={shareToken}
             alt={file.originalName}
             className="max-w-full max-h-full object-contain transition-all duration-200 select-none"
-            onLoad={() => setLoading(false)}
-            onError={() => {
-              setLoading(false);
-              setError(true);
-            }}
+            draggable={false}
+            shareToken={shareToken}
+            src={`/api/files/${file.id}/serve?share=${shareToken}`}
             style={{
               transform: `scale(${scale}) rotate(${rotation}deg) translate(${position.x}px, ${position.y}px)`,
-              cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'pointer'
+              cursor:
+                scale > 1 ? (isDragging ? "grabbing" : "grab") : "pointer",
             }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
             onClick={(e) => {
               if (!isDragging && scale === 1) {
                 handleZoomIn();
               }
             }}
-            draggable={false}
+            onError={() => {
+              setLoading(false);
+              setError(true);
+            }}
+            onLoad={() => setLoading(false)}
+            onMouseDown={handleMouseDown}
+            onMouseLeave={handleMouseUp}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
           />
         )}
       </div>
@@ -214,10 +200,14 @@ export function ShareImagePreview({ file, shareToken, onDownload }: SharePreview
 }
 
 // 视频预览组件（分享版本）
-export function ShareVideoPreview({ file, shareToken, onDownload }: SharePreviewComponentProps) {
+export function ShareVideoPreview({
+  file,
+  shareToken,
+  onDownload,
+}: SharePreviewComponentProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [videoSrc, setVideoSrc] = useState<string>('');
+  const [videoSrc, setVideoSrc] = useState<string>("");
 
   useEffect(() => {
     const loadVideo = async () => {
@@ -234,10 +224,11 @@ export function ShareVideoPreview({ file, shareToken, onDownload }: SharePreview
 
         const blob = await response.blob();
         const blobUrl = URL.createObjectURL(blob);
+
         setVideoSrc(blobUrl);
         setLoading(false);
       } catch (err) {
-        console.error('Failed to load share video:', err);
+        console.error("Failed to load share video:", err);
         setError(true);
         setLoading(false);
       }
@@ -258,16 +249,13 @@ export function ShareVideoPreview({ file, shareToken, onDownload }: SharePreview
       <div className="flex items-center justify-between p-3 bg-white border-b border-divider">
         <div className="flex items-center gap-2">
           <VideoIcon className="w-5 h-5 text-primary-500" />
-          <span className="text-sm font-medium text-dark-olive-800">视频播放器</span>
+          <span className="text-sm font-medium text-dark-olive-800">
+            视频播放器
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            isIconOnly
-            size="sm"
-            variant="light"
-            onPress={onDownload}
-          >
+          <Button isIconOnly size="sm" variant="light" onPress={onDownload}>
             <DownloadIcon className="w-4 h-4" />
           </Button>
         </div>
@@ -278,7 +266,7 @@ export function ShareVideoPreview({ file, shareToken, onDownload }: SharePreview
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
             <div className="flex flex-col items-center gap-3">
-              <Spinner size="lg" color="primary" />
+              <Spinner color="primary" size="lg" />
               <p className="text-sm text-white">加载视频中...</p>
             </div>
           </div>
@@ -288,7 +276,9 @@ export function ShareVideoPreview({ file, shareToken, onDownload }: SharePreview
           <div className="aspect-video bg-danger-50 flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <VideoIcon className="w-12 h-12 text-danger-500 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold text-danger-700">视频加载失败</h3>
+              <h3 className="text-lg font-semibold text-danger-700">
+                视频加载失败
+              </h3>
               <p className="text-sm text-danger-500 mb-4">无法播放此视频文件</p>
               <Button
                 color="danger"
@@ -304,16 +294,16 @@ export function ShareVideoPreview({ file, shareToken, onDownload }: SharePreview
           </div>
         ) : videoSrc ? (
           <video
-            src={videoSrc}
             controls
             className="w-full h-auto max-h-[70vh]"
             preload="metadata"
-            onLoadStart={() => setLoading(true)}
+            src={videoSrc}
             onCanPlay={() => setLoading(false)}
             onError={() => {
               setLoading(false);
               setError(true);
             }}
+            onLoadStart={() => setLoading(true)}
           >
             您的浏览器不支持视频播放
           </video>
@@ -324,10 +314,14 @@ export function ShareVideoPreview({ file, shareToken, onDownload }: SharePreview
 }
 
 // 音频预览组件（分享版本）
-export function ShareAudioPreview({ file, shareToken, onDownload }: SharePreviewComponentProps) {
+export function ShareAudioPreview({
+  file,
+  shareToken,
+  onDownload,
+}: SharePreviewComponentProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [audioSrc, setAudioSrc] = useState<string>('');
+  const [audioSrc, setAudioSrc] = useState<string>("");
 
   useEffect(() => {
     const loadAudio = async () => {
@@ -344,10 +338,11 @@ export function ShareAudioPreview({ file, shareToken, onDownload }: SharePreview
 
         const blob = await response.blob();
         const blobUrl = URL.createObjectURL(blob);
+
         setAudioSrc(blobUrl);
         setLoading(false);
       } catch (err) {
-        console.error('Failed to load share audio:', err);
+        console.error("Failed to load share audio:", err);
         setError(true);
         setLoading(false);
       }
@@ -368,16 +363,13 @@ export function ShareAudioPreview({ file, shareToken, onDownload }: SharePreview
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <MusicIcon className="w-5 h-5 text-primary-500" />
-          <span className="text-sm font-medium text-dark-olive-800">音频播放器</span>
+          <span className="text-sm font-medium text-dark-olive-800">
+            音频播放器
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            isIconOnly
-            size="sm"
-            variant="light"
-            onPress={onDownload}
-          >
+          <Button isIconOnly size="sm" variant="light" onPress={onDownload}>
             <DownloadIcon className="w-4 h-4" />
           </Button>
         </div>
@@ -387,7 +379,7 @@ export function ShareAudioPreview({ file, shareToken, onDownload }: SharePreview
       <div className="text-center">
         {loading && (
           <div className="flex flex-col items-center gap-4">
-            <Spinner size="lg" color="primary" />
+            <Spinner color="primary" size="lg" />
             <p className="text-sm text-default-500">加载音频中...</p>
           </div>
         )}
@@ -398,7 +390,9 @@ export function ShareAudioPreview({ file, shareToken, onDownload }: SharePreview
               <MusicIcon className="w-8 h-8 text-danger-500" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-danger-700">音频加载失败</h3>
+              <h3 className="text-lg font-semibold text-danger-700">
+                音频加载失败
+              </h3>
               <p className="text-sm text-danger-500">无法播放此音频文件</p>
             </div>
             <Button
@@ -428,16 +422,16 @@ export function ShareAudioPreview({ file, shareToken, onDownload }: SharePreview
             </div>
 
             <audio
-              src={audioSrc}
               controls
               className="w-full max-w-md"
               preload="metadata"
-              onLoadStart={() => setLoading(true)}
+              src={audioSrc}
               onCanPlay={() => setLoading(false)}
               onError={() => {
                 setLoading(false);
                 setError(true);
               }}
+              onLoadStart={() => setLoading(true)}
             >
               您的浏览器不支持音频播放
             </audio>
@@ -449,10 +443,14 @@ export function ShareAudioPreview({ file, shareToken, onDownload }: SharePreview
 }
 
 // PDF预览组件（分享版本）
-export function SharePDFPreview({ file, shareToken, onDownload }: SharePreviewComponentProps) {
+export function SharePDFPreview({
+  file,
+  shareToken,
+  onDownload,
+}: SharePreviewComponentProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [pdfSrc, setPdfSrc] = useState<string>('');
+  const [pdfSrc, setPdfSrc] = useState<string>("");
 
   useEffect(() => {
     const loadPDF = async () => {
@@ -469,10 +467,11 @@ export function SharePDFPreview({ file, shareToken, onDownload }: SharePreviewCo
 
         const blob = await response.blob();
         const blobUrl = URL.createObjectURL(blob);
+
         setPdfSrc(blobUrl);
         setLoading(false);
       } catch (err) {
-        console.error('Failed to load share PDF:', err);
+        console.error("Failed to load share PDF:", err);
         setError(true);
         setLoading(false);
       }
@@ -493,16 +492,13 @@ export function SharePDFPreview({ file, shareToken, onDownload }: SharePreviewCo
       <div className="flex items-center justify-between p-3 bg-white border-b border-divider">
         <div className="flex items-center gap-2">
           <FileTextIcon className="w-5 h-5 text-primary-500" />
-          <span className="text-sm font-medium text-dark-olive-800">PDF 查看器</span>
+          <span className="text-sm font-medium text-dark-olive-800">
+            PDF 查看器
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            isIconOnly
-            size="sm"
-            variant="light"
-            onPress={onDownload}
-          >
+          <Button isIconOnly size="sm" variant="light" onPress={onDownload}>
             <DownloadIcon className="w-4 h-4" />
           </Button>
         </div>
@@ -513,7 +509,7 @@ export function SharePDFPreview({ file, shareToken, onDownload }: SharePreviewCo
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
             <div className="flex flex-col items-center gap-3">
-              <Spinner size="lg" color="primary" />
+              <Spinner color="primary" size="lg" />
               <p className="text-sm text-default-500">加载 PDF 中...</p>
             </div>
           </div>
@@ -523,8 +519,12 @@ export function SharePDFPreview({ file, shareToken, onDownload }: SharePreviewCo
           <div className="h-full flex items-center justify-center bg-danger-50">
             <div className="text-center">
               <FileTextIcon className="w-12 h-12 text-danger-500 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold text-danger-700">PDF 加载失败</h3>
-              <p className="text-sm text-danger-500 mb-4">无法显示此 PDF 文件</p>
+              <h3 className="text-lg font-semibold text-danger-700">
+                PDF 加载失败
+              </h3>
+              <p className="text-sm text-danger-500 mb-4">
+                无法显示此 PDF 文件
+              </p>
               <Button
                 color="danger"
                 variant="flat"
@@ -539,15 +539,15 @@ export function SharePDFPreview({ file, shareToken, onDownload }: SharePreviewCo
           </div>
         ) : pdfSrc ? (
           <iframe
-            src={pdfSrc}
+            allow="fullscreen"
             className="w-full h-full border-0"
+            src={pdfSrc}
             title={file.originalName}
-            onLoad={() => setLoading(false)}
             onError={() => {
               setLoading(false);
               setError(true);
             }}
-            allow="fullscreen"
+            onLoad={() => setLoading(false)}
           />
         ) : null}
       </div>
@@ -556,22 +556,50 @@ export function SharePDFPreview({ file, shareToken, onDownload }: SharePreviewCo
 }
 
 // 通用的分享文件预览组件
-export function ShareFilePreview({ file, shareToken, onDownload }: SharePreviewComponentProps) {
-  const fileName = file.originalName || file.name || '';
+export function ShareFilePreview({
+  file,
+  shareToken,
+  onDownload,
+}: SharePreviewComponentProps) {
+  const fileName = file.originalName || file.name || "";
   const previewType = getPreviewType(fileName, file.mimeType);
 
   switch (previewType) {
     case PreviewType.IMAGE:
-      return <ShareImagePreview file={file} shareToken={shareToken} onDownload={onDownload} />;
+      return (
+        <ShareImagePreview
+          file={file}
+          shareToken={shareToken}
+          onDownload={onDownload}
+        />
+      );
 
     case PreviewType.VIDEO:
-      return <ShareVideoPreview file={file} shareToken={shareToken} onDownload={onDownload} />;
+      return (
+        <ShareVideoPreview
+          file={file}
+          shareToken={shareToken}
+          onDownload={onDownload}
+        />
+      );
 
     case PreviewType.AUDIO:
-      return <ShareAudioPreview file={file} shareToken={shareToken} onDownload={onDownload} />;
+      return (
+        <ShareAudioPreview
+          file={file}
+          shareToken={shareToken}
+          onDownload={onDownload}
+        />
+      );
 
     case PreviewType.PDF:
-      return <SharePDFPreview file={file} shareToken={shareToken} onDownload={onDownload} />;
+      return (
+        <SharePDFPreview
+          file={file}
+          shareToken={shareToken}
+          onDownload={onDownload}
+        />
+      );
 
     default:
       // 不支持预览的文件类型，返回null，让父组件显示默认的下载界面

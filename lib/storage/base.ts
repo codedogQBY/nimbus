@@ -59,7 +59,10 @@ export abstract class StorageSource {
   abstract testConnection(): Promise<boolean>;
 
   // 文件操作
-  abstract uploadFile(path: string, file: Buffer | ReadableStream): Promise<UploadResult>;
+  abstract uploadFile(
+    path: string,
+    file: Buffer | ReadableStream,
+  ): Promise<UploadResult>;
   abstract downloadFile(path: string): Promise<ReadableStream>;
   abstract deleteFile(path: string): Promise<void>;
   abstract getFileInfo(path: string): Promise<FileInfo>;
@@ -77,13 +80,13 @@ export abstract class StorageSource {
    * 确保文件夹路径存在，递归创建
    */
   async ensureFolderPath(path: string): Promise<void> {
-    const parts = path.split('/').filter(Boolean);
-    let currentPath = '';
+    const parts = path.split("/").filter(Boolean);
+    let currentPath = "";
 
     for (const part of parts) {
-      currentPath += '/' + part;
+      currentPath += "/" + part;
       const exists = await this.folderExists(currentPath);
-      
+
       if (!exists) {
         await this.createFolder(currentPath);
       }
@@ -97,4 +100,3 @@ export abstract class StorageSource {
   abstract getLastSyncTime(): Promise<Date>;
   abstract setLastSyncTime(time: Date): Promise<void>;
 }
-

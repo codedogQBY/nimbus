@@ -1,6 +1,8 @@
-import nodemailer from 'nodemailer';
-import { emailConfig } from '@/config/email';
-import prisma from './prisma';
+import nodemailer from "nodemailer";
+
+import prisma from "./prisma";
+
+import { emailConfig } from "@/config/email";
 
 export class EmailService {
   private transporter: nodemailer.Transporter;
@@ -21,15 +23,17 @@ export class EmailService {
    */
   async sendVerificationEmail(
     email: string,
-    type: 'register' | 'reset_password' | 'change_email',
-    userId?: number
+    type: "register" | "reset_password" | "change_email",
+    userId?: number,
   ): Promise<{ code: string; expiresAt: Date }> {
     // 检查发送频率限制
     await this.checkRateLimit(email);
 
     // 生成验证码
     const code = this.generateVerificationCode();
-    const expiresAt = new Date(Date.now() + emailConfig.templates.verification.expiresIn);
+    const expiresAt = new Date(
+      Date.now() + emailConfig.templates.verification.expiresIn,
+    );
 
     // 准备邮件内容
     const emailContent = this.buildEmailContent(type, code, expiresAt);
@@ -56,21 +60,33 @@ export class EmailService {
       });
 
       // 记录发送日志
-      await this.logEmail(email, emailContent.subject, type, 'sent');
+      await this.logEmail(email, emailContent.subject, type, "sent");
 
       return { code, expiresAt };
     } catch (error) {
       // 记录失败日志
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      await this.logEmail(email, emailContent.subject, type, 'failed', errorMessage);
-      throw new Error('邮件发送失败，请稍后重试');
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      await this.logEmail(
+        email,
+        emailContent.subject,
+        type,
+        "failed",
+        errorMessage,
+      );
+      throw new Error("邮件发送失败，请稍后重试");
     }
   }
 
   /**
    * 验证邮箱验证码
    */
-  async verifyCode(email: string, code: string, type: string): Promise<boolean> {
+  async verifyCode(
+    email: string,
+    code: string,
+    type: string,
+  ): Promise<boolean> {
     const verification = await prisma.emailVerification.findFirst({
       where: {
         email,
@@ -85,7 +101,7 @@ export class EmailService {
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
     });
 
@@ -128,13 +144,16 @@ export class EmailService {
     // 检查是否在冷却期内
     const lastSent = await prisma.emailVerification.findFirst({
       where: { email },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     if (lastSent) {
-      const cooldownEnd = lastSent.createdAt.getTime() + emailConfig.rateLimits.resendCooldown;
+      const cooldownEnd =
+        lastSent.createdAt.getTime() + emailConfig.rateLimits.resendCooldown;
+
       if (Date.now() < cooldownEnd) {
         const waitSeconds = Math.ceil((cooldownEnd - Date.now()) / 1000);
+
         throw new Error(`请等待 ${waitSeconds} 秒后再重新发送`);
       }
     }
@@ -151,7 +170,7 @@ export class EmailService {
     });
 
     if (recentCount >= emailConfig.rateLimits.maxAttemptsPerHour) {
-      throw new Error('发送次数过多，请一小时后再试');
+      throw new Error("发送次数过多，请一小时后再试");
     }
   }
 
@@ -161,27 +180,27 @@ export class EmailService {
   private buildEmailContent(
     type: string,
     code: string,
-    expiresAt: Date
+    expiresAt: Date,
   ): { subject: string; html: string; text: string } {
     const expiresInMinutes = Math.floor(
-      (expiresAt.getTime() - Date.now()) / (60 * 1000)
+      (expiresAt.getTime() - Date.now()) / (60 * 1000),
     );
 
     const templates = {
       register: {
-        subject: '验证您的邮箱 - Nimbus 网盘',
-        title: '欢迎注册 Nimbus！',
-        message: '感谢您注册 Nimbus 网盘。请使用以下验证码完成邮箱验证：',
+        subject: "验证您的邮箱 - Nimbus 网盘",
+        title: "欢迎注册 Nimbus！",
+        message: "感谢您注册 Nimbus 网盘。请使用以下验证码完成邮箱验证：",
       },
       reset_password: {
-        subject: '重置密码 - Nimbus 网盘',
-        title: '重置您的密码',
-        message: '您请求重置密码。请使用以下验证码完成密码重置：',
+        subject: "重置密码 - Nimbus 网盘",
+        title: "重置您的密码",
+        message: "您请求重置密码。请使用以下验证码完成密码重置：",
       },
       change_email: {
-        subject: '验证新邮箱 - Nimbus 网盘',
-        title: '验证您的新邮箱',
-        message: '您正在更改邮箱地址。请使用以下验证码验证新邮箱：',
+        subject: "验证新邮箱 - Nimbus 网盘",
+        title: "验证您的新邮箱",
+        message: "您正在更改邮箱地址。请使用以下验证码验证新邮箱：",
       },
     };
 
@@ -255,8 +274,8 @@ ${template.message}
     email: string,
     subject: string,
     type: string,
-    status: 'sent' | 'failed',
-    errorMessage?: string
+    status: "sent" | "failed",
+    errorMessage?: string,
   ): Promise<void> {
     await prisma.emailLog.create({
       data: {
@@ -265,11 +284,10 @@ ${template.message}
         type,
         status,
         errorMessage,
-        sentAt: status === 'sent' ? new Date() : null,
+        sentAt: status === "sent" ? new Date() : null,
       },
     });
   }
 }
 
 export default EmailService;
-

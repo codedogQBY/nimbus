@@ -1,6 +1,7 @@
-import { StorageSource, FolderContents, FileInfo } from './base';
-import { storageManager } from './manager';
-import prisma from '../prisma';
+import prisma from "../prisma";
+
+import { FolderContents, FileInfo } from "./base";
+import { storageManager } from "./manager";
 
 export interface SyncResult {
   success: boolean;
@@ -24,7 +25,7 @@ export interface MergedFolderContents extends FolderContents {
 export interface SourceStatus {
   sourceId: number;
   sourceName: string;
-  status: 'online' | 'offline' | 'error';
+  status: "online" | "offline" | "error";
   error?: string;
   fileCount: number;
   folderCount: number;
@@ -48,6 +49,7 @@ export class FolderSyncManager {
     for (const sourceRecord of storageSources) {
       try {
         const source = await storageManager.getStorageSource(sourceRecord.id);
+
         await source.ensureFolderPath(folderPath);
 
         results.push({
@@ -66,7 +68,7 @@ export class FolderSyncManager {
     }
 
     return {
-      success: results.every(r => r.success),
+      success: results.every((r) => r.success),
       results,
       affectedSources: storageSources.length,
     };
@@ -80,7 +82,11 @@ export class FolderSyncManager {
       where: { isActive: true },
     });
 
-    const allFiles: (FileInfo & { sourceId: number; sourceName: string; sourceType: string })[] = [];
+    const allFiles: (FileInfo & {
+      sourceId: number;
+      sourceName: string;
+      sourceType: string;
+    })[] = [];
     const allFolders = new Map<string, FileInfo>();
     const sourceStatus: SourceStatus[] = [];
 
@@ -91,7 +97,7 @@ export class FolderSyncManager {
           const contents = await source.listFolder(folderPath);
 
           // 添加文件（带源信息）
-          contents.files.forEach(file => {
+          contents.files.forEach((file) => {
             allFiles.push({
               ...file,
               sourceId: sourceRecord.id,
@@ -101,7 +107,7 @@ export class FolderSyncManager {
           });
 
           // 合并文件夹（去重）
-          contents.folders.forEach(folder => {
+          contents.folders.forEach((folder) => {
             if (!allFolders.has(folder.path)) {
               allFolders.set(folder.path, folder);
             }
@@ -110,7 +116,7 @@ export class FolderSyncManager {
           sourceStatus.push({
             sourceId: sourceRecord.id,
             sourceName: sourceRecord.name,
-            status: 'online',
+            status: "online",
             fileCount: contents.files.length,
             folderCount: contents.folders.length,
           });
@@ -118,13 +124,13 @@ export class FolderSyncManager {
           sourceStatus.push({
             sourceId: sourceRecord.id,
             sourceName: sourceRecord.name,
-            status: 'error',
+            status: "error",
             error: error instanceof Error ? error.message : String(error),
             fileCount: 0,
             folderCount: 0,
           });
         }
-      })
+      }),
     );
 
     const folders = Array.from(allFolders.values());
@@ -136,14 +142,17 @@ export class FolderSyncManager {
       totalSize: allFiles.reduce((sum, f) => sum + f.size, 0),
       sourceStatus,
       sourcesQueried: storageSources.length,
-      sourcesOnline: sourceStatus.filter(s => s.status === 'online').length,
+      sourcesOnline: sourceStatus.filter((s) => s.status === "online").length,
     };
   }
 
   /**
    * 同步文件夹重命名操作
    */
-  async renameFolderAcrossSources(oldPath: string, newPath: string): Promise<SyncResult> {
+  async renameFolderAcrossSources(
+    oldPath: string,
+    newPath: string,
+  ): Promise<SyncResult> {
     const storageSources = await prisma.storageSource.findMany({
       where: { isActive: true },
     });
@@ -156,6 +165,7 @@ export class FolderSyncManager {
 
         // 检查旧文件夹是否存在
         const exists = await source.folderExists(oldPath);
+
         if (exists) {
           await source.moveFolder(oldPath, newPath);
         } else {
@@ -179,7 +189,7 @@ export class FolderSyncManager {
     }
 
     return {
-      success: results.every(r => r.success),
+      success: results.every((r) => r.success),
       results,
       affectedSources: storageSources.length,
     };
@@ -190,7 +200,7 @@ export class FolderSyncManager {
    */
   async deleteFolderAcrossSources(
     folderPath: string,
-    recursive: boolean = false
+    recursive: boolean = false,
   ): Promise<SyncResult> {
     const storageSources = await prisma.storageSource.findMany({
       where: { isActive: true },
@@ -201,8 +211,9 @@ export class FolderSyncManager {
     for (const sourceRecord of storageSources) {
       try {
         const source = await storageManager.getStorageSource(sourceRecord.id);
-        
+
         const exists = await source.folderExists(folderPath);
+
         if (exists) {
           await source.deleteFolder(folderPath, recursive);
         }
@@ -223,7 +234,7 @@ export class FolderSyncManager {
     }
 
     return {
-      success: results.every(r => r.success),
+      success: results.every((r) => r.success),
       results,
       affectedSources: storageSources.length,
     };
@@ -232,4 +243,3 @@ export class FolderSyncManager {
 
 // 单例实例
 export const folderSyncManager = new FolderSyncManager();
-

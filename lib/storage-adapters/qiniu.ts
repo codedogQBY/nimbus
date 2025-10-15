@@ -1,8 +1,9 @@
-import { StorageAdapter, UploadResult, StorageConfig } from './index';
-import * as qiniu from 'qiniu';
+import * as qiniu from "qiniu";
+
+import { StorageAdapter, UploadResult, StorageConfig } from "./index";
 
 export class QiniuAdapter implements StorageAdapter {
-  name = '七牛云';
+  name = "七牛云";
   private mac: qiniu.auth.digest.Mac;
   private config: qiniu.conf.Config;
   private bucket: string;
@@ -10,10 +11,13 @@ export class QiniuAdapter implements StorageAdapter {
   private region: string;
 
   constructor(private storageConfig: StorageConfig) {
-    this.mac = new qiniu.auth.digest.Mac(storageConfig.accessKey, storageConfig.secretKey);
+    this.mac = new qiniu.auth.digest.Mac(
+      storageConfig.accessKey,
+      storageConfig.secretKey,
+    );
     this.bucket = storageConfig.bucket;
     this.domain = storageConfig.domain;
-    this.region = storageConfig.region || 'z0';
+    this.region = storageConfig.region || "z0";
 
     // 配置七牛云区域
     this.config = new qiniu.conf.Config();
@@ -24,12 +28,13 @@ export class QiniuAdapter implements StorageAdapter {
 
   private getZone(region: string): qiniu.zone.Zone {
     const zoneMap: Record<string, qiniu.zone.Zone> = {
-      'z0': qiniu.zone.Zone_z0,  // 华东
-      'z1': qiniu.zone.Zone_z1,  // 华北
-      'z2': qiniu.zone.Zone_z2,  // 华南
-      'na0': qiniu.zone.Zone_na0, // 北美
-      'as0': qiniu.zone.Zone_as0, // 东南亚
+      z0: qiniu.zone.Zone_z0, // 华东
+      z1: qiniu.zone.Zone_z1, // 华北
+      z2: qiniu.zone.Zone_z2, // 华南
+      na0: qiniu.zone.Zone_na0, // 北美
+      as0: qiniu.zone.Zone_as0, // 东南亚
     };
+
     return zoneMap[region] || qiniu.zone.Zone_z0;
   }
 
@@ -38,7 +43,8 @@ export class QiniuAdapter implements StorageAdapter {
       // 创建上传策略
       const putPolicy = new qiniu.rs.PutPolicy({
         scope: `${this.bucket}:${path}`,
-        returnBody: '{"key":"$(key)","hash":"$(etag)","bucket":"$(bucket)","fsize":$(fsize)}'
+        returnBody:
+          '{"key":"$(key)","hash":"$(etag)","bucket":"$(bucket)","fsize":$(fsize)}',
       });
 
       // 生成上传token
@@ -60,16 +66,18 @@ export class QiniuAdapter implements StorageAdapter {
           putExtra,
           (respErr: any, respBody: any, respInfo: any) => {
             if (respErr) {
-              console.error('Qiniu upload error:', respErr);
+              console.error("Qiniu upload error:", respErr);
               resolve({
                 success: false,
-                error: respErr.message || 'Upload failed',
+                error: respErr.message || "Upload failed",
               });
+
               return;
             }
 
             if (respInfo.statusCode === 200) {
               const url = this.getUrl(path);
+
               resolve({
                 success: true,
                 url,
@@ -78,20 +86,25 @@ export class QiniuAdapter implements StorageAdapter {
                 hash: respBody.hash,
               });
             } else {
-              console.error('Qiniu upload failed:', respInfo.statusCode, respBody);
+              console.error(
+                "Qiniu upload failed:",
+                respInfo.statusCode,
+                respBody,
+              );
               resolve({
                 success: false,
                 error: `Upload failed with status: ${respInfo.statusCode}`,
               });
             }
-          }
+          },
         );
       });
     } catch (error) {
-      console.error('Qiniu upload error:', error);
+      console.error("Qiniu upload error:", error);
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Upload failed',
+        error: error instanceof Error ? error.message : "Upload failed",
       };
     }
   }
@@ -100,32 +113,37 @@ export class QiniuAdapter implements StorageAdapter {
     try {
       // 将文件路径转换为完整的下载URL
       const downloadUrl = this.getDownloadUrl(path);
-      console.log('Qiniu download - path:', path);
-      console.log('Qiniu download - domain:', this.domain);
-      console.log('Qiniu download - downloadUrl:', downloadUrl);
 
       const response = await fetch(downloadUrl);
+
       if (!response.ok) {
-        console.log('Qiniu download - response status:', response.status);
-        console.log('Qiniu download - response statusText:', response.statusText);
-        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Download failed: ${response.status} ${response.statusText}`,
+        );
       }
 
       const arrayBuffer = await response.arrayBuffer();
+
       return Buffer.from(arrayBuffer);
     } catch (error) {
-      console.error('Qiniu download error:', error);
-      throw new Error(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("Qiniu download error:", error);
+      throw new Error(
+        `Download failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
   // 生成私有空间的下载URL
-  private generatePrivateDownloadUrl(url: string, expires: number = 3600): string {
+  private generatePrivateDownloadUrl(
+    url: string,
+    expires: number = 3600,
+  ): string {
     const deadline = Math.floor(Date.now() / 1000) + expires;
     const signUrl = `${url}?e=${deadline}`;
 
     // 使用官方SDK生成签名
     const accessToken = qiniu.util.generateAccessToken(this.mac, signUrl);
+
     return `${signUrl}&token=${accessToken}`;
   }
 
@@ -134,23 +152,33 @@ export class QiniuAdapter implements StorageAdapter {
       const bucketManager = new qiniu.rs.BucketManager(this.mac, this.config);
 
       return new Promise((resolve) => {
-        bucketManager.delete(this.bucket, path, (err: any, respBody: any, respInfo: any) => {
-          if (err) {
-            console.error('Delete failed:', err);
-            resolve(false);
-            return;
-          }
+        bucketManager.delete(
+          this.bucket,
+          path,
+          (err: any, respBody: any, respInfo: any) => {
+            if (err) {
+              console.error("Delete failed:", err);
+              resolve(false);
 
-          if (respInfo.statusCode === 200) {
-            resolve(true);
-          } else {
-            console.error('Delete failed with status:', respInfo.statusCode, respBody);
-            resolve(false);
-          }
-        });
+              return;
+            }
+
+            if (respInfo.statusCode === 200) {
+              resolve(true);
+            } else {
+              console.error(
+                "Delete failed with status:",
+                respInfo.statusCode,
+                respBody,
+              );
+              resolve(false);
+            }
+          },
+        );
       });
     } catch (error) {
-      console.error('Delete failed:', error);
+      console.error("Delete failed:", error);
+
       return false;
     }
   }
@@ -158,13 +186,14 @@ export class QiniuAdapter implements StorageAdapter {
   getUrl(path: string): string {
     // 确保domain包含协议
     let domain = this.domain;
-    if (!domain.startsWith('http://') && !domain.startsWith('https://')) {
+
+    if (!domain.startsWith("http://") && !domain.startsWith("https://")) {
       domain = `https://${domain}`;
     }
-    
+
     // 移除domain末尾的斜杠，避免双斜杠
-    domain = domain.replace(/\/$/, '');
-    
+    domain = domain.replace(/\/$/, "");
+
     return `${domain}/${path}`;
   }
 
@@ -183,32 +212,33 @@ export class QiniuAdapter implements StorageAdapter {
     try {
       const bucketManager = new qiniu.rs.BucketManager(this.mac, this.config);
 
-      console.log('Testing Qiniu connection using official SDK...');
-
       return new Promise((resolve) => {
-        // 使用bucketStat API测试连接，这是一个轻量级的测试方式
-        bucketManager.stat(this.bucket, 'non-existent-test-file', (err: any, respBody: any, respInfo: any) => {
-          console.log(`Qiniu test response status: ${respInfo.statusCode}`);
-
-          // 612表示文件不存在，但这说明认证是成功的
-          // 200表示成功
-          // 401表示认证失败
-          if (respInfo.statusCode === 200 || respInfo.statusCode === 612) {
-            console.log('Qiniu connection test successful');
-            resolve(true);
-          } else if (respInfo.statusCode === 401) {
-            console.error('Qiniu authentication failed:', respBody);
-            resolve(false);
-          } else {
-            console.error(`Qiniu connection test failed with status: ${respInfo.statusCode}`, respBody);
-            resolve(false);
-          }
-        });
+        bucketManager.stat(
+          this.bucket,
+          "non-existent-test-file",
+          (err: any, respBody: any, respInfo: any) => {
+            // 612表示文件不存在，但这说明认证是成功的
+            // 200表示成功
+            // 401表示认证失败
+            if (respInfo.statusCode === 200 || respInfo.statusCode === 612) {
+              resolve(true);
+            } else if (respInfo.statusCode === 401) {
+              console.error("Qiniu authentication failed:", respBody);
+              resolve(false);
+            } else {
+              console.error(
+                `Qiniu connection test failed with status: ${respInfo.statusCode}`,
+                respBody,
+              );
+              resolve(false);
+            }
+          },
+        );
       });
     } catch (error) {
-      console.error('Qiniu connection test error:', error);
+      console.error("Qiniu connection test error:", error);
+
       return false;
     }
   }
-
 }

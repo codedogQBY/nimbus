@@ -1,7 +1,7 @@
-import { StorageAdapter, UploadResult, StorageConfig } from './index';
+import { StorageAdapter, UploadResult, StorageConfig } from "./index";
 
 export class TelegramAdapter implements StorageAdapter {
-  name = 'Telegram';
+  name = "Telegram";
   private botToken: string;
   private chatId: string;
 
@@ -13,11 +13,11 @@ export class TelegramAdapter implements StorageAdapter {
   async upload(file: File, path: string): Promise<UploadResult> {
     try {
       // TODO: 实现 Telegram 上传逻辑
-      throw new Error('Telegram upload not implemented yet');
+      throw new Error("Telegram upload not implemented yet");
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Upload failed',
+        error: error instanceof Error ? error.message : "Upload failed",
       };
     }
   }
@@ -25,9 +25,11 @@ export class TelegramAdapter implements StorageAdapter {
   async download(url: string): Promise<Buffer> {
     try {
       // TODO: 实现 Telegram 下载逻辑
-      throw new Error('Telegram download not implemented yet');
+      throw new Error("Telegram download not implemented yet");
     } catch (error) {
-      throw new Error(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Download failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
@@ -36,7 +38,8 @@ export class TelegramAdapter implements StorageAdapter {
       // TODO: 实现 Telegram 删除逻辑
       return false;
     } catch (error) {
-      console.error('Delete failed:', error);
+      console.error("Delete failed:", error);
+
       return false;
     }
   }

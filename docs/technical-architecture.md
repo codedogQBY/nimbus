@@ -3,6 +3,7 @@
 ## 1. 系统架构概述
 
 ### 1.1 整体架构
+
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Frontend      │    │   Backend       │    │  Storage Layer  │
@@ -22,6 +23,7 @@
 ```
 
 ### 1.2 核心设计原则
+
 - **存储源抽象**: 统一接口，插件化扩展
 - **文件夹分布**: 同一文件夹的文件可分布在不同存储源
 - **隐私保护**: 中间层代理，隐藏真实存储源
@@ -31,6 +33,7 @@
 ## 2. 技术栈选择
 
 ### 2.1 前端技术栈
+
 ```json
 {
   "framework": "Next.js 14+ (App Router)",
@@ -46,6 +49,7 @@
 ```
 
 ### 2.2 后端技术栈
+
 ```json
 {
   "runtime": "Node.js 20+",
@@ -60,6 +64,7 @@
 ```
 
 ### 2.3 存储层技术
+
 ```json
 {
   "cloudflare_r2": "AWS SDK v3",
@@ -73,7 +78,9 @@
 ## 3. 数据库设计
 
 ### 3.1 系统架构说明
+
 Nimbus 采用**个人网盘 + RBAC权限管理**架构：
+
 - **文件统一存储**: 所有文件不做用户隔离，存储在共享空间
 - **权限细分控制**: 通过RBAC系统实现不同用户的访问控制
 - **多角色支持**: 用户可拥有多个角色，权限按角色累加
@@ -82,6 +89,7 @@ Nimbus 采用**个人网盘 + RBAC权限管理**架构：
 ### 3.2 数据表结构
 
 #### 用户表 (users)
+
 ```sql
 CREATE TABLE users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -102,6 +110,7 @@ CREATE INDEX idx_users_is_owner ON users(is_owner);
 ```
 
 #### 角色表 (roles)
+
 ```sql
 CREATE TABLE roles (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -126,6 +135,7 @@ INSERT INTO roles (name, display_name, description, is_system, priority) VALUES
 ```
 
 #### 权限表 (permissions)
+
 ```sql
 CREATE TABLE permissions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -172,6 +182,7 @@ INSERT INTO permissions (name, resource, action, display_name, description) VALU
 ```
 
 #### 角色权限关联表 (role_permissions)
+
 ```sql
 CREATE TABLE role_permissions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -217,6 +228,7 @@ SELECT 5, id FROM permissions WHERE name IN (
 ```
 
 #### 用户角色关联表 (user_roles)
+
 ```sql
 CREATE TABLE user_roles (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -237,6 +249,7 @@ CREATE INDEX idx_user_roles_expires_at ON user_roles(expires_at);
 ```
 
 #### 权限审计日志表 (permission_logs)
+
 ```sql
 CREATE TABLE permission_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -258,6 +271,7 @@ CREATE INDEX idx_permission_logs_granted ON permission_logs(granted);
 ```
 
 #### 邮箱验证码表 (email_verifications)
+
 ```sql
 CREATE TABLE email_verifications (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -282,6 +296,7 @@ CREATE INDEX idx_email_verifications_user_id ON email_verifications(user_id);
 ```
 
 #### 邮件发送日志表 (email_logs)
+
 ```sql
 CREATE TABLE email_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -301,6 +316,7 @@ CREATE INDEX idx_email_logs_created_at ON email_logs(created_at);
 ```
 
 #### 登录历史表 (login_history)
+
 ```sql
 CREATE TABLE login_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -320,6 +336,7 @@ CREATE INDEX idx_login_history_ip_address ON login_history(ip_address);
 ```
 
 #### 存储源配置表 (storage_sources)
+
 ```sql
 -- 个人网盘模式：存储源为全局配置，不与特定用户关联
 CREATE TABLE storage_sources (
@@ -340,6 +357,7 @@ CREATE INDEX idx_storage_sources_is_active ON storage_sources(is_active);
 ```
 
 #### 文件夹表 (folders)
+
 ```sql
 -- 个人网盘模式：文件夹不做用户隔离，统一存储
 CREATE TABLE folders (
@@ -360,6 +378,7 @@ CREATE INDEX idx_folders_created_by ON folders(created_by);
 ```
 
 #### 文件表 (files)
+
 ```sql
 -- 个人网盘模式：文件不做用户隔离，统一存储
 CREATE TABLE files (
@@ -391,6 +410,7 @@ CREATE INDEX idx_files_mime_type ON files(mime_type);
 ```
 
 #### 分享链接表 (shares)
+
 ```sql
 CREATE TABLE shares (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -419,6 +439,7 @@ CREATE INDEX idx_shares_folder_id ON shares(folder_id);
 ### 3.3 RBAC权限检查实现
 
 #### 权限检查服务
+
 ```typescript
 class PermissionService {
   private db: Database;
@@ -427,7 +448,10 @@ class PermissionService {
   /**
    * 检查用户是否拥有指定权限
    */
-  async hasPermission(userId: number, permissionName: string): Promise<boolean> {
+  async hasPermission(
+    userId: number,
+    permissionName: string,
+  ): Promise<boolean> {
     // 检查所有者权限
     const user = await this.getUserById(userId);
     if (user.is_owner) {
@@ -436,7 +460,7 @@ class PermissionService {
 
     // 从缓存获取用户权限
     let userPermissions = this.permissionCache.get(userId);
-    
+
     if (!userPermissions) {
       userPermissions = await this.loadUserPermissions(userId);
       this.permissionCache.set(userId, userPermissions);
@@ -449,7 +473,8 @@ class PermissionService {
    * 加载用户的所有权限（合并所有角色的权限）
    */
   private async loadUserPermissions(userId: number): Promise<Set<string>> {
-    const permissions = await this.db.query(`
+    const permissions = await this.db.query(
+      `
       SELECT DISTINCT p.name
       FROM permissions p
       INNER JOIN role_permissions rp ON p.id = rp.permission_id
@@ -457,17 +482,22 @@ class PermissionService {
       WHERE ur.user_id = ?
         AND ur.is_active = TRUE
         AND (ur.expires_at IS NULL OR ur.expires_at > CURRENT_TIMESTAMP)
-    `, [userId]);
+    `,
+      [userId],
+    );
 
-    return new Set(permissions.map(p => p.name));
+    return new Set(permissions.map((p) => p.name));
   }
 
   /**
    * 批量检查权限
    */
-  async hasPermissions(userId: number, permissionNames: string[]): Promise<boolean> {
+  async hasPermissions(
+    userId: number,
+    permissionNames: string[],
+  ): Promise<boolean> {
     for (const permission of permissionNames) {
-      if (!await this.hasPermission(userId, permission)) {
+      if (!(await this.hasPermission(userId, permission))) {
         return false;
       }
     }
@@ -477,7 +507,10 @@ class PermissionService {
   /**
    * 检查用户是否拥有任一权限（OR关系）
    */
-  async hasAnyPermission(userId: number, permissionNames: string[]): Promise<boolean> {
+  async hasAnyPermission(
+    userId: number,
+    permissionNames: string[],
+  ): Promise<boolean> {
     for (const permission of permissionNames) {
       if (await this.hasPermission(userId, permission)) {
         return true;
@@ -490,46 +523,55 @@ class PermissionService {
    * 获取用户的所有权限
    */
   async getUserPermissions(userId: number): Promise<Permission[]> {
-    return await this.db.query(`
+    return await this.db.query(
+      `
       SELECT DISTINCT p.*
       FROM permissions p
       INNER JOIN role_permissions rp ON p.id = rp.permission_id
       INNER JOIN user_roles ur ON rp.role_id = ur.role_id
       WHERE ur.user_id = ?
         AND (ur.expires_at IS NULL OR ur.expires_at > CURRENT_TIMESTAMP)
-    `, [userId]);
+    `,
+      [userId],
+    );
   }
 
   /**
    * 获取用户的所有角色
    */
   async getUserRoles(userId: number): Promise<Role[]> {
-    return await this.db.query(`
+    return await this.db.query(
+      `
       SELECT r.*, ur.expires_at
       FROM roles r
       INNER JOIN user_roles ur ON r.id = ur.role_id
       WHERE ur.user_id = ?
         AND (ur.expires_at IS NULL OR ur.expires_at > CURRENT_TIMESTAMP)
       ORDER BY r.priority DESC
-    `, [userId]);
+    `,
+      [userId],
+    );
   }
 
   /**
    * 为用户分配角色
    */
   async assignRole(
-    userId: number, 
-    roleId: number, 
+    userId: number,
+    roleId: number,
     grantedBy: number,
-    expiresAt?: Date
+    expiresAt?: Date,
   ): Promise<void> {
-    await this.db.execute(`
+    await this.db.execute(
+      `
       INSERT INTO user_roles (user_id, role_id, granted_by, expires_at)
       VALUES (?, ?, ?, ?)
       ON CONFLICT (user_id, role_id) DO UPDATE SET
         granted_by = excluded.granted_by,
         expires_at = excluded.expires_at
-    `, [userId, roleId, grantedBy, expiresAt]);
+    `,
+      [userId, roleId, grantedBy, expiresAt],
+    );
 
     // 清除缓存
     this.permissionCache.delete(userId);
@@ -539,10 +581,13 @@ class PermissionService {
    * 移除用户角色
    */
   async removeRole(userId: number, roleId: number): Promise<void> {
-    await this.db.execute(`
+    await this.db.execute(
+      `
       DELETE FROM user_roles
       WHERE user_id = ? AND role_id = ?
-    `, [userId, roleId]);
+    `,
+      [userId, roleId],
+    );
 
     // 清除缓存
     this.permissionCache.delete(userId);
@@ -558,28 +603,32 @@ class PermissionService {
     resourceId: number | null,
     permissionRequired: string,
     granted: boolean,
-    request: Request
+    request: Request,
   ): Promise<void> {
-    await this.db.execute(`
+    await this.db.execute(
+      `
       INSERT INTO permission_logs (
         user_id, action, resource_type, resource_id,
         permission_required, granted, ip_address, user_agent
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      userId,
-      action,
-      resourceType,
-      resourceId,
-      permissionRequired,
-      granted,
-      request.ip,
-      request.headers['user-agent']
-    ]);
+    `,
+      [
+        userId,
+        action,
+        resourceType,
+        resourceId,
+        permissionRequired,
+        granted,
+        request.ip,
+        request.headers["user-agent"],
+      ],
+    );
   }
 }
 ```
 
 #### 权限检查中间件
+
 ```typescript
 /**
  * 权限检查中间件工厂
@@ -587,30 +636,33 @@ class PermissionService {
 function requirePermission(...permissions: string[]) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.user?.id;
-    
+
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
     const permissionService = new PermissionService();
-    const hasPermission = await permissionService.hasPermissions(userId, permissions);
+    const hasPermission = await permissionService.hasPermissions(
+      userId,
+      permissions,
+    );
 
     // 记录权限检查
     await permissionService.logPermissionCheck(
       userId,
-      req.method + ' ' + req.path,
-      req.params.resourceType || 'unknown',
+      req.method + " " + req.path,
+      req.params.resourceType || "unknown",
       req.params.id ? parseInt(req.params.id) : null,
-      permissions.join(', '),
+      permissions.join(", "),
       hasPermission,
-      req
+      req,
     );
 
     if (!hasPermission) {
       return res.status(403).json({
-        error: 'Forbidden',
-        message: '您没有执行此操作的权限',
-        required: permissions
+        error: "Forbidden",
+        message: "您没有执行此操作的权限",
+        required: permissions,
       });
     }
 
@@ -624,19 +676,22 @@ function requirePermission(...permissions: string[]) {
 function requireAnyPermission(...permissions: string[]) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.user?.id;
-    
+
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
     const permissionService = new PermissionService();
-    const hasPermission = await permissionService.hasAnyPermission(userId, permissions);
+    const hasPermission = await permissionService.hasAnyPermission(
+      userId,
+      permissions,
+    );
 
     if (!hasPermission) {
       return res.status(403).json({
-        error: 'Forbidden',
-        message: '您没有执行此操作的权限',
-        required_any: permissions
+        error: "Forbidden",
+        message: "您没有执行此操作的权限",
+        required_any: permissions,
       });
     }
 
@@ -645,28 +700,32 @@ function requireAnyPermission(...permissions: string[]) {
 }
 
 // 使用示例
-app.post('/api/files/upload', 
+app.post(
+  "/api/files/upload",
   authenticate,
-  requirePermission('files.upload'),
-  uploadController.upload
+  requirePermission("files.upload"),
+  uploadController.upload,
 );
 
-app.delete('/api/files/:id',
+app.delete(
+  "/api/files/:id",
   authenticate,
-  requirePermission('files.delete'),
-  filesController.delete
+  requirePermission("files.delete"),
+  filesController.delete,
 );
 
-app.get('/api/users',
+app.get(
+  "/api/users",
   authenticate,
-  requireAnyPermission('users.view', 'users.manage'),
-  usersController.list
+  requireAnyPermission("users.view", "users.manage"),
+  usersController.list,
 );
 
-app.post('/api/storage-sources',
+app.post(
+  "/api/storage-sources",
   authenticate,
-  requirePermission('storage.manage'),
-  storageController.create
+  requirePermission("storage.manage"),
+  storageController.create,
 );
 ```
 
@@ -675,6 +734,7 @@ app.post('/api/storage-sources',
 ### 4.1 RESTful API 规范
 
 #### 认证相关 API
+
 ```typescript
 // POST /api/auth/register - 用户注册（第一步）
 interface RegisterRequest {
@@ -706,7 +766,7 @@ interface VerifyEmailResponse {
 // POST /api/auth/resend-code - 重新发送验证码
 interface ResendCodeRequest {
   email: string;
-  type: 'register' | 'reset_password' | 'change_email';
+  type: "register" | "reset_password" | "change_email";
 }
 
 interface ResendCodeResponse {
@@ -768,6 +828,7 @@ interface LogoutResponse {
 ```
 
 #### 文件管理 API
+
 ```typescript
 // GET /api/files?folderId=123&page=1&limit=50
 interface FileListResponse {
@@ -802,6 +863,7 @@ interface CreateShareRequest {
 ```
 
 #### 存储源管理 API
+
 ```typescript
 // GET /api/storage-sources
 interface StorageSourcesResponse {
@@ -813,7 +875,7 @@ interface StorageSourcesResponse {
 // POST /api/storage-sources
 interface CreateStorageSourceRequest {
   name: string;
-  type: 'r2' | 'qiniu' | 'telegram' | 'github';
+  type: "r2" | "qiniu" | "telegram" | "github";
   config: StorageSourceConfig;
 }
 
@@ -829,6 +891,7 @@ interface TestStorageSourceResponse {
 ```
 
 ### 4.2 文件代理 API
+
 ```typescript
 // GET /api/proxy/file/:shareToken/:filename
 // 通过分享令牌访问文件，隐藏真实存储源
@@ -843,6 +906,7 @@ interface TestStorageSourceResponse {
 ## 5. 存储源插件系统
 
 ### 5.1 存储源抽象接口
+
 ```typescript
 interface StorageSource {
   // 基础信息
@@ -856,7 +920,10 @@ interface StorageSource {
   testConnection(): Promise<boolean>;
 
   // 文件操作
-  uploadFile(path: string, file: Buffer | ReadableStream): Promise<UploadResult>;
+  uploadFile(
+    path: string,
+    file: Buffer | ReadableStream,
+  ): Promise<UploadResult>;
   downloadFile(path: string): Promise<ReadableStream>;
   deleteFile(path: string): Promise<void>;
   getFileInfo(path: string): Promise<FileInfo>;
@@ -915,7 +982,8 @@ interface QuotaInfo {
   available: number;
 }
 ```
-```
+
+````
 
 ### 5.2 具体存储源实现
 
@@ -952,9 +1020,10 @@ class R2StorageSource implements StorageSource {
 
   // ... 其他方法实现
 }
-```
+````
 
 #### Telegram 存储实现
+
 ```typescript
 class TelegramStorageSource implements StorageSource {
   private bot: Bot;
@@ -967,7 +1036,8 @@ class TelegramStorageSource implements StorageSource {
 
   async uploadFile(path: string, file: Buffer): Promise<UploadResult> {
     // 大文件需要分片上传
-    if (file.length > 50 * 1024 * 1024) { // 50MB
+    if (file.length > 50 * 1024 * 1024) {
+      // 50MB
       return this.uploadLargeFile(path, file);
     }
 
@@ -982,7 +1052,10 @@ class TelegramStorageSource implements StorageSource {
     };
   }
 
-  private async uploadLargeFile(path: string, file: Buffer): Promise<UploadResult> {
+  private async uploadLargeFile(
+    path: string,
+    file: Buffer,
+  ): Promise<UploadResult> {
     const chunkSize = 20 * 1024 * 1024; // 20MB per chunk
     const chunks: string[] = [];
 
@@ -996,13 +1069,14 @@ class TelegramStorageSource implements StorageSource {
     }
 
     // 保存分片信息
-    const metaMessage = await this.bot.api.sendMessage(this.channelId,
+    const metaMessage = await this.bot.api.sendMessage(
+      this.channelId,
       JSON.stringify({
-        type: 'multipart',
+        type: "multipart",
         originalPath: path,
         chunks: chunks,
         totalSize: file.length,
-      })
+      }),
     );
 
     return {
@@ -1016,6 +1090,7 @@ class TelegramStorageSource implements StorageSource {
 ```
 
 ### 5.3 文件夹同步管理器
+
 ```typescript
 class FolderSyncManager {
   private sources: Map<number, StorageSource> = new Map();
@@ -1024,7 +1099,7 @@ class FolderSyncManager {
   // 在所有存储源中同步创建文件夹
   async createFolderAcrossSources(
     userId: number,
-    folderPath: string
+    folderPath: string,
   ): Promise<SyncResult> {
     const userSources = await this.getUserStorageSources(userId);
     const results: SourceSyncResult[] = [];
@@ -1048,7 +1123,7 @@ class FolderSyncManager {
     }
 
     return {
-      success: results.every(r => r.success),
+      success: results.every((r) => r.success),
       results,
       affectedSources: userSources.length,
     };
@@ -1057,7 +1132,7 @@ class FolderSyncManager {
   // 合并所有存储源的文件夹内容
   async mergeFolderContents(
     userId: number,
-    folderPath: string
+    folderPath: string,
   ): Promise<MergedFolderContents> {
     const userSources = await this.getActiveStorageSources(userId);
     const allFiles: FileInfo[] = [];
@@ -1070,7 +1145,7 @@ class FolderSyncManager {
           const contents = await source.listFolder(folderPath);
 
           // 添加源信息到文件和文件夹
-          contents.files.forEach(file => {
+          contents.files.forEach((file) => {
             allFiles.push({
               ...file,
               sourceId: source.id,
@@ -1079,29 +1154,29 @@ class FolderSyncManager {
             });
           });
 
-          contents.folders.forEach(folder => {
+          contents.folders.forEach((folder) => {
             // 去重文件夹（可能在多个源中都存在）
-            if (!allFolders.find(f => f.path === folder.path)) {
+            if (!allFolders.find((f) => f.path === folder.path)) {
               allFolders.push(folder);
             }
           });
 
           sourceStatus.push({
             sourceId: source.id,
-            status: 'online',
+            status: "online",
             fileCount: contents.files.length,
             folderCount: contents.folders.length,
           });
         } catch (error) {
           sourceStatus.push({
             sourceId: source.id,
-            status: 'error',
+            status: "error",
             error: error.message,
             fileCount: 0,
             folderCount: 0,
           });
         }
-      })
+      }),
     );
 
     return {
@@ -1111,7 +1186,7 @@ class FolderSyncManager {
       totalFiles: allFiles.length,
       totalFolders: allFolders.length,
       sourcesQueried: userSources.length,
-      sourcesOnline: sourceStatus.filter(s => s.status === 'online').length,
+      sourcesOnline: sourceStatus.filter((s) => s.status === "online").length,
     };
   }
 
@@ -1119,7 +1194,7 @@ class FolderSyncManager {
   async renameFolderAcrossSources(
     userId: number,
     oldPath: string,
-    newPath: string
+    newPath: string,
   ): Promise<SyncResult> {
     const userSources = await this.getUserStorageSources(userId);
     const results: SourceSyncResult[] = [];
@@ -1151,7 +1226,7 @@ class FolderSyncManager {
     }
 
     return {
-      success: results.every(r => r.success),
+      success: results.every((r) => r.success),
       results,
       affectedSources: userSources.length,
     };
@@ -1161,7 +1236,7 @@ class FolderSyncManager {
   async deleteFolderAcrossSources(
     userId: number,
     folderPath: string,
-    deleteFiles: boolean = false
+    deleteFiles: boolean = false,
   ): Promise<FolderDeleteResult> {
     const userSources = await this.getUserStorageSources(userId);
     const results: SourceDeleteResult[] = [];
@@ -1184,7 +1259,7 @@ class FolderSyncManager {
     if (!deleteFiles && totalFilesFound > 0) {
       return {
         success: false,
-        reason: 'folder_not_empty',
+        reason: "folder_not_empty",
         totalFiles: totalFilesFound,
         filesInSources,
         results: [],
@@ -1217,7 +1292,7 @@ class FolderSyncManager {
     }
 
     return {
-      success: results.every(r => r.success),
+      success: results.every((r) => r.success),
       totalFiles: totalFilesFound,
       filesInSources,
       results,
@@ -1239,7 +1314,11 @@ interface SourceSyncResult {
 }
 
 interface MergedFolderContents {
-  files: (FileInfo & { sourceId: number; sourceName: string; sourceType: string })[];
+  files: (FileInfo & {
+    sourceId: number;
+    sourceName: string;
+    sourceType: string;
+  })[];
   folders: FolderInfo[];
   sourceStatus: SourceStatus[];
   totalFiles: number;
@@ -1250,7 +1329,7 @@ interface MergedFolderContents {
 
 interface SourceStatus {
   sourceId: number;
-  status: 'online' | 'offline' | 'error';
+  status: "online" | "offline" | "error";
   error?: string;
   fileCount: number;
   folderCount: number;
@@ -1272,7 +1351,9 @@ interface SourceDeleteResult {
   timestamp: Date;
 }
 ```
+
 ### 5.4 智能存储源选择策略
+
 ```typescript
 class StorageSourceManager {
   private sources: Map<number, StorageSource> = new Map();
@@ -1286,18 +1367,18 @@ class StorageSourceManager {
   async selectStorageSource(
     userId: number,
     fileSize: number,
-    fileType: string
+    fileType: string,
   ): Promise<StorageSource> {
     const userSources = await this.getUserStorageSources(userId);
 
     // 筛选可用的存储源
-    const availableSources = userSources.filter(source => {
+    const availableSources = userSources.filter((source) => {
       const quotaInfo = source.getQuotaInfo();
       return quotaInfo.available >= fileSize && source.isActive;
     });
 
     if (availableSources.length === 0) {
-      throw new Error('No available storage source');
+      throw new Error("No available storage source");
     }
 
     // 选择策略：优先级 + 剩余空间 + 文件类型适配
@@ -1307,15 +1388,16 @@ class StorageSourceManager {
   private selectByStrategy(
     sources: StorageSource[],
     fileSize: number,
-    fileType: string
+    fileType: string,
   ): StorageSource {
     // 1. 按优先级排序
     sources.sort((a, b) => b.priority - a.priority);
 
     // 2. 大文件优先选择R2/七牛云
-    if (fileSize > 100 * 1024 * 1024) { // > 100MB
-      const preferredSources = sources.filter(s =>
-        s.type === 'r2' || s.type === 'qiniu'
+    if (fileSize > 100 * 1024 * 1024) {
+      // > 100MB
+      const preferredSources = sources.filter(
+        (s) => s.type === "r2" || s.type === "qiniu",
       );
       if (preferredSources.length > 0) {
         return preferredSources[0];
@@ -1323,9 +1405,9 @@ class StorageSourceManager {
     }
 
     // 3. 图片/视频优先选择有CDN的源
-    if (fileType.startsWith('image/') || fileType.startsWith('video/')) {
-      const cdnSources = sources.filter(s =>
-        s.type === 'r2' || s.type === 'qiniu'
+    if (fileType.startsWith("image/") || fileType.startsWith("video/")) {
+      const cdnSources = sources.filter(
+        (s) => s.type === "r2" || s.type === "qiniu",
       );
       if (cdnSources.length > 0) {
         return cdnSources[0];
@@ -1345,17 +1427,18 @@ class StorageSourceManager {
 ## 6. 文件夹同步与合并系统
 
 ### 6.1 文件上传流程
+
 ```typescript
 class FileUploadService {
   constructor(
     private storageManager: StorageSourceManager,
-    private folderSyncManager: FolderSyncManager
+    private folderSyncManager: FolderSyncManager,
   ) {}
 
   async uploadFile(
     userId: number,
     folderId: number,
-    file: Express.Multer.File
+    file: Express.Multer.File,
   ): Promise<File> {
     // 1. 获取文件夹路径
     const folderPath = await this.getFolderPath(folderId);
@@ -1363,7 +1446,7 @@ class FileUploadService {
     // 2. 确保所有存储源都有对应的文件夹结构
     await this.folderSyncManager.ensureFolderExistsAcrossSources(
       userId,
-      folderPath
+      folderPath,
     );
 
     // 3. 智能选择存储源（用户无需选择）
@@ -1371,14 +1454,14 @@ class FileUploadService {
       userId,
       file.size,
       file.mimetype,
-      folderPath
+      folderPath,
     );
 
     // 4. 上传文件到选定的存储源
     const uploadResult = await this.uploadToStorageSource(
       storageSource,
       folderPath,
-      file
+      file,
     );
 
     // 5. 保存文件记录到数据库
@@ -1398,19 +1481,19 @@ class FileUploadService {
   // 确保文件夹在所有存储源中存在
   private async ensureFolderExistsAcrossSources(
     userId: number,
-    folderPath: string
+    folderPath: string,
   ): Promise<void> {
     const syncResult = await this.folderSyncManager.createFolderAcrossSources(
       userId,
-      folderPath
+      folderPath,
     );
 
     if (!syncResult.success) {
       // 记录同步失败的存储源，但不阻止上传
-      logger.warn('Folder sync partially failed', {
+      logger.warn("Folder sync partially failed", {
         userId,
         folderPath,
-        failedSources: syncResult.results.filter(r => !r.success),
+        failedSources: syncResult.results.filter((r) => !r.success),
       });
     }
   }
@@ -1418,6 +1501,7 @@ class FileUploadService {
 ```
 
 ### 6.2 文件夹读取与合并
+
 ```typescript
 class FolderService {
   constructor(private folderSyncManager: FolderSyncManager) {}
@@ -1425,7 +1509,7 @@ class FolderService {
   async getFolderContents(
     userId: number,
     folderId: number,
-    options: FolderQueryOptions = {}
+    options: FolderQueryOptions = {},
   ): Promise<FolderContentsResponse> {
     // 1. 获取文件夹路径
     const folderPath = await this.getFolderPath(folderId);
@@ -1433,20 +1517,20 @@ class FolderService {
     // 2. 从所有存储源合并文件夹内容
     const mergedContents = await this.folderSyncManager.mergeFolderContents(
       userId,
-      folderPath
+      folderPath,
     );
 
     // 3. 应用过滤和排序
     const filteredContents = this.applyFiltersAndSorting(
       mergedContents,
-      options
+      options,
     );
 
     // 4. 分页处理
     const paginatedContents = this.applyPagination(
       filteredContents,
       options.page || 1,
-      options.limit || 50
+      options.limit || 50,
     );
 
     return {
@@ -1464,7 +1548,7 @@ class FolderService {
   async createFolder(
     userId: number,
     parentFolderId: number,
-    folderName: string
+    folderName: string,
   ): Promise<Folder> {
     // 1. 构建完整路径
     const parentPath = await this.getFolderPath(parentFolderId);
@@ -1481,7 +1565,7 @@ class FolderService {
     // 3. 在所有存储源中同步创建文件夹
     const syncResult = await this.folderSyncManager.createFolderAcrossSources(
       userId,
-      fullPath
+      fullPath,
     );
 
     // 4. 记录同步状态
@@ -1494,7 +1578,7 @@ class FolderService {
   async renameFolder(
     userId: number,
     folderId: number,
-    newName: string
+    newName: string,
   ): Promise<Folder> {
     const folder = await this.getFolderById(folderId);
     const oldPath = folder.path;
@@ -1510,7 +1594,7 @@ class FolderService {
     const syncResult = await this.folderSyncManager.renameFolderAcrossSources(
       userId,
       oldPath,
-      newPath
+      newPath,
     );
 
     // 3. 更新子文件夹路径
@@ -1526,7 +1610,7 @@ class FolderService {
   async deleteFolder(
     userId: number,
     folderId: number,
-    force: boolean = false
+    force: boolean = false,
   ): Promise<FolderDeleteResponse> {
     const folder = await this.getFolderById(folderId);
 
@@ -1534,13 +1618,13 @@ class FolderService {
     const deleteResult = await this.folderSyncManager.deleteFolderAcrossSources(
       userId,
       folder.path,
-      force
+      force,
     );
 
-    if (!deleteResult.success && deleteResult.reason === 'folder_not_empty') {
+    if (!deleteResult.success && deleteResult.reason === "folder_not_empty") {
       return {
         success: false,
-        reason: 'folder_not_empty',
+        reason: "folder_not_empty",
         conflictInfo: {
           totalFiles: deleteResult.totalFiles,
           filesInSources: deleteResult.filesInSources,
@@ -1565,8 +1649,8 @@ class FolderService {
 interface FolderQueryOptions {
   page?: number;
   limit?: number;
-  sortBy?: 'name' | 'size' | 'modified';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: "name" | "size" | "modified";
+  sortOrder?: "asc" | "desc";
   fileType?: string;
   searchQuery?: string;
 }
@@ -1604,6 +1688,7 @@ interface FolderDeleteResponse {
 ```
 
 ### 6.3 存储源故障处理
+
 ```typescript
 class StorageSourceHealthManager {
   private healthChecks: Map<number, HealthCheckResult> = new Map();
@@ -1620,7 +1705,7 @@ class StorageSourceHealthManager {
 
         results.push({
           sourceId: source.id,
-          status: isOnline ? 'online' : 'offline',
+          status: isOnline ? "online" : "offline",
           responseTime: await this.measureResponseTime(source),
           quotaInfo,
           lastChecked: new Date(),
@@ -1628,7 +1713,7 @@ class StorageSourceHealthManager {
       } catch (error) {
         results.push({
           sourceId: source.id,
-          status: 'error',
+          status: "error",
           error: error.message,
           responseTime: null,
           quotaInfo: null,
@@ -1638,13 +1723,13 @@ class StorageSourceHealthManager {
     }
 
     // 更新健康状态缓存
-    results.forEach(result => {
+    results.forEach((result) => {
       this.healthChecks.set(result.sourceId, result);
     });
 
     return {
       totalSources: userSources.length,
-      onlineSources: results.filter(r => r.status === 'online').length,
+      onlineSources: results.filter((r) => r.status === "online").length,
       results,
       overallHealth: this.calculateOverallHealth(results),
     };
@@ -1653,14 +1738,14 @@ class StorageSourceHealthManager {
   // 处理存储源故障转移
   async handleSourceFailover(
     failedSourceId: number,
-    userId: number
+    userId: number,
   ): Promise<FailoverResult> {
     const remainingSources = await this.getHealthyStorageSources(userId);
 
     if (remainingSources.length === 0) {
       return {
         success: false,
-        reason: 'no_healthy_sources',
+        reason: "no_healthy_sources",
       };
     }
 
@@ -1680,7 +1765,7 @@ class StorageSourceHealthManager {
   // 存储源恢复时的同步
   async handleSourceRecovery(
     recoveredSourceId: number,
-    userId: number
+    userId: number,
   ): Promise<RecoveryResult> {
     // 1. 重新标记为可用
     await this.markSourceAsAvailable(recoveredSourceId);
@@ -1709,9 +1794,9 @@ class StorageSourceHealthManager {
     }
 
     return {
-      success: syncResults.every(r => r.success),
-      syncedFolders: syncResults.filter(r => r.success).length,
-      failedFolders: syncResults.filter(r => !r.success).length,
+      success: syncResults.every((r) => r.success),
+      syncedFolders: syncResults.filter((r) => r.success).length,
+      failedFolders: syncResults.filter((r) => !r.success).length,
       syncResults,
     };
   }
@@ -1719,7 +1804,7 @@ class StorageSourceHealthManager {
 
 interface HealthCheckResult {
   sourceId: number;
-  status: 'online' | 'offline' | 'error';
+  status: "online" | "offline" | "error";
   responseTime: number | null;
   quotaInfo: QuotaInfo | null;
   error?: string;
@@ -1730,7 +1815,7 @@ interface HealthReport {
   totalSources: number;
   onlineSources: number;
   results: HealthCheckResult[];
-  overallHealth: 'good' | 'degraded' | 'critical';
+  overallHealth: "good" | "degraded" | "critical";
 }
 
 interface FailoverResult {
@@ -1757,13 +1842,14 @@ interface FolderSyncResult {
 ## 7. 文件处理系统
 
 ### 7.1 文件上传处理
+
 ```typescript
 class FileUploadService {
   async uploadFile(
     userId: number,
     folderId: number,
     file: Express.Multer.File,
-    storageSourceId?: number
+    storageSourceId?: number,
   ): Promise<File> {
     // 1. 文件校验
     await this.validateFile(file);
@@ -1775,7 +1861,11 @@ class FileUploadService {
     // 3. 检查重复文件
     const existingFile = await this.findDuplicateFile(userId, md5Hash);
     if (existingFile) {
-      return this.createFileReference(existingFile, folderId, file.originalname);
+      return this.createFileReference(
+        existingFile,
+        folderId,
+        file.originalname,
+      );
     }
 
     // 4. 选择存储源
@@ -1784,14 +1874,17 @@ class FileUploadService {
       : await this.storageManager.selectStorageSource(
           userId,
           file.size,
-          file.mimetype
+          file.mimetype,
         );
 
     // 5. 生成存储路径
     const storagePath = this.generateStoragePath(userId, file.originalname);
 
     // 6. 上传到存储源
-    const uploadResult = await storageSource.uploadFile(storagePath, file.buffer);
+    const uploadResult = await storageSource.uploadFile(
+      storagePath,
+      file.buffer,
+    );
 
     // 7. 保存文件记录
     const fileRecord = await this.createFileRecord({
@@ -1816,8 +1909,8 @@ class FileUploadService {
   private generateStoragePath(userId: number, filename: string): string {
     const date = new Date();
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
     const uuid = crypto.randomUUID();
 
     return `users/${userId}/${year}/${month}/${day}/${uuid}-${filename}`;
@@ -1826,6 +1919,7 @@ class FileUploadService {
 ```
 
 ### 6.2 文件下载代理
+
 ```typescript
 class FileProxyService {
   async downloadFile(fileId: number, userId: number): Promise<ReadableStream> {
@@ -1844,7 +1938,10 @@ class FileProxyService {
     return stream;
   }
 
-  async downloadByShareToken(shareToken: string, password?: string): Promise<{
+  async downloadByShareToken(
+    shareToken: string,
+    password?: string,
+  ): Promise<{
     stream: ReadableStream;
     filename: string;
     mimeType: string;
@@ -1877,15 +1974,16 @@ class FileProxyService {
 ## 7. 在线解压缩系统
 
 ### 7.1 压缩文件处理
+
 ```typescript
 class CompressionService {
-  private readonly supportedFormats = ['zip', 'rar', '7z', 'tar', 'tar.gz'];
+  private readonly supportedFormats = ["zip", "rar", "7z", "tar", "tar.gz"];
 
   async extractArchive(
     fileId: number,
     userId: number,
     targetFolderId: number,
-    extractOptions: ExtractOptions = {}
+    extractOptions: ExtractOptions = {},
   ): Promise<ExtractResult> {
     // 1. 获取文件流
     const fileStream = await this.fileProxy.downloadFile(fileId, userId);
@@ -1911,7 +2009,11 @@ class CompressionService {
 
       for (const entry of selectedEntries) {
         if (extractOptions.onProgress) {
-          extractOptions.onProgress(entry.name, results.length, selectedEntries.length);
+          extractOptions.onProgress(
+            entry.name,
+            results.length,
+            selectedEntries.length,
+          );
         }
 
         const extractedData = await extractor.extract(tempFilePath, entry.name);
@@ -1919,7 +2021,7 @@ class CompressionService {
           userId,
           targetFolderId,
           entry.name,
-          extractedData
+          extractedData,
         );
 
         results.push({
@@ -1942,14 +2044,14 @@ class CompressionService {
 
   private getExtractor(format: string): ArchiveExtractor {
     switch (format) {
-      case 'zip':
+      case "zip":
         return new ZipExtractor();
-      case 'rar':
+      case "rar":
         return new RarExtractor();
-      case '7z':
+      case "7z":
         return new SevenZipExtractor();
-      case 'tar':
-      case 'tar.gz':
+      case "tar":
+      case "tar.gz":
         return new TarExtractor();
       default:
         throw new Error(`No extractor for format: ${format}`);
@@ -1967,7 +2069,7 @@ class ZipExtractor implements ArchiveExtractor {
     const zip = new StreamZip.async({ file: filePath });
     const entries = await zip.entries();
 
-    return Object.values(entries).map(entry => ({
+    return Object.values(entries).map((entry) => ({
       name: entry.name,
       size: entry.size,
       isDirectory: entry.isDirectory,
@@ -1983,6 +2085,7 @@ class ZipExtractor implements ArchiveExtractor {
 ```
 
 ### 7.2 前端解压缩预览
+
 ```typescript
 // 前端压缩文件预览组件
 interface ArchivePreviewProps {
@@ -2075,6 +2178,7 @@ const ArchivePreview: React.FC<ArchivePreviewProps> = ({ fileId, onExtract }) =>
 ## 8. 部署与运维
 
 ### 8.1 Docker 部署
+
 ```dockerfile
 # Dockerfile
 FROM node:20-alpine AS builder
@@ -2106,7 +2210,7 @@ CMD ["npm", "start"]
 
 ```yaml
 # docker-compose.yml
-version: '3.8'
+version: "3.8"
 
 services:
   nimbus:
@@ -2136,6 +2240,7 @@ services:
 ```
 
 ### 8.2 环境变量配置
+
 ```bash
 # .env.production
 NODE_ENV=production
@@ -2164,12 +2269,17 @@ REDIS_URL=redis://localhost:6379
 ```
 
 ### 8.3 监控与日志
+
 ```typescript
 // 监控中间件
-export const monitoringMiddleware = (req: FastifyRequest, reply: FastifyReply, done: Function) => {
+export const monitoringMiddleware = (
+  req: FastifyRequest,
+  reply: FastifyReply,
+  done: Function,
+) => {
   const startTime = Date.now();
 
-  reply.addHook('onSend', (request, reply, payload, done) => {
+  reply.addHook("onSend", (request, reply, payload, done) => {
     const duration = Date.now() - startTime;
 
     // 记录API性能
@@ -2178,13 +2288,15 @@ export const monitoringMiddleware = (req: FastifyRequest, reply: FastifyReply, d
       url: request.url,
       statusCode: reply.statusCode,
       duration,
-      userAgent: request.headers['user-agent'],
+      userAgent: request.headers["user-agent"],
       ip: request.ip,
     });
 
     // 慢查询警告
     if (duration > 1000) {
-      logger.warn(`Slow API: ${request.method} ${request.url} took ${duration}ms`);
+      logger.warn(
+        `Slow API: ${request.method} ${request.url} took ${duration}ms`,
+      );
     }
 
     done();
@@ -2194,7 +2306,11 @@ export const monitoringMiddleware = (req: FastifyRequest, reply: FastifyReply, d
 };
 
 // 错误监控
-export const errorHandler = (error: Error, request: FastifyRequest, reply: FastifyReply) => {
+export const errorHandler = (
+  error: Error,
+  request: FastifyRequest,
+  reply: FastifyReply,
+) => {
   logger.error({
     error: error.message,
     stack: error.stack,
@@ -2205,11 +2321,11 @@ export const errorHandler = (error: Error, request: FastifyRequest, reply: Fasti
   });
 
   // 发送错误到监控服务 (如 Sentry)
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === "production") {
     // Sentry.captureException(error);
   }
 
-  reply.status(500).send({ error: 'Internal Server Error' });
+  reply.status(500).send({ error: "Internal Server Error" });
 };
 ```
 
@@ -2218,29 +2334,30 @@ export const errorHandler = (error: Error, request: FastifyRequest, reply: Fasti
 ### 9.1 邮箱验证服务
 
 #### 邮件发送配置
+
 ```typescript
 // config/email.ts
 export const emailConfig = {
   smtp: {
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true',
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: process.env.SMTP_SECURE === "true",
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASSWORD,
     },
   },
   from: {
-    name: 'Nimbus 网盘',
-    email: process.env.SMTP_FROM || 'noreply@nimbus.com',
+    name: "Nimbus 网盘",
+    email: process.env.SMTP_FROM || "noreply@nimbus.com",
   },
   templates: {
     verification: {
-      subject: '验证您的邮箱 - Nimbus',
+      subject: "验证您的邮箱 - Nimbus",
       expiresIn: 5 * 60 * 1000, // 5分钟
     },
     resetPassword: {
-      subject: '重置密码 - Nimbus',
+      subject: "重置密码 - Nimbus",
       expiresIn: 10 * 60 * 1000, // 10分钟
     },
   },
@@ -2252,9 +2369,10 @@ export const emailConfig = {
 ```
 
 #### 邮件服务实现
+
 ```typescript
-import nodemailer from 'nodemailer';
-import { emailConfig } from '../config/email';
+import nodemailer from "nodemailer";
+import { emailConfig } from "../config/email";
 
 class EmailService {
   private transporter: nodemailer.Transporter;
@@ -2276,21 +2394,26 @@ class EmailService {
    */
   async sendVerificationEmail(
     email: string,
-    type: 'register' | 'reset_password' | 'change_email',
-    userId?: number
+    type: "register" | "reset_password" | "change_email",
+    userId?: number,
   ): Promise<{ code: string; expiresAt: Date }> {
     // 检查发送频率限制
     await this.checkRateLimit(email);
 
     // 生成验证码
     const code = this.generateVerificationCode();
-    const expiresAt = new Date(Date.now() + emailConfig.templates.verification.expiresIn);
+    const expiresAt = new Date(
+      Date.now() + emailConfig.templates.verification.expiresIn,
+    );
 
     // 保存验证码到数据库
-    await this.db.execute(`
+    await this.db.execute(
+      `
       INSERT INTO email_verifications (email, code, type, user_id, expires_at)
       VALUES (?, ?, ?, ?, ?)
-    `, [email, code, type, userId || null, expiresAt]);
+    `,
+      [email, code, type, userId || null, expiresAt],
+    );
 
     // 准备邮件内容
     const emailContent = this.buildEmailContent(type, code, expiresAt);
@@ -2306,21 +2429,32 @@ class EmailService {
       });
 
       // 记录发送日志
-      await this.logEmail(email, emailContent.subject, type, 'sent');
+      await this.logEmail(email, emailContent.subject, type, "sent");
 
       return { code, expiresAt };
     } catch (error) {
       // 记录失败日志
-      await this.logEmail(email, emailContent.subject, type, 'failed', error.message);
-      throw new Error('邮件发送失败，请稍后重试');
+      await this.logEmail(
+        email,
+        emailContent.subject,
+        type,
+        "failed",
+        error.message,
+      );
+      throw new Error("邮件发送失败，请稍后重试");
     }
   }
 
   /**
    * 验证邮箱验证码
    */
-  async verifyCode(email: string, code: string, type: string): Promise<boolean> {
-    const verification = await this.db.queryOne(`
+  async verifyCode(
+    email: string,
+    code: string,
+    type: string,
+  ): Promise<boolean> {
+    const verification = await this.db.queryOne(
+      `
       SELECT * FROM email_verifications
       WHERE email = ?
         AND code = ?
@@ -2330,25 +2464,33 @@ class EmailService {
         AND attempts < max_attempts
       ORDER BY created_at DESC
       LIMIT 1
-    `, [email, code, type]);
+    `,
+      [email, code, type],
+    );
 
     if (!verification) {
       // 记录失败尝试
-      await this.db.execute(`
+      await this.db.execute(
+        `
         UPDATE email_verifications
         SET attempts = attempts + 1
         WHERE email = ? AND type = ? AND is_verified = FALSE
-      `, [email, type]);
+      `,
+        [email, type],
+      );
 
       return false;
     }
 
     // 标记为已验证
-    await this.db.execute(`
+    await this.db.execute(
+      `
       UPDATE email_verifications
       SET is_verified = TRUE, verified_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `, [verification.id]);
+    `,
+      [verification.id],
+    );
 
     return true;
   }
@@ -2358,15 +2500,20 @@ class EmailService {
    */
   private async checkRateLimit(email: string): Promise<void> {
     // 检查是否在冷却期内
-    const lastSent = await this.db.queryOne(`
+    const lastSent = await this.db.queryOne(
+      `
       SELECT created_at FROM email_verifications
       WHERE email = ?
       ORDER BY created_at DESC
       LIMIT 1
-    `, [email]);
+    `,
+      [email],
+    );
 
     if (lastSent) {
-      const cooldownEnd = new Date(lastSent.created_at).getTime() + emailConfig.rateLimits.resendCooldown;
+      const cooldownEnd =
+        new Date(lastSent.created_at).getTime() +
+        emailConfig.rateLimits.resendCooldown;
       if (Date.now() < cooldownEnd) {
         const waitSeconds = Math.ceil((cooldownEnd - Date.now()) / 1000);
         throw new Error(`请等待 ${waitSeconds} 秒后再重新发送`);
@@ -2375,13 +2522,16 @@ class EmailService {
 
     // 检查每小时发送次数
     const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const recentCount = await this.db.queryOne(`
+    const recentCount = await this.db.queryOne(
+      `
       SELECT COUNT(*) as count FROM email_verifications
       WHERE email = ? AND created_at > ?
-    `, [email, hourAgo]);
+    `,
+      [email, hourAgo],
+    );
 
     if (recentCount.count >= emailConfig.rateLimits.maxAttemptsPerHour) {
-      throw new Error('发送次数过多，请一小时后再试');
+      throw new Error("发送次数过多，请一小时后再试");
     }
   }
 
@@ -2391,27 +2541,27 @@ class EmailService {
   private buildEmailContent(
     type: string,
     code: string,
-    expiresAt: Date
+    expiresAt: Date,
   ): { subject: string; html: string; text: string } {
     const expiresInMinutes = Math.floor(
-      (expiresAt.getTime() - Date.now()) / (60 * 1000)
+      (expiresAt.getTime() - Date.now()) / (60 * 1000),
     );
 
     const templates = {
       register: {
-        subject: '验证您的邮箱 - Nimbus 网盘',
-        title: '欢迎注册 Nimbus！',
-        message: '感谢您注册 Nimbus 网盘。请使用以下验证码完成邮箱验证：',
+        subject: "验证您的邮箱 - Nimbus 网盘",
+        title: "欢迎注册 Nimbus！",
+        message: "感谢您注册 Nimbus 网盘。请使用以下验证码完成邮箱验证：",
       },
       reset_password: {
-        subject: '重置密码 - Nimbus 网盘',
-        title: '重置您的密码',
-        message: '您请求重置密码。请使用以下验证码完成密码重置：',
+        subject: "重置密码 - Nimbus 网盘",
+        title: "重置您的密码",
+        message: "您请求重置密码。请使用以下验证码完成密码重置：",
       },
       change_email: {
-        subject: '验证新邮箱 - Nimbus 网盘',
-        title: '验证您的新邮箱',
-        message: '您正在更改邮箱地址。请使用以下验证码验证新邮箱：',
+        subject: "验证新邮箱 - Nimbus 网盘",
+        title: "验证您的新邮箱",
+        message: "您正在更改邮箱地址。请使用以下验证码验证新邮箱：",
       },
     };
 
@@ -2485,13 +2635,23 @@ ${template.message}
     email: string,
     subject: string,
     type: string,
-    status: 'sent' | 'failed',
-    errorMessage?: string
+    status: "sent" | "failed",
+    errorMessage?: string,
   ): Promise<void> {
-    await this.db.execute(`
+    await this.db.execute(
+      `
       INSERT INTO email_logs (email, subject, type, status, error_message, sent_at)
       VALUES (?, ?, ?, ?, ?, ?)
-    `, [email, subject, type, status, errorMessage || null, status === 'sent' ? new Date() : null]);
+    `,
+      [
+        email,
+        subject,
+        type,
+        status,
+        errorMessage || null,
+        status === "sent" ? new Date() : null,
+      ],
+    );
   }
 }
 
@@ -2501,9 +2661,9 @@ export default EmailService;
 ### 9.2 认证服务实现
 
 ```typescript
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { EmailService } from './email.service';
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { EmailService } from "./email.service";
 
 class AuthService {
   private db: Database;
@@ -2520,32 +2680,34 @@ class AuthService {
     username: string,
     email: string,
     password: string,
-    ipAddress: string
+    ipAddress: string,
   ): Promise<{ success: boolean; message: string; email: string }> {
     // 验证输入
     await this.validateRegistration(username, email, password);
 
     // 检查用户名是否已存在
     const existingUsername = await this.db.queryOne(
-      'SELECT id FROM users WHERE username = ?',
-      [username]
+      "SELECT id FROM users WHERE username = ?",
+      [username],
     );
     if (existingUsername) {
-      throw new Error('用户名已被使用');
+      throw new Error("用户名已被使用");
     }
 
     // 检查邮箱是否已注册
     const existingEmail = await this.db.queryOne(
-      'SELECT id, is_active FROM users WHERE email = ?',
-      [email]
+      "SELECT id, is_active FROM users WHERE email = ?",
+      [email],
     );
-    
+
     if (existingEmail) {
       if (existingEmail.is_active) {
-        throw new Error('该邮箱已被注册');
+        throw new Error("该邮箱已被注册");
       } else {
         // 如果账号存在但未激活，删除旧账号重新注册
-        await this.db.execute('DELETE FROM users WHERE id = ?', [existingEmail.id]);
+        await this.db.execute("DELETE FROM users WHERE id = ?", [
+          existingEmail.id,
+        ]);
       }
     }
 
@@ -2553,17 +2715,20 @@ class AuthService {
     const passwordHash = await bcrypt.hash(password, 10);
 
     // 创建未激活的用户账号
-    const result = await this.db.execute(`
+    const result = await this.db.execute(
+      `
       INSERT INTO users (username, email, password_hash, is_active)
       VALUES (?, ?, ?, FALSE)
-    `, [username, email, passwordHash]);
+    `,
+      [username, email, passwordHash],
+    );
 
     // 发送验证邮件
-    await this.emailService.sendVerificationEmail(email, 'register');
+    await this.emailService.sendVerificationEmail(email, "register");
 
     return {
       success: true,
-      message: '注册成功，验证码已发送至您的邮箱',
+      message: "注册成功，验证码已发送至您的邮箱",
       email,
     };
   }
@@ -2573,42 +2738,54 @@ class AuthService {
    */
   async verifyEmail(
     email: string,
-    code: string
+    code: string,
   ): Promise<{ success: boolean; token: string; user: User }> {
     // 验证验证码
-    const isValid = await this.emailService.verifyCode(email, code, 'register');
-    
+    const isValid = await this.emailService.verifyCode(email, code, "register");
+
     if (!isValid) {
-      throw new Error('验证码错误或已过期');
+      throw new Error("验证码错误或已过期");
     }
 
     // 激活用户账号
-    await this.db.execute(`
+    await this.db.execute(
+      `
       UPDATE users SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP
       WHERE email = ?
-    `, [email]);
-
-    // 获取用户信息
-    const user = await this.db.queryOne(
-      'SELECT * FROM users WHERE email = ?',
-      [email]
+    `,
+      [email],
     );
 
+    // 获取用户信息
+    const user = await this.db.queryOne("SELECT * FROM users WHERE email = ?", [
+      email,
+    ]);
+
     // 为首个注册用户自动设置为 Owner
-    const userCount = await this.db.queryOne('SELECT COUNT(*) as count FROM users WHERE is_active = TRUE');
+    const userCount = await this.db.queryOne(
+      "SELECT COUNT(*) as count FROM users WHERE is_active = TRUE",
+    );
     if (userCount.count === 1) {
-      await this.db.execute('UPDATE users SET is_owner = TRUE WHERE id = ?', [user.id]);
-      await this.db.execute(`
+      await this.db.execute("UPDATE users SET is_owner = TRUE WHERE id = ?", [
+        user.id,
+      ]);
+      await this.db.execute(
+        `
         INSERT INTO user_roles (user_id, role_id, granted_by)
         VALUES (?, 1, ?)
-      `, [user.id, user.id]); // role_id=1 是 owner 角色
+      `,
+        [user.id, user.id],
+      ); // role_id=1 是 owner 角色
       user.is_owner = true;
     } else {
       // 其他用户默认分配 viewer 角色
-      await this.db.execute(`
+      await this.db.execute(
+        `
         INSERT INTO user_roles (user_id, role_id, granted_by)
         VALUES (?, 4, 1)
-      `, [user.id]); // role_id=4 是 viewer 角色，granted_by=1 是 owner
+      `,
+        [user.id],
+      ); // role_id=4 是 viewer 角色，granted_by=1 是 owner
     }
 
     // 生成 JWT token
@@ -2628,34 +2805,60 @@ class AuthService {
     identifier: string,
     password: string,
     ipAddress: string,
-    userAgent: string
-  ): Promise<{ success: boolean; token?: string; user?: User; requireEmailVerification?: boolean }> {
+    userAgent: string,
+  ): Promise<{
+    success: boolean;
+    token?: string;
+    user?: User;
+    requireEmailVerification?: boolean;
+  }> {
     // 查找用户（支持用户名或邮箱）
-    const user = await this.db.queryOne(`
+    const user = await this.db.queryOne(
+      `
       SELECT * FROM users
       WHERE username = ? OR email = ?
       LIMIT 1
-    `, [identifier, identifier]);
+    `,
+      [identifier, identifier],
+    );
 
     if (!user) {
       // 记录失败日志
-      await this.logLogin(null, identifier.includes('@') ? 'email' : 'username', ipAddress, userAgent, 'failed', '用户不存在');
-      throw new Error('用户名或密码错误');
+      await this.logLogin(
+        null,
+        identifier.includes("@") ? "email" : "username",
+        ipAddress,
+        userAgent,
+        "failed",
+        "用户不存在",
+      );
+      throw new Error("用户名或密码错误");
     }
 
     // 验证密码
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-    
+
     if (!isPasswordValid) {
-      await this.logLogin(user.id, identifier.includes('@') ? 'email' : 'username', ipAddress, userAgent, 'failed', '密码错误');
-      throw new Error('用户名或密码错误');
+      await this.logLogin(
+        user.id,
+        identifier.includes("@") ? "email" : "username",
+        ipAddress,
+        userAgent,
+        "failed",
+        "密码错误",
+      );
+      throw new Error("用户名或密码错误");
     }
 
     // 检查账号是否已激活
     if (!user.is_active) {
       // 重新发送验证邮件
-      await this.emailService.sendVerificationEmail(user.email, 'register', user.id);
-      
+      await this.emailService.sendVerificationEmail(
+        user.email,
+        "register",
+        user.id,
+      );
+
       return {
         success: false,
         requireEmailVerification: true,
@@ -2666,12 +2869,22 @@ class AuthService {
     const token = this.generateToken(user);
 
     // 更新最后登录时间
-    await this.db.execute(`
+    await this.db.execute(
+      `
       UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?
-    `, [user.id]);
+    `,
+      [user.id],
+    );
 
     // 记录成功登录
-    await this.logLogin(user.id, identifier.includes('@') ? 'email' : 'username', ipAddress, userAgent, 'success', null);
+    await this.logLogin(
+      user.id,
+      identifier.includes("@") ? "email" : "username",
+      ipAddress,
+      userAgent,
+      "success",
+      null,
+    );
 
     return {
       success: true,
@@ -2683,22 +2896,30 @@ class AuthService {
   /**
    * 忘记密码
    */
-  async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
-    const user = await this.db.queryOne('SELECT * FROM users WHERE email = ?', [email]);
-    
+  async forgotPassword(
+    email: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const user = await this.db.queryOne("SELECT * FROM users WHERE email = ?", [
+      email,
+    ]);
+
     if (!user) {
       // 为了安全，即使用户不存在也返回成功
       return {
         success: true,
-        message: '如果该邮箱已注册，重置密码的验证码已发送至您的邮箱',
+        message: "如果该邮箱已注册，重置密码的验证码已发送至您的邮箱",
       };
     }
 
-    await this.emailService.sendVerificationEmail(email, 'reset_password', user.id);
+    await this.emailService.sendVerificationEmail(
+      email,
+      "reset_password",
+      user.id,
+    );
 
     return {
       success: true,
-      message: '重置密码的验证码已发送至您的邮箱',
+      message: "重置密码的验证码已发送至您的邮箱",
     };
   }
 
@@ -2708,13 +2929,17 @@ class AuthService {
   async resetPassword(
     email: string,
     code: string,
-    newPassword: string
+    newPassword: string,
   ): Promise<{ success: boolean; token: string }> {
     // 验证验证码
-    const isValid = await this.emailService.verifyCode(email, code, 'reset_password');
-    
+    const isValid = await this.emailService.verifyCode(
+      email,
+      code,
+      "reset_password",
+    );
+
     if (!isValid) {
-      throw new Error('验证码错误或已过期');
+      throw new Error("验证码错误或已过期");
     }
 
     // 验证新密码
@@ -2722,13 +2947,18 @@ class AuthService {
 
     // 更新密码
     const passwordHash = await bcrypt.hash(newPassword, 10);
-    await this.db.execute(`
+    await this.db.execute(
+      `
       UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
       WHERE email = ?
-    `, [passwordHash, email]);
+    `,
+      [passwordHash, email],
+    );
 
     // 获取用户信息并生成 token（自动登录）
-    const user = await this.db.queryOne('SELECT * FROM users WHERE email = ?', [email]);
+    const user = await this.db.queryOne("SELECT * FROM users WHERE email = ?", [
+      email,
+    ]);
     const token = this.generateToken(user);
 
     return {
@@ -2749,7 +2979,7 @@ class AuthService {
         isOwner: user.is_owner,
       },
       process.env.JWT_SECRET!,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || "7d" },
     );
   }
 
@@ -2762,13 +2992,16 @@ class AuthService {
     ipAddress: string,
     userAgent: string,
     status: string,
-    failureReason: string | null
+    failureReason: string | null,
   ): Promise<void> {
     if (userId) {
-      await this.db.execute(`
+      await this.db.execute(
+        `
         INSERT INTO login_history (user_id, login_method, ip_address, user_agent, status, failure_reason)
         VALUES (?, ?, ?, ?, ?, ?)
-      `, [userId, loginMethod, ipAddress, userAgent, status, failureReason]);
+      `,
+        [userId, loginMethod, ipAddress, userAgent, status, failureReason],
+      );
     }
   }
 
@@ -2783,15 +3016,19 @@ class AuthService {
   /**
    * 验证注册输入
    */
-  private async validateRegistration(username: string, email: string, password: string): Promise<void> {
+  private async validateRegistration(
+    username: string,
+    email: string,
+    password: string,
+  ): Promise<void> {
     // 验证用户名
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-      throw new Error('用户名只能包含字母、数字和下划线，长度3-20个字符');
+      throw new Error("用户名只能包含字母、数字和下划线，长度3-20个字符");
     }
 
     // 验证邮箱
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      throw new Error('邮箱格式不正确');
+      throw new Error("邮箱格式不正确");
     }
 
     // 验证密码
@@ -2803,16 +3040,16 @@ class AuthService {
    */
   private validatePassword(password: string): void {
     if (password.length < 8) {
-      throw new Error('密码长度至少为8个字符');
+      throw new Error("密码长度至少为8个字符");
     }
     if (!/[A-Z]/.test(password)) {
-      throw new Error('密码必须包含至少一个大写字母');
+      throw new Error("密码必须包含至少一个大写字母");
     }
     if (!/[a-z]/.test(password)) {
-      throw new Error('密码必须包含至少一个小写字母');
+      throw new Error("密码必须包含至少一个小写字母");
     }
     if (!/[0-9]/.test(password)) {
-      throw new Error('密码必须包含至少一个数字');
+      throw new Error("密码必须包含至少一个数字");
     }
   }
 }
@@ -2823,9 +3060,13 @@ export default AuthService;
 ## 10. 安全考虑
 
 ### 10.1 认证与授权
+
 ```typescript
 // JWT 认证中间件
-export const authMiddleware = async (request: FastifyRequest, reply: FastifyReply) => {
+export const authMiddleware = async (
+  request: FastifyRequest,
+  reply: FastifyReply,
+) => {
   try {
     const token = extractTokenFromHeader(request.headers.authorization);
     const payload = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
@@ -2833,12 +3074,12 @@ export const authMiddleware = async (request: FastifyRequest, reply: FastifyRepl
     // 检查用户是否存在且激活
     const user = await getUserById(payload.userId);
     if (!user || !user.isActive) {
-      throw new Error('User not found or inactive');
+      throw new Error("User not found or inactive");
     }
 
     request.user = user;
   } catch (error) {
-    reply.status(401).send({ error: 'Unauthorized' });
+    reply.status(401).send({ error: "Unauthorized" });
   }
 };
 
@@ -2846,7 +3087,7 @@ export const authMiddleware = async (request: FastifyRequest, reply: FastifyRepl
 export const checkFilePermission = async (
   userId: number,
   fileId: number,
-  action: 'read' | 'write' | 'delete'
+  action: "read" | "write" | "delete",
 ): Promise<boolean> => {
   const file = await getFileById(fileId);
 
@@ -2856,7 +3097,7 @@ export const checkFilePermission = async (
   }
 
   // 检查分享权限
-  if (action === 'read') {
+  if (action === "read") {
     const share = await getActiveShareByFileId(fileId);
     return !!share;
   }
@@ -2866,40 +3107,51 @@ export const checkFilePermission = async (
 ```
 
 ### 9.2 数据加密
+
 ```typescript
 // 敏感配置加密存储
 export class ConfigEncryption {
-  private readonly algorithm = 'aes-256-gcm';
-  private readonly keyDerivation = 'pbkdf2';
+  private readonly algorithm = "aes-256-gcm";
+  private readonly keyDerivation = "pbkdf2";
 
   encrypt(data: string, password: string): string {
     const salt = crypto.randomBytes(16);
     const iv = crypto.randomBytes(12);
-    const key = crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256');
+    const key = crypto.pbkdf2Sync(password, salt, 100000, 32, "sha256");
 
     const cipher = crypto.createCipherGCM(this.algorithm, key, iv);
-    let encrypted = cipher.update(data, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
+    let encrypted = cipher.update(data, "utf8", "hex");
+    encrypted += cipher.final("hex");
 
     const authTag = cipher.getAuthTag();
 
     return JSON.stringify({
-      salt: salt.toString('hex'),
-      iv: iv.toString('hex'),
-      authTag: authTag.toString('hex'),
+      salt: salt.toString("hex"),
+      iv: iv.toString("hex"),
+      authTag: authTag.toString("hex"),
       encrypted,
     });
   }
 
   decrypt(encryptedData: string, password: string): string {
     const { salt, iv, authTag, encrypted } = JSON.parse(encryptedData);
-    const key = crypto.pbkdf2Sync(password, Buffer.from(salt, 'hex'), 100000, 32, 'sha256');
+    const key = crypto.pbkdf2Sync(
+      password,
+      Buffer.from(salt, "hex"),
+      100000,
+      32,
+      "sha256",
+    );
 
-    const decipher = crypto.createDecipherGCM(this.algorithm, key, Buffer.from(iv, 'hex'));
-    decipher.setAuthTag(Buffer.from(authTag, 'hex'));
+    const decipher = crypto.createDecipherGCM(
+      this.algorithm,
+      key,
+      Buffer.from(iv, "hex"),
+    );
+    decipher.setAuthTag(Buffer.from(authTag, "hex"));
 
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
+    let decrypted = decipher.update(encrypted, "hex", "utf8");
+    decrypted += decipher.final("utf8");
 
     return decrypted;
   }
@@ -2909,6 +3161,7 @@ export class ConfigEncryption {
 ## 10. 性能优化
 
 ### 10.1 缓存策略
+
 ```typescript
 // Redis 缓存服务
 export class CacheService {
@@ -2919,7 +3172,11 @@ export class CacheService {
   }
 
   // 缓存文件元数据
-  async cacheFileMetadata(fileId: number, metadata: FileMetadata, ttl = 3600): Promise<void> {
+  async cacheFileMetadata(
+    fileId: number,
+    metadata: FileMetadata,
+    ttl = 3600,
+  ): Promise<void> {
     await this.redis.setex(`file:${fileId}`, ttl, JSON.stringify(metadata));
   }
 
@@ -2929,23 +3186,35 @@ export class CacheService {
   }
 
   // 缓存文件夹内容
-  async cacheFolderContents(folderId: number, contents: FolderContents, ttl = 1800): Promise<void> {
+  async cacheFolderContents(
+    folderId: number,
+    contents: FolderContents,
+    ttl = 1800,
+  ): Promise<void> {
     await this.redis.setex(`folder:${folderId}`, ttl, JSON.stringify(contents));
   }
 
   // 缓存存储源状态
-  async cacheStorageSourceStatus(sourceId: number, status: StorageSourceStatus, ttl = 300): Promise<void> {
+  async cacheStorageSourceStatus(
+    sourceId: number,
+    status: StorageSourceStatus,
+    ttl = 300,
+  ): Promise<void> {
     await this.redis.setex(`storage:${sourceId}`, ttl, JSON.stringify(status));
   }
 }
 
 // 缓存中间件
 export const cacheMiddleware = (ttl: number = 300) => {
-  return async (request: FastifyRequest, reply: FastifyReply, done: Function) => {
+  return async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+    done: Function,
+  ) => {
     const cacheKey = `api:${request.method}:${request.url}`;
 
     // 只缓存 GET 请求
-    if (request.method !== 'GET') {
+    if (request.method !== "GET") {
       return done();
     }
 
@@ -2956,7 +3225,7 @@ export const cacheMiddleware = (ttl: number = 300) => {
     }
 
     // 缓存响应
-    reply.addHook('onSend', async (request, reply, payload) => {
+    reply.addHook("onSend", async (request, reply, payload) => {
       if (reply.statusCode === 200) {
         await cache.setex(cacheKey, ttl, payload);
       }
@@ -2968,10 +3237,11 @@ export const cacheMiddleware = (ttl: number = 300) => {
 ```
 
 ### 10.2 数据库优化
+
 ```typescript
 // 数据库连接池
 export const dbConfig = {
-  client: 'sqlite3',
+  client: "sqlite3",
   connection: {
     filename: process.env.DATABASE_URL,
   },
@@ -2990,23 +3260,20 @@ export class FileService {
     folderId: number,
     page: number = 1,
     limit: number = 50,
-    sortBy: string = 'created_at',
-    sortOrder: 'asc' | 'desc' = 'desc'
+    sortBy: string = "created_at",
+    sortOrder: "asc" | "desc" = "desc",
   ): Promise<PaginatedFiles> {
     const offset = (page - 1) * limit;
 
     // 使用索引优化的查询
     const [files, totalCount] = await Promise.all([
-      db('files')
-        .where('folder_id', folderId)
+      db("files")
+        .where("folder_id", folderId)
         .orderBy(sortBy, sortOrder)
         .limit(limit)
         .offset(offset),
 
-      db('files')
-        .where('folder_id', folderId)
-        .count('* as count')
-        .first()
+      db("files").where("folder_id", folderId).count("* as count").first(),
     ]);
 
     return {

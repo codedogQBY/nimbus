@@ -1,4 +1,5 @@
-import { StorageAdapter, UploadResult, StorageConfig } from './index';
+import crypto from "crypto";
+
 import {
   S3Client,
   PutObjectCommand,
@@ -9,10 +10,11 @@ import {
   CreateMultipartUploadCommand,
   UploadPartCommand,
   CompleteMultipartUploadCommand,
-  AbortMultipartUploadCommand
-} from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import crypto from 'crypto';
+  AbortMultipartUploadCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
+import { StorageAdapter, UploadResult, StorageConfig } from "./index";
 
 export interface R2Config extends StorageConfig {
   accountId: string;
@@ -38,7 +40,7 @@ export interface R2UploadResult extends UploadResult {
 }
 
 export class R2Adapter implements StorageAdapter {
-  name = 'Cloudflare R2';
+  name = "Cloudflare R2";
   private client: S3Client;
   private bucketName: string;
   private domain?: string;
@@ -49,19 +51,20 @@ export class R2Adapter implements StorageAdapter {
     this.config = config;
     this.bucketName = config.bucketName;
     this.domain = config.domain;
-    this.endpoint = config.endpoint || `https://${config.accountId}.r2.cloudflarestorage.com`;
+    this.endpoint =
+      config.endpoint || `https://${config.accountId}.r2.cloudflarestorage.com`;
 
     // 创建自定义的 HTTPS Agent 来处理 SSL 问题
-    const httpsAgent = new (require('https').Agent)({
+    const httpsAgent = new (require("https").Agent)({
       keepAlive: true,
       timeout: 30000,
       // 对于某些网络环境，可能需要更宽松的 SSL 设置
-      secureProtocol: 'TLSv1_2_method',
-      ciphers: 'HIGH:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!SRP:!CAMELLIA',
+      secureProtocol: "TLSv1_2_method",
+      ciphers: "HIGH:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!SRP:!CAMELLIA",
     });
 
     this.client = new S3Client({
-      region: config.region || 'auto',
+      region: config.region || "auto",
       endpoint: this.endpoint,
       credentials: {
         accessKeyId: config.accessKeyId,
@@ -84,16 +87,16 @@ export class R2Adapter implements StorageAdapter {
    */
   private validateConfig(): void {
     if (!this.config.accountId) {
-      throw new Error('accountId is required for R2 configuration');
+      throw new Error("accountId is required for R2 configuration");
     }
     if (!this.config.accessKeyId) {
-      throw new Error('accessKeyId is required for R2 configuration');
+      throw new Error("accessKeyId is required for R2 configuration");
     }
     if (!this.config.secretAccessKey) {
-      throw new Error('secretAccessKey is required for R2 configuration');
+      throw new Error("secretAccessKey is required for R2 configuration");
     }
     if (!this.config.bucketName) {
-      throw new Error('bucketName is required for R2 configuration');
+      throw new Error("bucketName is required for R2 configuration");
     }
   }
 
@@ -108,11 +111,16 @@ export class R2Adapter implements StorageAdapter {
   /**
    * 上传文件 - 支持单文件和分片上传
    */
-  async upload(file: File, path: string, options?: UploadOptions): Promise<R2UploadResult> {
+  async upload(
+    file: File,
+    path: string,
+    options?: UploadOptions,
+  ): Promise<R2UploadResult> {
     try {
       const buffer = Buffer.from(await file.arrayBuffer());
       const fileSize = buffer.length;
-      const multipartThreshold = options?.multipartThreshold || 100 * 1024 * 1024; // 100MB
+      const multipartThreshold =
+        options?.multipartThreshold || 100 * 1024 * 1024; // 100MB
 
       // 大文件使用分片上传
       if (fileSize > multipartThreshold) {
@@ -121,10 +129,11 @@ export class R2Adapter implements StorageAdapter {
         return await this.singleUpload(buffer, path, file.type, options);
       }
     } catch (error) {
-      console.error('R2 upload error:', error);
+      console.error("R2 upload error:", error);
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Upload failed',
+        error: error instanceof Error ? error.message : "Upload failed",
       };
     }
   }
@@ -136,12 +145,12 @@ export class R2Adapter implements StorageAdapter {
     buffer: Buffer,
     path: string,
     contentType: string,
-    options?: UploadOptions
+    options?: UploadOptions,
   ): Promise<R2UploadResult> {
     const metadata = {
       uploadedAt: new Date().toISOString(),
       size: buffer.length.toString(),
-      hash: crypto.createHash('md5').update(buffer).digest('hex'),
+      hash: crypto.createHash("md5").update(buffer).digest("hex"),
       ...options?.metadata,
     };
 
@@ -149,9 +158,9 @@ export class R2Adapter implements StorageAdapter {
       Bucket: this.bucketName,
       Key: path,
       Body: buffer,
-      ContentType: contentType || 'application/octet-stream',
+      ContentType: contentType || "application/octet-stream",
       Metadata: metadata,
-      ContentMD5: crypto.createHash('md5').update(buffer).digest('base64'),
+      ContentMD5: crypto.createHash("md5").update(buffer).digest("base64"),
     });
 
     const response = await this.client.send(command);
@@ -179,7 +188,7 @@ export class R2Adapter implements StorageAdapter {
     buffer: Buffer,
     path: string,
     contentType: string,
-    options?: UploadOptions
+    options?: UploadOptions,
   ): Promise<R2UploadResult> {
     const chunkSize = 5 * 1024 * 1024; // 5MB per chunk
     const chunks = Math.ceil(buffer.length / chunkSize);
@@ -187,7 +196,7 @@ export class R2Adapter implements StorageAdapter {
     const metadata = {
       uploadedAt: new Date().toISOString(),
       size: buffer.length.toString(),
-      hash: crypto.createHash('md5').update(buffer).digest('hex'),
+      hash: crypto.createHash("md5").update(buffer).digest("hex"),
       chunks: chunks.toString(),
       ...options?.metadata,
     };
@@ -196,14 +205,14 @@ export class R2Adapter implements StorageAdapter {
     const createCommand = new CreateMultipartUploadCommand({
       Bucket: this.bucketName,
       Key: path,
-      ContentType: contentType || 'application/octet-stream',
+      ContentType: contentType || "application/octet-stream",
       Metadata: metadata,
     });
 
     const { UploadId } = await this.client.send(createCommand);
 
     if (!UploadId) {
-      throw new Error('Failed to create multipart upload');
+      throw new Error("Failed to create multipart upload");
     }
 
     try {
@@ -268,13 +277,15 @@ export class R2Adapter implements StorageAdapter {
     } catch (error) {
       // 上传失败，取消分片上传
       try {
-        await this.client.send(new AbortMultipartUploadCommand({
-          Bucket: this.bucketName,
-          Key: path,
-          UploadId,
-        }));
+        await this.client.send(
+          new AbortMultipartUploadCommand({
+            Bucket: this.bucketName,
+            Key: path,
+            UploadId,
+          }),
+        );
       } catch (abortError) {
-        console.error('Failed to abort multipart upload:', abortError);
+        console.error("Failed to abort multipart upload:", abortError);
       }
       throw error;
     }
@@ -286,7 +297,9 @@ export class R2Adapter implements StorageAdapter {
   async download(path: string): Promise<Buffer> {
     try {
       // 如果已经是一个路径（不是完整URL），直接使用；否则提取路径
-      const filePath = path.startsWith('http') ? this.extractPathFromUrl(path) : path;
+      const filePath = path.startsWith("http")
+        ? this.extractPathFromUrl(path)
+        : path;
 
       const command = new GetObjectCommand({
         Bucket: this.bucketName,
@@ -296,7 +309,7 @@ export class R2Adapter implements StorageAdapter {
       const response = await this.client.send(command);
 
       if (!response.Body) {
-        throw new Error('File not found or empty');
+        throw new Error("File not found or empty");
       }
 
       // 优化的流处理
@@ -311,11 +324,14 @@ export class R2Adapter implements StorageAdapter {
         for await (const chunk of stream) {
           chunks.push(chunk);
         }
+
         return Buffer.concat(chunks);
       }
     } catch (error) {
-      console.error('R2 download error:', error);
-      throw new Error(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("R2 download error:", error);
+      throw new Error(
+        `Download failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
@@ -330,13 +346,15 @@ export class R2Adapter implements StorageAdapter {
       });
 
       await this.client.send(command);
+
       return true;
     } catch (error) {
-      console.error('R2 delete error:', error);
+      console.error("R2 delete error:", error);
       // 如果文件不存在，也算删除成功
-      if (error instanceof Error && error.name === 'NoSuchKey') {
+      if (error instanceof Error && error.name === "NoSuchKey") {
         return true;
       }
+
       return false;
     }
   }
@@ -362,13 +380,15 @@ export class R2Adapter implements StorageAdapter {
       return {
         size: response.ContentLength || 0,
         lastModified: response.LastModified || new Date(),
-        etag: response.ETag || '',
-        contentType: response.ContentType || 'application/octet-stream',
+        etag: response.ETag || "",
+        contentType: response.ContentType || "application/octet-stream",
         metadata: response.Metadata,
       };
     } catch (error) {
-      console.error('Get file metadata error:', error);
-      throw new Error(`Failed to get file metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("Get file metadata error:", error);
+      throw new Error(
+        `Failed to get file metadata: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
@@ -384,15 +404,21 @@ export class R2Adapter implements StorageAdapter {
 
       return await getSignedUrl(this.client, command, { expiresIn });
     } catch (error) {
-      console.error('Get signed URL error:', error);
-      throw new Error(`Failed to generate signed URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("Get signed URL error:", error);
+      throw new Error(
+        `Failed to generate signed URL: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
   /**
    * 生成上传预签名URL
    */
-  async getUploadSignedUrl(path: string, contentType?: string, expiresIn: number = 3600): Promise<string> {
+  async getUploadSignedUrl(
+    path: string,
+    contentType?: string,
+    expiresIn: number = 3600,
+  ): Promise<string> {
     try {
       const command = new PutObjectCommand({
         Bucket: this.bucketName,
@@ -402,15 +428,20 @@ export class R2Adapter implements StorageAdapter {
 
       return await getSignedUrl(this.client, command, { expiresIn });
     } catch (error) {
-      console.error('Get upload signed URL error:', error);
-      throw new Error(`Failed to generate upload signed URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("Get upload signed URL error:", error);
+      throw new Error(
+        `Failed to generate upload signed URL: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
   /**
    * 列出文件夹内容
    */
-  async listObjects(prefix: string = '', maxKeys: number = 1000): Promise<{
+  async listObjects(
+    prefix: string = "",
+    maxKeys: number = 1000,
+  ): Promise<{
     objects: Array<{
       key: string;
       size: number;
@@ -429,11 +460,11 @@ export class R2Adapter implements StorageAdapter {
 
       const response = await this.client.send(command);
 
-      const objects = (response.Contents || []).map(obj => ({
-        key: obj.Key || '',
+      const objects = (response.Contents || []).map((obj) => ({
+        key: obj.Key || "",
         size: obj.Size || 0,
         lastModified: obj.LastModified || new Date(),
-        etag: obj.ETag || '',
+        etag: obj.ETag || "",
       }));
 
       return {
@@ -442,8 +473,10 @@ export class R2Adapter implements StorageAdapter {
         nextContinuationToken: response.NextContinuationToken,
       };
     } catch (error) {
-      console.error('List objects error:', error);
-      throw new Error(`Failed to list objects: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("List objects error:", error);
+      throw new Error(
+        `Failed to list objects: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
@@ -452,11 +485,14 @@ export class R2Adapter implements StorageAdapter {
    */
   getUrl(path: string): string {
     // 清理路径，移除开头的斜杠
-    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    const cleanPath = path.startsWith("/") ? path.slice(1) : path;
 
     if (this.domain) {
       // 自定义域名，确保以 https:// 开头
-      const domain = this.domain.startsWith('http') ? this.domain : `https://${this.domain}`;
+      const domain = this.domain.startsWith("http")
+        ? this.domain
+        : `https://${this.domain}`;
+
       return `${domain}/${cleanPath}`;
     }
 
@@ -476,43 +512,57 @@ export class R2Adapter implements StorageAdapter {
       });
 
       await this.client.send(command);
+
       return true;
     } catch (error: any) {
-      console.error('R2 connection test failed:', error);
+      console.error("R2 connection test failed:", error);
 
       // 详细的错误分析
-      const errorMessage = error.message || '';
-      const errorCode = error.code || error.name || '';
+      const errorMessage = error.message || "";
+      const errorCode = error.code || error.name || "";
 
       // SSL/TLS 相关错误 - 提供具体的解决建议
-      if (errorMessage.includes('EPROTO') || errorMessage.includes('SSL') || errorMessage.includes('TLS') || errorMessage.includes('handshake failure')) {
-        throw new Error('❌ 网络环境阻止了到 Cloudflare R2 的连接。\n' +
-          '可能原因：\n' +
-          '• 公司/学校网络阻止对象存储服务\n' +
-          '• VPN 或代理干扰 SSL 连接\n' +
-          '• 防火墙规则阻止连接\n\n' +
-          '建议解决方案：\n' +
-          '1. 尝试切换到个人网络（手机热点）\n' +
-          '2. 联系网络管理员白名单 *.r2.cloudflarestorage.com\n' +
-          '3. 考虑使用其他存储服务（如又拍云、七牛云）');
+      if (
+        errorMessage.includes("EPROTO") ||
+        errorMessage.includes("SSL") ||
+        errorMessage.includes("TLS") ||
+        errorMessage.includes("handshake failure")
+      ) {
+        throw new Error(
+          "❌ 网络环境阻止了到 Cloudflare R2 的连接。\n" +
+            "可能原因：\n" +
+            "• 公司/学校网络阻止对象存储服务\n" +
+            "• VPN 或代理干扰 SSL 连接\n" +
+            "• 防火墙规则阻止连接\n\n" +
+            "建议解决方案：\n" +
+            "1. 尝试切换到个人网络（手机热点）\n" +
+            "2. 联系网络管理员白名单 *.r2.cloudflarestorage.com\n" +
+            "3. 考虑使用其他存储服务（如又拍云、七牛云）",
+        );
       }
 
       // AWS S3 相关错误
-      if (errorCode === 'NoSuchBucket') {
+      if (errorCode === "NoSuchBucket") {
         throw new Error(`存储桶 '${this.bucketName}' 不存在，请检查存储桶名称`);
-      } else if (errorCode === 'InvalidAccessKeyId') {
-        throw new Error('Access Key ID 无效，请检查您的 API 凭据');
-      } else if (errorCode === 'SignatureDoesNotMatch') {
-        throw new Error('Secret Access Key 无效，请检查您的 API 凭据');
-      } else if (errorCode === 'AccessDenied') {
-        throw new Error('权限被拒绝，请检查 API 密钥的权限设置');
-      } else if (errorCode === 'RequestTimeout' || errorMessage.includes('timeout')) {
-        throw new Error('连接超时，请检查网络连接');
+      } else if (errorCode === "InvalidAccessKeyId") {
+        throw new Error("Access Key ID 无效，请检查您的 API 凭据");
+      } else if (errorCode === "SignatureDoesNotMatch") {
+        throw new Error("Secret Access Key 无效，请检查您的 API 凭据");
+      } else if (errorCode === "AccessDenied") {
+        throw new Error("权限被拒绝，请检查 API 密钥的权限设置");
+      } else if (
+        errorCode === "RequestTimeout" ||
+        errorMessage.includes("timeout")
+      ) {
+        throw new Error("连接超时，请检查网络连接");
       }
 
       // 网络连接错误
-      if (errorMessage.includes('ENOTFOUND') || errorMessage.includes('ECONNREFUSED')) {
-        throw new Error('无法连接到 Cloudflare R2 服务器，请检查网络连接');
+      if (
+        errorMessage.includes("ENOTFOUND") ||
+        errorMessage.includes("ECONNREFUSED")
+      ) {
+        throw new Error("无法连接到 Cloudflare R2 服务器，请检查网络连接");
       }
 
       // 未知错误
@@ -529,21 +579,31 @@ export class R2Adapter implements StorageAdapter {
 
       // 自定义域名
       if (this.domain) {
-        const domainObj = new URL(this.domain.startsWith('http') ? this.domain : `https://${this.domain}`);
+        const domainObj = new URL(
+          this.domain.startsWith("http")
+            ? this.domain
+            : `https://${this.domain}`,
+        );
+
         if (urlObj.hostname === domainObj.hostname) {
-          return urlObj.pathname.startsWith('/') ? urlObj.pathname.slice(1) : urlObj.pathname;
+          return urlObj.pathname.startsWith("/")
+            ? urlObj.pathname.slice(1)
+            : urlObj.pathname;
         }
       }
 
       // R2 默认域名格式
       const r2Pattern = /^https:\/\/pub-([^.]+)\.r2\.dev\/(.+)$/;
       const match = url.match(r2Pattern);
+
       if (match) {
         return match[2];
       }
 
       // 如果都不匹配，返回 pathname
-      return urlObj.pathname.startsWith('/') ? urlObj.pathname.slice(1) : urlObj.pathname;
+      return urlObj.pathname.startsWith("/")
+        ? urlObj.pathname.slice(1)
+        : urlObj.pathname;
     } catch (error) {
       // 如果不是有效的URL，直接返回原始路径
       return url;
@@ -573,7 +633,10 @@ export class R2Adapter implements StorageAdapter {
 
         if (response.Contents) {
           objectCount += response.Contents.length;
-          totalSize += response.Contents.reduce((sum, obj) => sum + (obj.Size || 0), 0);
+          totalSize += response.Contents.reduce(
+            (sum, obj) => sum + (obj.Size || 0),
+            0,
+          );
         }
 
         continuationToken = response.NextContinuationToken;
@@ -581,8 +644,10 @@ export class R2Adapter implements StorageAdapter {
 
       return { objectCount, totalSize };
     } catch (error) {
-      console.error('Get storage usage error:', error);
-      throw new Error(`Failed to get storage usage: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("Get storage usage error:", error);
+      throw new Error(
+        `Failed to get storage usage: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 }

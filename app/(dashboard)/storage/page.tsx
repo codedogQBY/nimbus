@@ -1,12 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useToast } from '@/components/toast-provider';
-import { 
-  Card, 
-  CardBody, 
-  Progress, 
-  Button, 
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardBody,
+  Progress,
+  Button,
   Chip,
   Divider,
   Spinner,
@@ -19,11 +18,11 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  useDisclosure
-} from '@heroui/react';
-import { 
-  Cloud as CloudIcon, 
-  Plus as PlusIcon, 
+  useDisclosure,
+} from "@heroui/react";
+import {
+  Cloud as CloudIcon,
+  Plus as PlusIcon,
   CheckCircle2 as CheckCircle2Icon,
   AlertCircle as AlertCircleIcon,
   HardDrive as HardDriveIcon,
@@ -35,11 +34,13 @@ import {
   Send as SendIcon,
   Github as GithubIcon,
   Image as ImageIcon,
-  Code as CodeIcon
-} from 'lucide-react';
-import ky from 'ky';
-import { AddStorageModal } from '@/components/add-storage-modal';
-import { EditStorageModal } from '@/components/edit-storage-modal';
+  Code as CodeIcon,
+} from "lucide-react";
+import ky from "ky";
+
+import { useToast } from "@/components/toast-provider";
+import { AddStorageModal } from "@/components/add-storage-modal";
+import { EditStorageModal } from "@/components/edit-storage-modal";
 
 export default function StoragePage() {
   const { showError, showSuccess } = useToast();
@@ -51,7 +52,11 @@ export default function StoragePage() {
   const [editingSource, setEditingSource] = useState<any>(null);
   const [deletingSource, setDeletingSource] = useState<any>(null);
   const [testingSource, setTestingSource] = useState<number | null>(null);
-  const {isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose} = useDisclosure();
+  const {
+    isOpen: isDeleteOpen,
+    onOpen: onDeleteOpen,
+    onClose: onDeleteClose,
+  } = useDisclosure();
 
   useEffect(() => {
     loadStorageSources();
@@ -60,40 +65,36 @@ export default function StoragePage() {
   const loadStorageSources = async () => {
     try {
       setLoading(true);
-      
-      const token = localStorage.getItem('token');
-      const response = await ky.get('/api/storage-sources', {
-        headers: { Authorization: `Bearer ${token}` },
-      }).json<any>();
+
+      const token = localStorage.getItem("token");
+      const response = await ky
+        .get("/api/storage-sources", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .json<any>();
 
       setStorageSources(response.sources || []);
       setStats(response.stats || null);
     } catch (error: any) {
-      console.error('Load storage sources error:', error);
-      showError('加载失败', '加载存储源失败，请刷新重试');
+      console.error("Load storage sources error:", error);
+      showError("加载失败", "加载存储源失败，请刷新重试");
     } finally {
       setLoading(false);
     }
   };
 
   const formatBytes = (bytes: number): string => {
-    if (!bytes || bytes === 0 || isNaN(bytes) || bytes < 0) return '0 B';
+    if (!bytes || bytes === 0 || isNaN(bytes) || bytes < 0) return "0 B";
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   };
 
   const notifyStorageUpdate = () => {
     // 触发存储更新事件，通知 layout 刷新
-    window.dispatchEvent(new Event('storageUpdated'));
-  };
-
-  const handleAddSuccess = () => {
-    setShowAddModal(false);
-    loadStorageSources();
-    notifyStorageUpdate();
-    showSuccess('添加成功', '存储源已成功添加');
+    window.dispatchEvent(new Event("storageUpdated"));
   };
 
   const handleEdit = (source: any) => {
@@ -106,7 +107,7 @@ export default function StoragePage() {
     setEditingSource(null);
     loadStorageSources();
     notifyStorageUpdate();
-    showSuccess('更新成功', '存储源配置已成功更新');
+    showSuccess("更新成功", "存储源配置已成功更新");
   };
 
   const handleDelete = (source: any) => {
@@ -118,31 +119,40 @@ export default function StoragePage() {
     setTestingSource(source.id);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await ky.post(`/api/storage-sources/${source.id}/test`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).json<{ success: boolean; connected: boolean; message: string; error?: string }>();
+      const token = localStorage.getItem("token");
+      const response = await ky
+        .post(`/api/storage-sources/${source.id}/test`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .json<{
+          success: boolean;
+          connected: boolean;
+          message: string;
+          error?: string;
+        }>();
 
       if (response.connected) {
-        showSuccess('测试成功', response.message);
+        showSuccess("测试成功", response.message);
       } else {
-        showError('测试失败', response.message);
+        showError("测试失败", response.message);
       }
 
       // 刷新存储源列表以更新状态
       loadStorageSources();
     } catch (error: any) {
-      console.error('Test storage source error:', error);
+      console.error("Test storage source error:", error);
 
-      let errorMessage = '测试连接失败';
+      let errorMessage = "测试连接失败";
+
       try {
         const errorData = await error.response?.json();
+
         errorMessage = errorData?.error || errorMessage;
       } catch {
         // 如果无法解析错误响应，使用默认消息
       }
 
-      showError('测试失败', errorMessage);
+      showError("测试失败", errorMessage);
     } finally {
       setTestingSource(null);
     }
@@ -152,7 +162,8 @@ export default function StoragePage() {
     if (!deletingSource) return;
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
+
       await ky.delete(`/api/storage-sources/${deletingSource.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -161,20 +172,22 @@ export default function StoragePage() {
       setDeletingSource(null);
       loadStorageSources();
       notifyStorageUpdate();
-      showSuccess('删除成功', '存储源已成功删除');
+      showSuccess("删除成功", "存储源已成功删除");
     } catch (error: any) {
-      console.error('Delete storage source error:', error);
-      
+      console.error("Delete storage source error:", error);
+
       // 尝试获取详细错误信息
-      let errorMessage = '删除存储源失败';
+      let errorMessage = "删除存储源失败";
+
       try {
         const errorData = await error.response?.json();
+
         errorMessage = errorData?.error || errorMessage;
       } catch {
         // 如果无法解析错误响应，使用默认消息
       }
-      
-      showError('删除失败', errorMessage);
+
+      showError("删除失败", errorMessage);
     }
   };
 
@@ -182,21 +195,21 @@ export default function StoragePage() {
     const iconClass = "w-6 h-6 lg:w-8 lg:h-8 text-amber-brown-500";
 
     switch (type) {
-      case 'local':
+      case "local":
         return <HardDriveIcon className={iconClass} />;
-      case 'r2':
-      case 'qiniu':
-      case 'upyun':
+      case "r2":
+      case "qiniu":
+      case "upyun":
         return <CloudIcon className={iconClass} />;
-      case 'minio':
+      case "minio":
         return <DatabaseIcon className={iconClass} />;
-      case 'telegram':
+      case "telegram":
         return <SendIcon className={iconClass} />;
-      case 'github':
+      case "github":
         return <GithubIcon className={iconClass} />;
-      case 'cloudinary':
+      case "cloudinary":
         return <ImageIcon className={iconClass} />;
-      case 'custom':
+      case "custom":
         return <CodeIcon className={iconClass} />;
       default:
         return <HardDriveIcon className={iconClass} />;
@@ -206,7 +219,7 @@ export default function StoragePage() {
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <Spinner size="lg" color="primary" />
+        <Spinner color="primary" size="lg" />
       </div>
     );
   }
@@ -217,21 +230,25 @@ export default function StoragePage() {
         {/* 页面标题 */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl lg:text-2xl font-bold text-dark-olive-800">存储源管理</h1>
-            <p className="text-xs lg:text-sm text-default-500 mt-1">管理您的多源存储配置</p>
+            <h1 className="text-xl lg:text-2xl font-bold text-dark-olive-800">
+              存储源管理
+            </h1>
+            <p className="text-xs lg:text-sm text-default-500 mt-1">
+              管理您的多源存储配置
+            </p>
           </div>
           <Button
-            size="sm"
             isIconOnly
             className="lg:hidden bg-amber-brown-500 hover:bg-amber-brown-600 text-white"
+            size="sm"
             onPress={() => setShowAddModal(true)}
           >
             <PlusIcon className="w-5 h-5" />
           </Button>
           <Button
+            className="hidden lg:flex bg-amber-brown-500 hover:bg-amber-brown-600 text-white"
             size="lg"
             startContent={<PlusIcon className="w-5 h-5" />}
-            className="hidden lg:flex bg-amber-brown-500 hover:bg-amber-brown-600 text-white"
             onPress={() => setShowAddModal(true)}
           >
             添加存储源
@@ -247,14 +264,20 @@ export default function StoragePage() {
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <p className="text-sm opacity-90 mb-1">总存储空间</p>
-                    <p className="text-2xl lg:text-3xl font-bold">{formatBytes(stats.totalCapacity)}</p>
+                    <p className="text-2xl lg:text-3xl font-bold">
+                      {formatBytes(stats.totalCapacity)}
+                    </p>
                   </div>
                   <div className="w-10 h-10 lg:w-12 lg:h-12 bg-white/20 rounded-lg flex items-center justify-center">
                     <DatabaseIcon className="w-5 h-5 lg:w-6 lg:h-6" />
                   </div>
                 </div>
                 <p className="text-xs opacity-75">
-                  已使用 {formatBytes(stats.totalUsed)} ({stats.totalCapacity > 0 ? ((stats.totalUsed/stats.totalCapacity)*100).toFixed(1) : 0}%)
+                  已使用 {formatBytes(stats.totalUsed)} (
+                  {stats.totalCapacity > 0
+                    ? ((stats.totalUsed / stats.totalCapacity) * 100).toFixed(1)
+                    : 0}
+                  %)
                 </p>
               </CardBody>
             </Card>
@@ -309,7 +332,9 @@ export default function StoragePage() {
           <Card className="bg-white">
             <CardBody className="p-4 lg:p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base lg:text-lg font-semibold text-dark-olive-800">总体存储使用</h3>
+                <h3 className="text-base lg:text-lg font-semibold text-dark-olive-800">
+                  总体存储使用
+                </h3>
                 <div className="text-right">
                   <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">
                     {formatBytes(stats.totalUsed)}
@@ -320,14 +345,15 @@ export default function StoragePage() {
                 </div>
               </div>
               <Progress
-                value={(stats.totalUsed / stats.totalCapacity) * 100}
+                className="mb-3"
                 color="primary"
                 size="lg"
-                className="mb-3"
+                value={(stats.totalUsed / stats.totalCapacity) * 100}
               />
               <div className="flex items-center justify-between text-xs lg:text-sm">
                 <span className="text-default-600">
-                  已使用 {((stats.totalUsed/stats.totalCapacity)*100).toFixed(1)}%
+                  已使用{" "}
+                  {((stats.totalUsed / stats.totalCapacity) * 100).toFixed(1)}%
                 </span>
                 <span className="text-success">
                   剩余 {formatBytes(stats.totalCapacity - stats.totalUsed)}
@@ -339,8 +365,10 @@ export default function StoragePage() {
 
         {/* 存储源列表 */}
         <div>
-          <h2 className="text-base lg:text-lg font-semibold text-dark-olive-800 mb-3 lg:mb-4">我的存储源</h2>
-          
+          <h2 className="text-base lg:text-lg font-semibold text-dark-olive-800 mb-3 lg:mb-4">
+            我的存储源
+          </h2>
+
           {storageSources.length === 0 ? (
             // 空状态
             <Card className="bg-white border-2 border-dashed border-default-300">
@@ -355,9 +383,9 @@ export default function StoragePage() {
                   添加您的第一个存储源，开始使用 Nimbus 多源聚合网盘
                 </p>
                 <Button
+                  className="bg-amber-brown-500 hover:bg-amber-brown-600 text-white"
                   size="lg"
                   startContent={<PlusIcon className="w-5 h-5" />}
-                  className="bg-amber-brown-500 hover:bg-amber-brown-600 text-white"
                   onPress={() => setShowAddModal(true)}
                 >
                   添加存储源
@@ -380,15 +408,23 @@ export default function StoragePage() {
                             {source.name}
                           </h3>
                           <Chip
-                            size="sm"
                             color={source.isActive ? "success" : "default"}
+                            size="sm"
+                            startContent={
+                              source.isActive ? (
+                                <CheckCircle2Icon className="w-3 h-3" />
+                              ) : (
+                                <AlertCircleIcon className="w-3 h-3" />
+                              )
+                            }
                             variant="flat"
-                            startContent={source.isActive ? <CheckCircle2Icon className="w-3 h-3" /> : <AlertCircleIcon className="w-3 h-3" />}
                           >
-                            {source.isActive ? '在线' : '离线'}
+                            {source.isActive ? "在线" : "离线"}
                           </Chip>
                         </div>
-                        <p className="text-xs text-default-500">{source.type.toUpperCase()}</p>
+                        <p className="text-xs text-default-500">
+                          {source.type.toUpperCase()}
+                        </p>
                       </div>
                     </div>
 
@@ -399,15 +435,20 @@ export default function StoragePage() {
                       <div className="flex items-center justify-between text-xs lg:text-sm">
                         <span className="text-default-600">存储使用</span>
                         <span className="font-semibold text-dark-olive-800">
-                          {formatBytes(source.quotaUsed)} / {formatBytes(source.quotaLimit)}
+                          {formatBytes(source.quotaUsed)} /{" "}
+                          {formatBytes(source.quotaLimit)}
                         </span>
                       </div>
                       <Progress
-                        value={(source.quotaUsed / source.quotaLimit) * 100}
-                        color={source.quotaUsed / source.quotaLimit > 0.8 ? 'warning' : 'primary'}
+                        color={
+                          source.quotaUsed / source.quotaLimit > 0.8
+                            ? "warning"
+                            : "primary"
+                        }
                         size="md"
+                        value={(source.quotaUsed / source.quotaLimit) * 100}
                       />
-                      
+
                       <div className="grid grid-cols-2 gap-3 pt-2">
                         <div>
                           <p className="text-xs text-default-500">文件数量</p>
@@ -429,22 +470,22 @@ export default function StoragePage() {
                     {/* 操作按钮 */}
                     <div className="flex gap-2">
                       <Button
+                        className="flex-1 bg-secondary-100 text-dark-olive-700"
+                        isDisabled={testingSource !== null}
+                        isLoading={testingSource === source.id}
                         size="sm"
                         variant="flat"
-                        className="flex-1 bg-secondary-100 text-dark-olive-700"
                         onPress={() => handleTestConnection(source)}
-                        isLoading={testingSource === source.id}
-                        isDisabled={testingSource !== null}
                       >
                         测试连接
                       </Button>
                       <Dropdown>
                         <DropdownTrigger>
                           <Button
-                            size="sm"
-                            variant="flat"
                             isIconOnly
                             className="bg-secondary-100 text-dark-olive-700"
+                            size="sm"
+                            variant="flat"
                           >
                             <MoreVerticalIcon className="w-4 h-4" />
                           </Button>
@@ -473,7 +514,7 @@ export default function StoragePage() {
               ))}
 
               {/* 添加存储源卡片 */}
-              <Card 
+              <Card
                 isPressable
                 className="bg-white border-2 border-dashed border-default-300 hover:border-amber-brown-500 hover:bg-amber-brown-50/30 transition-all cursor-pointer"
                 onPress={() => setShowAddModal(true)}
@@ -486,7 +527,9 @@ export default function StoragePage() {
                     添加新存储源
                   </h3>
                   <p className="text-xs lg:text-sm text-default-500">
-                    支持 Cloudflare R2、七牛云、<br />Telegram、GitHub 等多种存储
+                    支持 Cloudflare R2、七牛云、
+                    <br />
+                    Telegram、GitHub 等多种存储
                   </p>
                 </CardBody>
               </Card>
@@ -506,12 +549,12 @@ export default function StoragePage() {
       {editingSource && (
         <EditStorageModal
           isOpen={showEditModal}
+          storageSource={editingSource}
           onClose={() => {
             setShowEditModal(false);
             setEditingSource(null);
           }}
           onSuccess={handleEditSuccess}
-          storageSource={editingSource}
         />
       )}
 
@@ -520,9 +563,13 @@ export default function StoragePage() {
         <ModalContent>
           {(onClose) => (
             <>
-              <ModalHeader className="flex flex-col gap-1">删除存储源</ModalHeader>
+              <ModalHeader className="flex flex-col gap-1">
+                删除存储源
+              </ModalHeader>
               <ModalBody>
-                <p>确定要删除存储源 <strong>{deletingSource?.name}</strong> 吗？</p>
+                <p>
+                  确定要删除存储源 <strong>{deletingSource?.name}</strong> 吗？
+                </p>
                 <p className="text-danger text-sm">
                   此操作不可撤销，如果该存储源中有文件，将无法删除。
                 </p>

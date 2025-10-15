@@ -1,7 +1,7 @@
-import { StorageAdapter, UploadResult, StorageConfig } from './index';
+import { StorageAdapter, UploadResult, StorageConfig } from "./index";
 
 export class CloudinaryAdapter implements StorageAdapter {
-  name = 'Cloudinary';
+  name = "Cloudinary";
   private cloudName: string;
   private apiKey: string;
   private apiSecret: string;
@@ -15,11 +15,11 @@ export class CloudinaryAdapter implements StorageAdapter {
   async upload(file: File, path: string): Promise<UploadResult> {
     try {
       // TODO: 实现 Cloudinary 上传逻辑
-      throw new Error('Cloudinary upload not implemented yet');
+      throw new Error("Cloudinary upload not implemented yet");
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Upload failed',
+        error: error instanceof Error ? error.message : "Upload failed",
       };
     }
   }
@@ -27,9 +27,11 @@ export class CloudinaryAdapter implements StorageAdapter {
   async download(url: string): Promise<Buffer> {
     try {
       // TODO: 实现 Cloudinary 下载逻辑
-      throw new Error('Cloudinary download not implemented yet');
+      throw new Error("Cloudinary download not implemented yet");
     } catch (error) {
-      throw new Error(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Download failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
@@ -38,7 +40,8 @@ export class CloudinaryAdapter implements StorageAdapter {
       // TODO: 实现 Cloudinary 删除逻辑
       return false;
     } catch (error) {
-      console.error('Delete failed:', error);
+      console.error("Delete failed:", error);
+
       return false;
     }
   }

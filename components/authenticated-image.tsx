@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 interface AuthenticatedImageProps {
   src: string;
@@ -29,9 +29,9 @@ export function AuthenticatedImage({
   onMouseUp,
   onMouseLeave,
   onClick,
-  draggable = false
+  draggable = false,
 }: AuthenticatedImageProps) {
-  const [imageSrc, setImageSrc] = useState<string>('');
+  const [imageSrc, setImageSrc] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -41,7 +41,7 @@ export function AuthenticatedImage({
         setLoading(true);
         setError(false);
 
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem("token");
         const response = await fetch(src, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
@@ -52,11 +52,12 @@ export function AuthenticatedImage({
 
         const blob = await response.blob();
         const imageUrl = URL.createObjectURL(blob);
+
         setImageSrc(imageUrl);
         setLoading(false);
         onLoad?.();
       } catch (err) {
-        console.error('Failed to load authenticated image:', err);
+        console.error("Failed to load authenticated image:", err);
         setError(true);
         setLoading(false);
         onError?.();
@@ -81,21 +82,37 @@ export function AuthenticatedImage({
   }
 
   return (
-    <img
-      src={imageSrc}
-      alt={alt}
+    <div
       className={className}
+      role={onClick ? "button" : undefined}
       style={style}
-      onError={() => {
-        setError(true);
-        onError?.();
-      }}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick(e as any);
+              }
+            }
+          : undefined
+      }
       onMouseDown={onMouseDown}
+      onMouseLeave={onMouseLeave}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
-      onMouseLeave={onMouseLeave}
-      onClick={onClick}
-      draggable={draggable}
-    />
+    >
+      <img
+        alt={alt}
+        draggable={draggable}
+        src={imageSrc}
+        style={{ width: "100%", height: "100%" }}
+        onError={() => {
+          setError(true);
+          onError?.();
+        }}
+      />
+    </div>
   );
 }

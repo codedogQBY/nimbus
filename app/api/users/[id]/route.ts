@@ -1,35 +1,41 @@
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
-import { requirePermissions } from '@/lib/permissions';
+import { NextRequest, NextResponse } from "next/server";
+
+import prisma from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
+import { requirePermissions } from "@/lib/permissions";
 
 // DELETE /api/users/[id] - 删除用户
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await getCurrentUser(request);
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // 检查权限
-    const { authorized } = await requirePermissions(request, ['users.manage']);
+    const { authorized } = await requirePermissions(request, ["users.manage"]);
+
     if (!authorized) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { id } = await params;
     const targetUserId = parseInt(id);
 
     if (isNaN(targetUserId)) {
-      return NextResponse.json({ error: '无效的用户ID' }, { status: 400 });
+      return NextResponse.json({ error: "无效的用户ID" }, { status: 400 });
     }
 
     // 不能删除自己
     if (targetUserId === user.id) {
-      return NextResponse.json({ error: '不能删除自己的账号' }, { status: 403 });
+      return NextResponse.json(
+        { error: "不能删除自己的账号" },
+        { status: 403 },
+      );
     }
 
     // 检查目标用户是否存在
@@ -54,12 +60,12 @@ export async function DELETE(
     });
 
     if (!targetUser) {
-      return NextResponse.json({ error: '用户不存在' }, { status: 404 });
+      return NextResponse.json({ error: "用户不存在" }, { status: 404 });
     }
 
     // 不能删除Owner用户
     if (targetUser.isOwner) {
-      return NextResponse.json({ error: '不能删除Owner用户' }, { status: 403 });
+      return NextResponse.json({ error: "不能删除Owner用户" }, { status: 403 });
     }
 
     // 使用事务删除用户及其相关数据
@@ -114,9 +120,9 @@ export async function DELETE(
       });
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      message: '用户删除成功',
+    return NextResponse.json({
+      success: true,
+      message: "用户删除成功",
       deletedUser: {
         id: targetUser.id,
         username: targetUser.username,
@@ -124,13 +130,14 @@ export async function DELETE(
       },
     });
   } catch (error) {
-    console.error('Delete user error:', error);
+    console.error("Delete user error:", error);
+
     return NextResponse.json(
-      { 
-        error: '删除用户失败', 
-        details: error instanceof Error ? error.message : String(error) 
+      {
+        error: "删除用户失败",
+        details: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -138,25 +145,27 @@ export async function DELETE(
 // GET /api/users/[id] - 获取单个用户信息
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await getCurrentUser(request);
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // 检查权限
-    const { authorized } = await requirePermissions(request, ['users.view']);
+    const { authorized } = await requirePermissions(request, ["users.view"]);
+
     if (!authorized) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { id } = await params;
     const userId = parseInt(id);
 
     if (isNaN(userId)) {
-      return NextResponse.json({ error: '无效的用户ID' }, { status: 400 });
+      return NextResponse.json({ error: "无效的用户ID" }, { status: 400 });
     }
 
     const targetUser = await prisma.user.findUnique({
@@ -192,7 +201,7 @@ export async function GET(
     });
 
     if (!targetUser) {
-      return NextResponse.json({ error: '用户不存在' }, { status: 404 });
+      return NextResponse.json({ error: "用户不存在" }, { status: 404 });
     }
 
     // 格式化用户数据
@@ -204,13 +213,14 @@ export async function GET(
 
     return NextResponse.json({ user: userWithRoles });
   } catch (error) {
-    console.error('Get user error:', error);
+    console.error("Get user error:", error);
+
     return NextResponse.json(
-      { 
-        error: '获取用户信息失败', 
-        details: error instanceof Error ? error.message : String(error) 
+      {
+        error: "获取用户信息失败",
+        details: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

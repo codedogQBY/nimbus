@@ -1,6 +1,7 @@
-import prisma from './prisma';
-import { NextRequest } from 'next/server';
-import { getCurrentUser } from './auth';
+import { NextRequest } from "next/server";
+
+import prisma from "./prisma";
+import { getCurrentUser } from "./auth";
 
 /**
  * 权限检查服务
@@ -11,7 +12,10 @@ export class PermissionService {
   /**
    * 检查用户是否拥有指定权限
    */
-  async hasPermission(userId: number, permissionName: string): Promise<boolean> {
+  async hasPermission(
+    userId: number,
+    permissionName: string,
+  ): Promise<boolean> {
     // 检查所有者权限
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -45,10 +49,7 @@ export class PermissionService {
               userRoles: {
                 some: {
                   userId,
-                  OR: [
-                    { expiresAt: null },
-                    { expiresAt: { gt: new Date() } },
-                  ],
+                  OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
                 },
               },
             },
@@ -66,24 +67,32 @@ export class PermissionService {
   /**
    * 批量检查权限（AND关系）
    */
-  async hasPermissions(userId: number, permissionNames: string[]): Promise<boolean> {
+  async hasPermissions(
+    userId: number,
+    permissionNames: string[],
+  ): Promise<boolean> {
     for (const permission of permissionNames) {
       if (!(await this.hasPermission(userId, permission))) {
         return false;
       }
     }
+
     return true;
   }
 
   /**
    * 检查用户是否拥有任一权限（OR关系）
    */
-  async hasAnyPermission(userId: number, permissionNames: string[]): Promise<boolean> {
+  async hasAnyPermission(
+    userId: number,
+    permissionNames: string[],
+  ): Promise<boolean> {
     for (const permission of permissionNames) {
       if (await this.hasPermission(userId, permission)) {
         return true;
       }
     }
+
     return false;
   }
 
@@ -99,10 +108,7 @@ export class PermissionService {
               userRoles: {
                 some: {
                   userId,
-                  OR: [
-                    { expiresAt: null },
-                    { expiresAt: { gt: new Date() } },
-                  ],
+                  OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
                 },
               },
             },
@@ -128,10 +134,7 @@ export class PermissionService {
         userRoles: {
           some: {
             userId,
-            OR: [
-              { expiresAt: null },
-              { expiresAt: { gt: new Date() } },
-            ],
+            OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
           },
         },
       },
@@ -143,7 +146,7 @@ export class PermissionService {
         priority: true,
       },
       orderBy: {
-        priority: 'desc',
+        priority: "desc",
       },
     });
   }
@@ -155,7 +158,7 @@ export class PermissionService {
     userId: number,
     roleId: number,
     grantedBy: number,
-    expiresAt?: Date
+    expiresAt?: Date,
   ): Promise<void> {
     await prisma.userRole.upsert({
       where: {
@@ -208,7 +211,7 @@ export class PermissionService {
     permissionRequired: string,
     granted: boolean,
     ipAddress: string | null,
-    userAgent: string | null
+    userAgent: string | null,
   ): Promise<void> {
     await prisma.permissionLog.create({
       data: {
@@ -244,18 +247,21 @@ export const permissionService = new PermissionService();
  */
 export async function requirePermissions(
   request: NextRequest,
-  permissions: string[]
+  permissions: string[],
 ): Promise<{ authorized: boolean; userId?: number; error?: string }> {
   const user = await getCurrentUser(request);
 
   if (!user) {
-    return { authorized: false, error: 'Unauthorized' };
+    return { authorized: false, error: "Unauthorized" };
   }
 
-  const hasPermission = await permissionService.hasPermissions(user.id, permissions);
+  const hasPermission = await permissionService.hasPermissions(
+    user.id,
+    permissions,
+  );
 
   if (!hasPermission) {
-    return { authorized: false, userId: user.id, error: 'Forbidden' };
+    return { authorized: false, userId: user.id, error: "Forbidden" };
   }
 
   return { authorized: true, userId: user.id };
@@ -266,20 +272,22 @@ export async function requirePermissions(
  */
 export async function requireAnyPermission(
   request: NextRequest,
-  permissions: string[]
+  permissions: string[],
 ): Promise<{ authorized: boolean; userId?: number; error?: string }> {
   const user = await getCurrentUser(request);
 
   if (!user) {
-    return { authorized: false, error: 'Unauthorized' };
+    return { authorized: false, error: "Unauthorized" };
   }
 
-  const hasPermission = await permissionService.hasAnyPermission(user.id, permissions);
+  const hasPermission = await permissionService.hasAnyPermission(
+    user.id,
+    permissions,
+  );
 
   if (!hasPermission) {
-    return { authorized: false, userId: user.id, error: 'Forbidden' };
+    return { authorized: false, userId: user.id, error: "Forbidden" };
   }
 
   return { authorized: true, userId: user.id };
 }
-

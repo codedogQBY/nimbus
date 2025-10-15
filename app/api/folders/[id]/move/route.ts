@@ -1,23 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
-import { requirePermissions } from '@/lib/permissions';
+import { NextRequest, NextResponse } from "next/server";
+
+import prisma from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
+import { requirePermissions } from "@/lib/permissions";
 
 // POST /api/folders/[id]/move - 移动文件夹
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await getCurrentUser(request);
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // 检查权限
-    const { authorized } = await requirePermissions(request, ['files.edit']);
+    const { authorized } = await requirePermissions(request, ["files.edit"]);
+
     if (!authorized) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { id } = await params;
@@ -31,7 +34,7 @@ export async function POST(
     });
 
     if (!folder) {
-      return NextResponse.json({ error: '文件夹不存在' }, { status: 404 });
+      return NextResponse.json({ error: "文件夹不存在" }, { status: 404 });
     }
 
     // 检查目标文件夹是否存在
@@ -41,14 +44,21 @@ export async function POST(
       });
 
       if (!targetFolder) {
-        return NextResponse.json({ error: '目标文件夹不存在' }, { status: 404 });
+        return NextResponse.json(
+          { error: "目标文件夹不存在" },
+          { status: 404 },
+        );
       }
 
       // 检查是否试图将文件夹移动到自己或子文件夹中
       let checkFolder: typeof targetFolder | null = targetFolder;
+
       while (checkFolder) {
         if (checkFolder.id === folderId) {
-          return NextResponse.json({ error: '不能将文件夹移动到自己或子文件夹中' }, { status: 400 });
+          return NextResponse.json(
+            { error: "不能将文件夹移动到自己或子文件夹中" },
+            { status: 400 },
+          );
         }
         if (checkFolder.parentId) {
           checkFolder = await prisma.folder.findUnique({
@@ -61,12 +71,17 @@ export async function POST(
     }
 
     // 计算新路径
-    let newPath = '/';
+    let newPath = "/";
+
     if (targetFolderId) {
       const targetFolder = await prisma.folder.findUnique({
         where: { id: targetFolderId },
       });
-      newPath = targetFolder!.path === '/' ? `/${folder.name}` : `${targetFolder!.path}/${folder.name}`;
+
+      newPath =
+        targetFolder!.path === "/"
+          ? `/${folder.name}`
+          : `${targetFolder!.path}/${folder.name}`;
     } else {
       newPath = `/${folder.name}`;
     }
@@ -91,7 +106,11 @@ export async function POST(
       });
 
       for (const subfolder of subfolders) {
-        const subPath = newBasePath === '/' ? `/${subfolder.name}` : `${newBasePath}/${subfolder.name}`;
+        const subPath =
+          newBasePath === "/"
+            ? `/${subfolder.name}`
+            : `${newBasePath}/${subfolder.name}`;
+
         await updateFolderPaths(subfolder.id, subPath);
       }
     }
@@ -118,11 +137,14 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Move folder error:', error);
+    console.error("Move folder error:", error);
+
     return NextResponse.json(
-      { error: '移动失败', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
+      {
+        error: "移动失败",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
     );
   }
 }
-

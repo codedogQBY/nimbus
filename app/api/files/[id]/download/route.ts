@@ -1,25 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { readFile, stat } from 'fs/promises';
-import path from 'path';
-import prisma from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
-import { requirePermissions } from '@/lib/permissions';
+import { readFile, stat } from "fs/promises";
+import path from "path";
+
+import { NextRequest, NextResponse } from "next/server";
+
+import prisma from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
+import { requirePermissions } from "@/lib/permissions";
 
 // GET /api/files/[id]/download - 下载文件
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await getCurrentUser(request);
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // 检查权限
-    const { authorized } = await requirePermissions(request, ['files.download']);
+    const { authorized } = await requirePermissions(request, [
+      "files.download",
+    ]);
+
     if (!authorized) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { id } = await params;
@@ -34,7 +40,7 @@ export async function GET(
     });
 
     if (!file) {
-      return NextResponse.json({ error: '文件不存在' }, { status: 404 });
+      return NextResponse.json({ error: "文件不存在" }, { status: 404 });
     }
 
     // TODO: 使用存储适配器获取文件
@@ -51,21 +57,25 @@ export async function GET(
       // 返回文件流
       return new NextResponse(fileBuffer, {
         headers: {
-          'Content-Type': file.mimeType || 'application/octet-stream',
-          'Content-Disposition': `attachment; filename="${encodeURIComponent(file.originalName)}"`,
-          'Content-Length': String(file.size),
+          "Content-Type": file.mimeType || "application/octet-stream",
+          "Content-Disposition": `attachment; filename="${encodeURIComponent(file.originalName)}"`,
+          "Content-Length": String(file.size),
         },
       });
     } catch (error) {
-      console.error('File read error:', error);
-      return NextResponse.json({ error: '文件读取失败' }, { status: 500 });
+      console.error("File read error:", error);
+
+      return NextResponse.json({ error: "文件读取失败" }, { status: 500 });
     }
   } catch (error) {
-    console.error('Download error:', error);
+    console.error("Download error:", error);
+
     return NextResponse.json(
-      { error: '下载失败', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
+      {
+        error: "下载失败",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
     );
   }
 }
-

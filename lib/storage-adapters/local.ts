@@ -1,7 +1,7 @@
-import { StorageAdapter, StorageConfig, UploadResult } from './index';
-import fs from 'fs/promises';
-import path from 'path';
-import { createReadStream } from 'fs';
+import fs from "fs/promises";
+import path from "path";
+
+import { StorageAdapter, StorageConfig, UploadResult } from "./index";
 
 export interface LocalConfig extends StorageConfig {
   basePath: string; // 本地存储的基础路径
@@ -15,22 +15,25 @@ export class LocalStorageAdapter implements StorageAdapter {
   constructor(config: LocalConfig) {
     // 确保配置正确
     this.config = {
-      basePath: config.basePath || config.path || './storage', // 兼容性处理
+      basePath: config.basePath || config.path || "./storage", // 兼容性处理
       maxFileSize: config.maxFileSize || 100 * 1024 * 1024, // 默认100MB
-      ...config
+      ...config,
     };
-    this.name = 'Local Storage';
+    this.name = "Local Storage";
 
-    console.log('LocalStorageAdapter initialized with config:', this.config);
+    console.log("LocalStorageAdapter initialized with config:", this.config);
   }
 
   async initialize(): Promise<void> {
     // 验证basePath配置
     if (!this.config.basePath) {
-      throw new Error('Local storage basePath configuration is missing');
+      throw new Error("Local storage basePath configuration is missing");
     }
 
-    console.log('Initializing local storage with basePath:', this.config.basePath);
+    console.log(
+      "Initializing local storage with basePath:",
+      this.config.basePath,
+    );
 
     // 确保存储目录存在
     try {
@@ -46,7 +49,7 @@ export class LocalStorageAdapter implements StorageAdapter {
       if (this.config.maxFileSize && file.size > this.config.maxFileSize) {
         return {
           success: false,
-          error: `文件大小超过限制 ${this.config.maxFileSize} 字节`
+          error: `文件大小超过限制 ${this.config.maxFileSize} 字节`,
         };
       }
 
@@ -58,6 +61,7 @@ export class LocalStorageAdapter implements StorageAdapter {
 
       // 写入文件
       const buffer = new Uint8Array(await file.arrayBuffer());
+
       await fs.writeFile(fullPath, buffer);
 
       return {
@@ -68,7 +72,7 @@ export class LocalStorageAdapter implements StorageAdapter {
     } catch (error) {
       return {
         success: false,
-        error: `本地存储上传失败: ${error instanceof Error ? error.message : String(error)}`
+        error: `本地存储上传失败: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }
@@ -77,30 +81,41 @@ export class LocalStorageAdapter implements StorageAdapter {
     try {
       // 如果已经是一个路径（不是完整URL），直接使用；否则从URL中提取路径
       let filePath: string;
-      if (path.startsWith('/api/files/local/')) {
-        filePath = decodeURIComponent(path.replace('/api/files/local/', ''));
+
+      if (path.startsWith("/api/files/local/")) {
+        filePath = decodeURIComponent(path.replace("/api/files/local/", ""));
       } else {
         filePath = path;
       }
 
-      console.log(`Downloading file from local storage: ${path} -> ${filePath}`);
+      console.log(
+        `Downloading file from local storage: ${path} -> ${filePath}`,
+      );
 
       const fullPath = path.join(this.config.basePath, filePath);
       const buffer = await fs.readFile(fullPath);
+
       return buffer;
     } catch (error) {
-      console.error('Local storage download error:', error);
-      throw new Error(`本地存储下载失败: ${error instanceof Error ? error.message : String(error)}`);
+      console.error("Local storage download error:", error);
+      throw new Error(
+        `本地存储下载失败: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
   async delete(filePath: string): Promise<boolean> {
     try {
       const fullPath = path.join(this.config.basePath, filePath);
+
       await fs.unlink(fullPath);
+
       return true;
     } catch (error) {
-      console.error(`本地存储删除失败: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(
+        `本地存储删除失败: ${error instanceof Error ? error.message : String(error)}`,
+      );
+
       return false;
     }
   }
@@ -112,16 +127,23 @@ export class LocalStorageAdapter implements StorageAdapter {
   async testConnection(): Promise<boolean> {
     try {
       // 测试目录访问权限
-      await fs.access(this.config.basePath, fs.constants.R_OK | fs.constants.W_OK);
-      
+      await fs.access(
+        this.config.basePath,
+        fs.constants.R_OK | fs.constants.W_OK,
+      );
+
       // 测试写入权限
-      const testFile = path.join(this.config.basePath, '.test');
-      await fs.writeFile(testFile, 'test');
+      const testFile = path.join(this.config.basePath, ".test");
+
+      await fs.writeFile(testFile, "test");
       await fs.unlink(testFile);
-      
+
       return true;
     } catch (error) {
-      console.error(`本地存储连接测试失败: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(
+        `本地存储连接测试失败: ${error instanceof Error ? error.message : String(error)}`,
+      );
+
       return false;
     }
   }

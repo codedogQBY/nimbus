@@ -1,42 +1,55 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardBody, CardHeader, Input, Button, Link, Divider } from '@heroui/react';
-import { EyeIcon, EyeOffIcon } from 'lucide-react';
-import ky from 'ky';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  Input,
+  Button,
+  Link,
+  Divider,
+} from "@heroui/react";
+import { EyeIcon, EyeOffIcon } from "lucide-react";
+import ky from "ky";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
-      const response = await ky.post('/api/auth/login', {
-        json: { identifier, password },
-      }).json<any>();
+      const response = await ky
+        .post("/api/auth/login", {
+          json: { identifier, password },
+        })
+        .json<any>();
 
       if (response.success) {
         // 保存 token 到 localStorage
-        localStorage.setItem('token', response.token);
-        
+        localStorage.setItem("token", response.token);
+
         // 跳转到文件管理页面
-        router.push('/files');
+        router.push("/files");
       } else if (response.requireEmailVerification) {
         // 需要验证邮箱，跳转到验证页面
-        router.push(`/verify-email?email=${encodeURIComponent(response.email)}`);
+        router.push(
+          `/verify-email?email=${encodeURIComponent(response.email)}`,
+        );
       }
     } catch (err: any) {
       const errorData = await err.response?.json();
-      setError(errorData?.error || '登录失败，请重试');
+
+      setError(errorData?.error || "登录失败，请重试");
     } finally {
       setLoading(false);
     }
@@ -52,7 +65,7 @@ export default function LoginPage() {
       </CardHeader>
 
       <CardBody className="p-6 pt-4">
-        <form onSubmit={handleLogin} className="flex flex-col gap-4">
+        <form className="flex flex-col gap-4" onSubmit={handleLogin}>
           {error && (
             <div className="bg-danger-50 border border-danger-200 text-danger-700 px-4 py-3 rounded-lg text-sm">
               {error}
@@ -60,22 +73,16 @@ export default function LoginPage() {
           )}
 
           <Input
+            isRequired
+            autoComplete="username"
             label="用户名或邮箱"
             placeholder="请输入用户名或邮箱"
             value={identifier}
-            onValueChange={setIdentifier}
             variant="bordered"
-            isRequired
-            autoComplete="username"
+            onValueChange={setIdentifier}
           />
 
           <Input
-            label="密码"
-            placeholder="请输入密码"
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onValueChange={setPassword}
-            variant="bordered"
             isRequired
             autoComplete="current-password"
             endContent={
@@ -91,20 +98,30 @@ export default function LoginPage() {
                 )}
               </button>
             }
+            label="密码"
+            placeholder="请输入密码"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            variant="bordered"
+            onValueChange={setPassword}
           />
 
           <div className="flex justify-end">
-            <Link href="/forgot-password" size="sm" className="text-amber-brown-500">
+            <Link
+              className="text-amber-brown-500"
+              href="/forgot-password"
+              size="sm"
+            >
               忘记密码？
             </Link>
           </div>
 
           <Button
-            type="submit"
-            color="primary"
-            size="lg"
-            isLoading={loading}
             className="w-full bg-amber-brown-500 hover:bg-amber-brown-600 text-white font-medium"
+            color="primary"
+            isLoading={loading}
+            size="lg"
+            type="submit"
           >
             登录
           </Button>
@@ -112,8 +129,8 @@ export default function LoginPage() {
           <Divider className="my-2" />
 
           <div className="text-center text-sm text-dark-olive-600">
-            还没有账号？{' '}
-            <Link href="/register" className="text-amber-brown-500 font-medium">
+            还没有账号？{" "}
+            <Link className="text-amber-brown-500 font-medium" href="/register">
               立即注册
             </Link>
           </div>
@@ -122,4 +139,3 @@ export default function LoginPage() {
     </Card>
   );
 }
-

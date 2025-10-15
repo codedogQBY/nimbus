@@ -5,7 +5,7 @@
   /* 品牌色 - 奶油绿 */
   --color-cream-green-50: #f4f8f4;
   --color-cream-green-100: #e8f0e8;
-  --color-cream-green-200: #D4E2D4;
+  --color-cream-green-200: #d4e2d4;
   --color-cream-green-300: #c0d4c0;
   --color-cream-green-400: #acc6ac;
   --color-cream-green-500: #98b898;
@@ -17,7 +17,7 @@
   /* 品牌色 - 浅卡其 */
   --color-khaki-50: #faf8f4;
   --color-khaki-100: #f5f1e9;
-  --color-khaki-200: #E8E1D0;
+  --color-khaki-200: #e8e1d0;
   --color-khaki-300: #ddd2b7;
   --color-khaki-400: #d2c39e;
   --color-khaki-500: #c7b485;
@@ -32,7 +32,7 @@
   --color-amber-brown-200: #f9daa6;
   --color-amber-brown-300: #f5c276;
   --color-amber-brown-400: #eda147;
-  --color-amber-brown-500: #B5651D;
+  --color-amber-brown-500: #b5651d;
   --color-amber-brown-600: #9a5418;
   --color-amber-brown-700: #7f4313;
   --color-amber-brown-800: #64320e;
@@ -47,6 +47,6 @@
   --color-dark-olive-500: #919b69;
   --color-dark-olive-600: #7a8554;
   --color-dark-olive-700: #636f3f;
-  --color-dark-olive-800: #556B2F;
+  --color-dark-olive-800: #556b2f;
   --color-dark-olive-900: #3a4a1f;
 }

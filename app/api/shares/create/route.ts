@@ -1,33 +1,37 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import prisma from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
-import { requirePermissions } from '@/lib/permissions';
-import { nanoid } from 'nanoid';
-import bcrypt from 'bcryptjs';
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { nanoid } from "nanoid";
+import bcrypt from "bcryptjs";
+
+import prisma from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
+import { requirePermissions } from "@/lib/permissions";
 
 // POST /api/shares/create - 创建分享
-const createShareSchema = z.object({
-  fileId: z.number().optional(),
-  folderId: z.number().optional(),
-  password: z.string().optional(),
-  expiresAt: z.string().optional(), // ISO date string
-  downloadLimit: z.number().optional(),
-}).refine(
-  (data) => data.fileId || data.folderId,
-  { message: '必须指定文件或文件夹' }
-);
+const createShareSchema = z
+  .object({
+    fileId: z.number().optional(),
+    folderId: z.number().optional(),
+    password: z.string().optional(),
+    expiresAt: z.string().optional(), // ISO date string
+    downloadLimit: z.number().optional(),
+  })
+  .refine((data) => data.fileId || data.folderId, {
+    message: "必须指定文件或文件夹",
+  });
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser(request);
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { authorized } = await requirePermissions(request, ['shares.create']);
+    const { authorized } = await requirePermissions(request, ["shares.create"]);
+
     if (!authorized) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -35,25 +39,30 @@ export async function POST(request: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { error: '参数错误', details: validation.error.issues },
-        { status: 400 }
+        { error: "参数错误", details: validation.error.issues },
+        { status: 400 },
       );
     }
 
-    const { fileId, folderId, password, expiresAt, downloadLimit } = validation.data;
+    const { fileId, folderId, password, expiresAt, downloadLimit } =
+      validation.data;
 
     // 验证文件或文件夹存在
     if (fileId) {
       const file = await prisma.file.findUnique({ where: { id: fileId } });
+
       if (!file) {
-        return NextResponse.json({ error: '文件不存在' }, { status: 404 });
+        return NextResponse.json({ error: "文件不存在" }, { status: 404 });
       }
     }
 
     if (folderId) {
-      const folder = await prisma.folder.findUnique({ where: { id: folderId } });
+      const folder = await prisma.folder.findUnique({
+        where: { id: folderId },
+      });
+
       if (!folder) {
-        return NextResponse.json({ error: '文件夹不存在' }, { status: 404 });
+        return NextResponse.json({ error: "文件夹不存在" }, { status: 404 });
       }
     }
 
@@ -78,8 +87,8 @@ export async function POST(request: NextRequest) {
     let snapshotData: any = {};
     let originalFileId: number | null = null;
     let originalFolderId: number | null = null;
-    let shareType = '';
-    let shareName = '';
+    let shareType = "";
+    let shareName = "";
 
     if (fileId) {
       // 文件分享：保存文件信息快照
@@ -93,11 +102,12 @@ export async function POST(request: NextRequest) {
       if (!file) {
         // 删除已创建的分享记录
         await prisma.share.delete({ where: { id: share.id } });
-        return NextResponse.json({ error: '文件不存在' }, { status: 404 });
+
+        return NextResponse.json({ error: "文件不存在" }, { status: 404 });
       }
 
       originalFileId = file.id;
-      shareType = 'file';
+      shareType = "file";
       shareName = file.originalName;
 
       snapshotData = {
@@ -123,23 +133,24 @@ export async function POST(request: NextRequest) {
       if (!folder) {
         // 删除已创建的分享记录
         await prisma.share.delete({ where: { id: share.id } });
-        return NextResponse.json({ error: '文件夹不存在' }, { status: 404 });
+
+        return NextResponse.json({ error: "文件夹不存在" }, { status: 404 });
       }
 
       originalFolderId = folder.id;
-      shareType = 'folder';
+      shareType = "folder";
       shareName = folder.name;
 
       // 递归获取文件夹的完整结构
       async function getFolderSnapshot(folderId: number): Promise<any> {
         const subFolders = await prisma.folder.findMany({
           where: { parentId: folderId },
-          orderBy: { name: 'asc' },
+          orderBy: { name: "asc" },
         });
 
         const files = await prisma.file.findMany({
           where: { folderId },
-          orderBy: { name: 'asc' },
+          orderBy: { name: "asc" },
         });
 
         const folderSnapshots = await Promise.all(
@@ -150,10 +161,10 @@ export async function POST(request: NextRequest) {
             createdAt: subfolder.createdAt.toISOString(),
             updatedAt: subfolder.updatedAt.toISOString(),
             children: await getFolderSnapshot(subfolder.id),
-          }))
+          })),
         );
 
-        const fileSnapshots = files.map(file => ({
+        const fileSnapshots = files.map((file) => ({
           id: file.id,
           name: file.name,
           originalName: file.originalName,
@@ -187,13 +198,21 @@ export async function POST(request: NextRequest) {
       };
 
       // 计算统计信息
-      function calculateStats(contents: any): { files: number, folders: number, size: number } {
+      function calculateStats(contents: any): {
+        files: number;
+        folders: number;
+        size: number;
+      } {
         let files = contents.files.length;
         let folders = contents.folders.length;
-        let size = contents.files.reduce((sum: number, file: any) => sum + file.size, 0);
+        let size = contents.files.reduce(
+          (sum: number, file: any) => sum + file.size,
+          0,
+        );
 
         for (const subfolder of contents.folders) {
           const subStats = calculateStats(subfolder.children);
+
           files += subStats.files;
           folders += subStats.folders;
           size += subStats.size;
@@ -203,6 +222,7 @@ export async function POST(request: NextRequest) {
       }
 
       const stats = calculateStats(folderContents);
+
       snapshotData.totalFiles = stats.files;
       snapshotData.totalFolders = stats.folders;
       snapshotData.totalSize = stats.size;
@@ -232,11 +252,14 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Create share error:', error);
+    console.error("Create share error:", error);
+
     return NextResponse.json(
-      { error: '创建分享失败', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
+      {
+        error: "创建分享失败",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
     );
   }
 }
-

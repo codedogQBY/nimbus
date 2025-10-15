@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import prisma from '@/lib/prisma';
-import { generateToken, sanitizeUser } from '@/lib/auth';
-import EmailService from '@/lib/email';
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+import prisma from "@/lib/prisma";
+import { generateToken, sanitizeUser } from "@/lib/auth";
+import EmailService from "@/lib/email";
 
 // 验证邮箱请求 Schema
 const verifyEmailSchema = z.object({
@@ -17,10 +18,11 @@ export async function POST(request: NextRequest) {
 
     // 2. 验证输入
     const validation = verifyEmailSchema.safeParse(body);
+
     if (!validation.success) {
       return NextResponse.json(
-        { error: '输入数据格式不正确', details: validation.error.issues },
-        { status: 400 }
+        { error: "输入数据格式不正确", details: validation.error.issues },
+        { status: 400 },
       );
     }
 
@@ -28,12 +30,12 @@ export async function POST(request: NextRequest) {
 
     // 3. 验证验证码
     const emailService = new EmailService();
-    const isValid = await emailService.verifyCode(email, code, 'register');
+    const isValid = await emailService.verifyCode(email, code, "register");
 
     if (!isValid) {
       return NextResponse.json(
-        { error: '验证码错误或已过期' },
-        { status: 400 }
+        { error: "验证码错误或已过期" },
+        { status: 400 },
       );
     }
 
@@ -52,10 +54,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: '用户不存在' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "用户不存在" }, { status: 404 });
     }
 
     // 6. 为首个注册用户自动设置为 Owner
@@ -72,7 +71,7 @@ export async function POST(request: NextRequest) {
 
       // 分配 Owner 角色
       const ownerRole = await prisma.role.findUnique({
-        where: { name: 'owner' },
+        where: { name: "owner" },
       });
 
       if (ownerRole) {
@@ -89,7 +88,7 @@ export async function POST(request: NextRequest) {
     } else {
       // 其他用户默认分配 Viewer 角色
       const viewerRole = await prisma.role.findUnique({
-        where: { name: 'viewer' },
+        where: { name: "viewer" },
       });
 
       if (viewerRole) {
@@ -120,21 +119,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: '邮箱验证成功',
+        message: "邮箱验证成功",
         token,
         user: sanitizeUser(user),
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
-    console.error('Email verification error:', error);
+    console.error("Email verification error:", error);
+
     return NextResponse.json(
       {
-        error: '验证失败，请稍后重试',
+        error: "验证失败，请稍后重试",
         details: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-

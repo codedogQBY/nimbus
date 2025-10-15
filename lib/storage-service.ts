@@ -1,5 +1,5 @@
-import prisma from './prisma';
-import { StorageManager, StorageType } from './storage-adapters';
+import prisma from "./prisma";
+import { StorageManager, StorageType } from "./storage-adapters";
 
 // 存储服务类
 export class StorageService {
@@ -12,6 +12,7 @@ export class StorageService {
     if (!StorageService.instance) {
       StorageService.instance = new StorageService();
     }
+
     return StorageService.instance;
   }
 
@@ -20,20 +21,20 @@ export class StorageService {
     try {
       const storageSources = await prisma.storageSource.findMany({
         where: { isActive: true },
-        orderBy: { priority: 'desc' },
+        orderBy: { priority: "desc" },
       });
 
       this.storageManager = new StorageManager(
-        storageSources.map(source => ({
+        storageSources.map((source) => ({
           id: source.id,
           type: source.type as StorageType,
           config: source.config as any,
           priority: source.priority || 50,
           isActive: source.isActive,
-        }))
+        })),
       );
     } catch (error) {
-      console.error('Failed to initialize storage manager:', error);
+      console.error("Failed to initialize storage manager:", error);
       this.storageManager = null;
     }
   }
@@ -48,7 +49,7 @@ export class StorageService {
     if (!this.storageManager) {
       await this.initialize();
       if (!this.storageManager) {
-        throw new Error('Storage manager not available');
+        throw new Error("Storage manager not available");
       }
     }
 
@@ -64,7 +65,7 @@ export class StorageService {
     if (!this.storageManager) {
       await this.initialize();
       if (!this.storageManager) {
-        throw new Error('Storage manager not available');
+        throw new Error("Storage manager not available");
       }
     }
 
@@ -76,7 +77,7 @@ export class StorageService {
     if (!this.storageManager) {
       await this.initialize();
       if (!this.storageManager) {
-        throw new Error('Storage manager not available');
+        throw new Error("Storage manager not available");
       }
     }
 
@@ -88,7 +89,7 @@ export class StorageService {
     if (!this.storageManager) {
       await this.initialize();
       if (!this.storageManager) {
-        throw new Error('Storage manager not available');
+        throw new Error("Storage manager not available");
       }
     }
 

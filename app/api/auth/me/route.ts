@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { permissionService } from '@/lib/permissions';
+import { NextRequest, NextResponse } from "next/server";
+
+import { getCurrentUser } from "@/lib/auth";
+import { permissionService } from "@/lib/permissions";
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,10 +9,7 @@ export async function GET(request: NextRequest) {
     const user = await getCurrentUser(request);
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // 2. 获取用户角色
@@ -27,17 +25,17 @@ export async function GET(request: NextRequest) {
         roles,
         permissions,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
-    console.error('Get current user error:', error);
+    console.error("Get current user error:", error);
+
     return NextResponse.json(
       {
-        error: '获取用户信息失败',
+        error: "获取用户信息失败",
         details: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-

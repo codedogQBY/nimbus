@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
-import { requirePermissions } from '@/lib/permissions';
-import { z } from 'zod';
-import { StorageAdapterFactory } from '@/lib/storage-adapters';
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+import prisma from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
+import { requirePermissions } from "@/lib/permissions";
+import { StorageAdapterFactory } from "@/lib/storage-adapters";
 
 // 处理文件删除时的分享逻辑
 async function handleSharesOnFileDelete(fileId: number) {
@@ -12,7 +13,7 @@ async function handleSharesOnFileDelete(fileId: number) {
     const fileShareSnapshots = await prisma.shareSnapshot.findMany({
       where: {
         originalFileId: fileId,
-        type: 'file',
+        type: "file",
       },
       include: {
         share: true,
@@ -30,7 +31,7 @@ async function handleSharesOnFileDelete(fileId: number) {
     // 2. 查找所有文件夹类型的分享快照，检查是否包含被删除的文件
     const folderShareSnapshots = await prisma.shareSnapshot.findMany({
       where: {
-        type: 'folder',
+        type: "folder",
       },
       include: {
         share: true,
@@ -38,18 +39,24 @@ async function handleSharesOnFileDelete(fileId: number) {
     });
 
     let updatedFolderShares = 0;
+
     for (const snapshot of folderShareSnapshots) {
       // 检查快照数据中是否包含被删除的文件
-      if (snapshot.snapshotData && containsFile(snapshot.snapshotData, fileId)) {
+      if (
+        snapshot.snapshotData &&
+        containsFile(snapshot.snapshotData, fileId)
+      ) {
         console.log(`更新文件夹分享快照: ${snapshot.share.shareToken}`);
         await updateFolderSnapshotOnFileDelete(snapshot.id, fileId);
         updatedFolderShares++;
       }
     }
 
-    console.log(`删除了 ${fileShareSnapshots.length} 个文件分享，更新了 ${updatedFolderShares} 个文件夹分享`);
+    console.log(
+      `删除了 ${fileShareSnapshots.length} 个文件分享，更新了 ${updatedFolderShares} 个文件夹分享`,
+    );
   } catch (error) {
-    console.error('处理分享删除逻辑时出错:', error);
+    console.error("处理分享删除逻辑时出错:", error);
     // 不抛出错误，避免影响文件删除的主流程
   }
 }
@@ -67,14 +74,20 @@ function containsFile(snapshotData: any, fileId: number): boolean {
 
   // 检查contents对象中的files数组
   if (snapshotData.contents) {
-    if (snapshotData.contents.files && Array.isArray(snapshotData.contents.files)) {
+    if (
+      snapshotData.contents.files &&
+      Array.isArray(snapshotData.contents.files)
+    ) {
       if (snapshotData.contents.files.some((file: any) => file.id === fileId)) {
         return true;
       }
     }
-    
+
     // 递归检查子文件夹
-    if (snapshotData.contents.folders && Array.isArray(snapshotData.contents.folders)) {
+    if (
+      snapshotData.contents.folders &&
+      Array.isArray(snapshotData.contents.folders)
+    ) {
       for (const subfolder of snapshotData.contents.folders) {
         if (containsFile(subfolder, fileId)) {
           return true;
@@ -85,13 +98,19 @@ function containsFile(snapshotData: any, fileId: number): boolean {
 
   // 检查children对象（用于嵌套的子文件夹结构）
   if (snapshotData.children) {
-    if (snapshotData.children.files && Array.isArray(snapshotData.children.files)) {
+    if (
+      snapshotData.children.files &&
+      Array.isArray(snapshotData.children.files)
+    ) {
       if (snapshotData.children.files.some((file: any) => file.id === fileId)) {
         return true;
       }
     }
-    
-    if (snapshotData.children.folders && Array.isArray(snapshotData.children.folders)) {
+
+    if (
+      snapshotData.children.folders &&
+      Array.isArray(snapshotData.children.folders)
+    ) {
       for (const subfolder of snapshotData.children.folders) {
         if (containsFile(subfolder, fileId)) {
           return true;
@@ -109,36 +128,54 @@ function removeFileFromFolder(folderData: any, deletedFileId: number): any {
 
   // 处理根级别的files数组
   if (folderData.files && Array.isArray(folderData.files)) {
-    folderData.files = folderData.files.filter((file: any) => file.id !== deletedFileId);
+    folderData.files = folderData.files.filter(
+      (file: any) => file.id !== deletedFileId,
+    );
   }
 
   // 处理contents对象中的files数组
   if (folderData.contents) {
     if (folderData.contents.files && Array.isArray(folderData.contents.files)) {
-      folderData.contents.files = folderData.contents.files.filter((file: any) => file.id !== deletedFileId);
+      folderData.contents.files = folderData.contents.files.filter(
+        (file: any) => file.id !== deletedFileId,
+      );
     }
-    
+
     // 递归处理子文件夹
-    if (folderData.contents.folders && Array.isArray(folderData.contents.folders)) {
-      folderData.contents.folders = folderData.contents.folders.map((subfolder: any) => {
-        // 递归处理子文件夹的children属性
-        if (subfolder.children) {
-          subfolder.children = removeFileFromFolder(subfolder.children, deletedFileId);
-        }
-        return subfolder;
-      });
+    if (
+      folderData.contents.folders &&
+      Array.isArray(folderData.contents.folders)
+    ) {
+      folderData.contents.folders = folderData.contents.folders.map(
+        (subfolder: any) => {
+          // 递归处理子文件夹的children属性
+          if (subfolder.children) {
+            subfolder.children = removeFileFromFolder(
+              subfolder.children,
+              deletedFileId,
+            );
+          }
+
+          return subfolder;
+        },
+      );
     }
   }
 
   // 处理children对象（用于嵌套的子文件夹结构）
   if (folderData.children) {
     if (folderData.children.files && Array.isArray(folderData.children.files)) {
-      folderData.children.files = folderData.children.files.filter((file: any) => file.id !== deletedFileId);
+      folderData.children.files = folderData.children.files.filter(
+        (file: any) => file.id !== deletedFileId,
+      );
     }
-    
-    if (folderData.children.folders && Array.isArray(folderData.children.folders)) {
-      folderData.children.folders = folderData.children.folders.map((subfolder: any) => 
-        removeFileFromFolder(subfolder, deletedFileId)
+
+    if (
+      folderData.children.folders &&
+      Array.isArray(folderData.children.folders)
+    ) {
+      folderData.children.folders = folderData.children.folders.map(
+        (subfolder: any) => removeFileFromFolder(subfolder, deletedFileId),
       );
     }
   }
@@ -147,7 +184,11 @@ function removeFileFromFolder(folderData: any, deletedFileId: number): any {
 }
 
 // 重新计算文件夹快照的统计信息
-function recalculateStats(contents: any): { files: number, folders: number, size: number } {
+function recalculateStats(contents: any): {
+  files: number;
+  folders: number;
+  size: number;
+} {
   if (!contents) return { files: 0, folders: 0, size: 0 };
 
   let files = 0;
@@ -157,17 +198,21 @@ function recalculateStats(contents: any): { files: number, folders: number, size
   // 计算当前级别的文件
   if (contents.files && Array.isArray(contents.files)) {
     files += contents.files.length;
-    size += contents.files.reduce((sum: number, file: any) => sum + (file.size || 0), 0);
+    size += contents.files.reduce(
+      (sum: number, file: any) => sum + (file.size || 0),
+      0,
+    );
   }
 
   // 计算当前级别的文件夹
   if (contents.folders && Array.isArray(contents.folders)) {
     folders += contents.folders.length;
-    
+
     // 递归计算子文件夹
     for (const subfolder of contents.folders) {
       if (subfolder.children) {
         const subStats = recalculateStats(subfolder.children);
+
         files += subStats.files;
         folders += subStats.folders;
         size += subStats.size;
@@ -179,7 +224,10 @@ function recalculateStats(contents: any): { files: number, folders: number, size
 }
 
 // 更新文件夹分享快照，移除被删除的文件
-async function updateFolderSnapshotOnFileDelete(snapshotId: number, deletedFileId: number) {
+async function updateFolderSnapshotOnFileDelete(
+  snapshotId: number,
+  deletedFileId: number,
+) {
   try {
     // 获取当前快照数据
     const snapshot = await prisma.shareSnapshot.findUnique({
@@ -188,17 +236,22 @@ async function updateFolderSnapshotOnFileDelete(snapshotId: number, deletedFileI
 
     if (!snapshot || !snapshot.snapshotData) {
       console.log(`快照 ${snapshotId} 不存在或数据为空`);
+
       return;
     }
 
     const snapshotData = snapshot.snapshotData as any;
-    
+
     // 从快照数据中移除被删除的文件
-    const updatedSnapshotData = removeFileFromFolder(snapshotData, deletedFileId);
+    const updatedSnapshotData = removeFileFromFolder(
+      snapshotData,
+      deletedFileId,
+    );
 
     // 重新计算统计信息
     if (updatedSnapshotData.contents) {
       const stats = recalculateStats(updatedSnapshotData.contents);
+
       updatedSnapshotData.totalFiles = stats.files;
       updatedSnapshotData.totalFolders = stats.folders;
       updatedSnapshotData.totalSize = stats.size;
@@ -212,26 +265,30 @@ async function updateFolderSnapshotOnFileDelete(snapshotId: number, deletedFileI
       },
     });
 
-    console.log(`已从文件夹分享快照中移除文件 ID: ${deletedFileId}，并更新了统计信息`);
+    console.log(
+      `已从文件夹分享快照中移除文件 ID: ${deletedFileId}，并更新了统计信息`,
+    );
   } catch (error) {
-    console.error('更新文件夹快照时出错:', error);
+    console.error("更新文件夹快照时出错:", error);
   }
 }
 
 // DELETE /api/files/[id] - 删除文件
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await getCurrentUser(request);
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { authorized } = await requirePermissions(request, ['files.delete']);
+    const { authorized } = await requirePermissions(request, ["files.delete"]);
+
     if (!authorized) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { id } = await params;
@@ -244,24 +301,29 @@ export async function DELETE(
     });
 
     if (!file) {
-      return NextResponse.json({ error: '文件不存在' }, { status: 404 });
+      return NextResponse.json({ error: "文件不存在" }, { status: 404 });
     }
 
     // 删除实际的物理文件
     try {
       const config = file.storageSource.config as Record<string, any>;
-      const adapter = StorageAdapterFactory.create(file.storageSource.type as any, config);
+      const adapter = StorageAdapterFactory.create(
+        file.storageSource.type as any,
+        config,
+      );
+
       if (adapter) {
         // 使用存储路径，不需要去掉前缀
         const filePath = file.storagePath;
 
         const deleteSuccess = await adapter.delete(filePath);
+
         if (!deleteSuccess) {
           console.warn(`Failed to delete physical file: ${file.storagePath}`);
         }
       }
     } catch (error) {
-      console.error('Error deleting physical file:', error);
+      console.error("Error deleting physical file:", error);
       // 继续执行数据库删除，即使物理文件删除失败
     }
 
@@ -276,14 +338,14 @@ export async function DELETE(
     // 更新存储源使用量，确保不会变成负数
     const storageSource = await prisma.storageSource.findUnique({
       where: { id: file.sourceId },
-      select: { quotaUsed: true }
+      select: { quotaUsed: true },
     });
-    
+
     if (storageSource) {
       const currentUsed = Number(storageSource.quotaUsed);
       const fileSize = Number(file.size);
       const newUsed = Math.max(0, currentUsed - fileSize); // 确保不为负数
-      
+
       await prisma.storageSource.update({
         where: { id: file.sourceId },
         data: {
@@ -294,10 +356,14 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Delete file error:', error);
+    console.error("Delete file error:", error);
+
     return NextResponse.json(
-      { error: '删除失败', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
+      {
+        error: "删除失败",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
     );
   }
 }
@@ -310,17 +376,19 @@ const updateFileSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await getCurrentUser(request);
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { authorized } = await requirePermissions(request, ['files.edit']);
+    const { authorized } = await requirePermissions(request, ["files.edit"]);
+
     if (!authorized) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { id } = await params;
@@ -330,8 +398,8 @@ export async function PATCH(
 
     if (!validation.success) {
       return NextResponse.json(
-        { error: '参数错误', details: validation.error.issues },
-        { status: 400 }
+        { error: "参数错误", details: validation.error.issues },
+        { status: 400 },
       );
     }
 
@@ -348,11 +416,14 @@ export async function PATCH(
       },
     });
   } catch (error) {
-    console.error('Update file error:', error);
+    console.error("Update file error:", error);
+
     return NextResponse.json(
-      { error: '更新失败', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
+      {
+        error: "更新失败",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
     );
   }
 }
-

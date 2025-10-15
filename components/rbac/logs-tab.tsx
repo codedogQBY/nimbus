@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   Card,
   CardBody,
@@ -10,7 +10,7 @@ import {
   Select,
   SelectItem,
   Pagination,
-} from '@heroui/react';
+} from "@heroui/react";
 import {
   SearchIcon,
   CheckCircleIcon,
@@ -18,8 +18,8 @@ import {
   ClockIcon,
   UserIcon,
   ShieldIcon,
-} from 'lucide-react';
-import ky from 'ky';
+} from "lucide-react";
+import ky from "ky";
 
 interface PermissionLog {
   id: number;
@@ -39,8 +39,8 @@ interface PermissionLog {
 export function LogsTab() {
   const [logs, setLogs] = useState<PermissionLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | 'granted' | 'denied'>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "granted" | "denied">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const logsPerPage = 20;
 
@@ -51,26 +51,30 @@ export function LogsTab() {
   const loadLogs = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const data = await ky.get('/api/rbac/logs', {
-        headers: { Authorization: `Bearer ${token}` },
-      }).json<{ logs: PermissionLog[] }>();
+      const token = localStorage.getItem("token");
+      const data = await ky
+        .get("/api/rbac/logs", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .json<{ logs: PermissionLog[] }>();
 
       setLogs(data.logs);
     } catch (error) {
-      console.error('Failed to load logs:', error);
+      console.error("Failed to load logs:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredLogs = logs.filter(log => {
-    const matchesSearch = log.permission.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const filteredLogs = logs.filter((log) => {
+    const matchesSearch =
+      log.permission.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.user.username.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesFilter = filter === 'all' ||
-      (filter === 'granted' && log.granted) ||
-      (filter === 'denied' && !log.granted);
+
+    const matchesFilter =
+      filter === "all" ||
+      (filter === "granted" && log.granted) ||
+      (filter === "denied" && !log.granted);
 
     return matchesSearch && matchesFilter;
   });
@@ -78,18 +82,19 @@ export function LogsTab() {
   const totalPages = Math.ceil(filteredLogs.length / logsPerPage);
   const paginatedLogs = filteredLogs.slice(
     (currentPage - 1) * logsPerPage,
-    currentPage * logsPerPage
+    currentPage * logsPerPage,
   );
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
+
+    return date.toLocaleString("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     });
   };
 
@@ -99,26 +104,32 @@ export function LogsTab() {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="flex-1">
           <Input
+            classNames={{
+              input: "text-sm",
+              inputWrapper: "h-10",
+            }}
             placeholder="搜索用户或权限..."
             startContent={<SearchIcon className="w-4 h-4 text-default-400" />}
             value={searchQuery}
             onValueChange={setSearchQuery}
-            classNames={{
-              input: "text-sm",
-              inputWrapper: "h-10"
-            }}
           />
         </div>
         <Select
+          className="w-full sm:w-40"
           placeholder="过滤"
           selectedKeys={[filter]}
-          onChange={(e) => setFilter(e.target.value as any)}
-          className="w-full sm:w-40"
           size="sm"
+          onChange={(e) => setFilter(e.target.value as any)}
         >
-          <SelectItem key="all" value="all">全部</SelectItem>
-          <SelectItem key="granted" value="granted">已授权</SelectItem>
-          <SelectItem key="denied" value="denied">已拒绝</SelectItem>
+          <SelectItem key="all" value="all">
+            全部
+          </SelectItem>
+          <SelectItem key="granted" value="granted">
+            已授权
+          </SelectItem>
+          <SelectItem key="denied" value="denied">
+            已拒绝
+          </SelectItem>
         </Select>
       </div>
 
@@ -136,7 +147,7 @@ export function LogsTab() {
           <CardBody className="p-3 lg:p-4">
             <p className="text-xs text-default-600 mb-1">已授权</p>
             <p className="text-lg lg:text-2xl font-bold text-success-600">
-              {logs.filter(l => l.granted).length}
+              {logs.filter((l) => l.granted).length}
             </p>
           </CardBody>
         </Card>
@@ -144,7 +155,7 @@ export function LogsTab() {
           <CardBody className="p-3 lg:p-4">
             <p className="text-xs text-default-600 mb-1">已拒绝</p>
             <p className="text-lg lg:text-2xl font-bold text-danger-600">
-              {logs.filter(l => !l.granted).length}
+              {logs.filter((l) => !l.granted).length}
             </p>
           </CardBody>
         </Card>
@@ -152,7 +163,7 @@ export function LogsTab() {
 
       {loading ? (
         <div className="flex justify-center items-center py-12">
-          <Spinner size="lg" color="primary" />
+          <Spinner color="primary" size="lg" />
         </div>
       ) : (
         <>
@@ -161,9 +172,11 @@ export function LogsTab() {
               <Card key={log.id} className="bg-white">
                 <CardBody className="p-3 lg:p-4">
                   <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                      log.granted ? 'bg-success-100' : 'bg-danger-100'
-                    }`}>
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        log.granted ? "bg-success-100" : "bg-danger-100"
+                      }`}
+                    >
                       {log.granted ? (
                         <CheckCircleIcon className="w-5 h-5 text-success-600" />
                       ) : (
@@ -179,7 +192,9 @@ export function LogsTab() {
                             {log.user.username}
                           </span>
                         </div>
-                        <span className="hidden lg:inline text-default-400">•</span>
+                        <span className="hidden lg:inline text-default-400">
+                          •
+                        </span>
                         <div className="flex items-center gap-2">
                           <ShieldIcon className="w-4 h-4 text-default-400 flex-shrink-0" />
                           <code className="text-sm font-mono text-primary-600 bg-primary-50 px-2 py-0.5 rounded truncate">
@@ -190,13 +205,13 @@ export function LogsTab() {
 
                       <div className="flex flex-wrap items-center gap-2 text-sm text-default-600">
                         <Chip
+                          color={log.granted ? "success" : "danger"}
                           size="sm"
                           variant="flat"
-                          color={log.granted ? 'success' : 'danger'}
                         >
-                          {log.granted ? '已授权' : '已拒绝'}
+                          {log.granted ? "已授权" : "已拒绝"}
                         </Chip>
-                        <Chip size="sm" variant="flat" color="secondary">
+                        <Chip color="secondary" size="sm" variant="flat">
                           {log.action}
                         </Chip>
                         {log.resource && (
@@ -230,7 +245,7 @@ export function LogsTab() {
                 没有权限日志
               </h3>
               <p className="text-sm text-default-500">
-                {searchQuery ? '请尝试其他搜索关键词' : '暂无权限操作记录'}
+                {searchQuery ? "请尝试其他搜索关键词" : "暂无权限操作记录"}
               </p>
             </div>
           )}
@@ -238,11 +253,11 @@ export function LogsTab() {
           {totalPages > 1 && (
             <div className="flex justify-center">
               <Pagination
-                total={totalPages}
-                page={currentPage}
-                onChange={setCurrentPage}
                 showControls
                 color="primary"
+                page={currentPage}
+                total={totalPages}
+                onChange={setCurrentPage}
               />
             </div>
           )}
@@ -251,4 +266,3 @@ export function LogsTab() {
     </div>
   );
 }
-

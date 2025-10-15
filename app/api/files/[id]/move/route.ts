@@ -1,23 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
-import { requirePermissions } from '@/lib/permissions';
+import { NextRequest, NextResponse } from "next/server";
+
+import prisma from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
+import { requirePermissions } from "@/lib/permissions";
 
 // POST /api/files/[id]/move - 移动文件
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await getCurrentUser(request);
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // 检查权限
-    const { authorized } = await requirePermissions(request, ['files.edit']);
+    const { authorized } = await requirePermissions(request, ["files.edit"]);
+
     if (!authorized) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { id } = await params;
@@ -31,7 +34,7 @@ export async function POST(
     });
 
     if (!file) {
-      return NextResponse.json({ error: '文件不存在' }, { status: 404 });
+      return NextResponse.json({ error: "文件不存在" }, { status: 404 });
     }
 
     // 检查目标文件夹是否存在
@@ -41,7 +44,10 @@ export async function POST(
       });
 
       if (!targetFolder) {
-        return NextResponse.json({ error: '目标文件夹不存在' }, { status: 404 });
+        return NextResponse.json(
+          { error: "目标文件夹不存在" },
+          { status: 404 },
+        );
       }
     }
 
@@ -63,11 +69,14 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Move error:', error);
+    console.error("Move error:", error);
+
     return NextResponse.json(
-      { error: '移动失败', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
+      {
+        error: "移动失败",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
     );
   }
 }
-

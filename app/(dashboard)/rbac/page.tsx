@@ -1,15 +1,16 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Card, CardBody, Tabs, Tab, Chip } from '@heroui/react';
-import { ShieldIcon, UsersIcon, KeyIcon, ActivityIcon } from 'lucide-react';
-import { RolesTab } from '@/components/rbac/roles-tab';
-import { PermissionsTab } from '@/components/rbac/permissions-tab';
-import { AssignmentsTab } from '@/components/rbac/assignments-tab';
-import { LogsTab } from '@/components/rbac/logs-tab';
+import { useState } from "react";
+import { Card, CardBody, Tabs, Tab } from "@heroui/react";
+import { ShieldIcon, UsersIcon, KeyIcon, ActivityIcon } from "lucide-react";
+
+import { RolesTab } from "@/components/rbac/roles-tab";
+import { PermissionsTab } from "@/components/rbac/permissions-tab";
+import { AssignmentsTab } from "@/components/rbac/assignments-tab";
+import { LogsTab } from "@/components/rbac/logs-tab";
 
 export default function RBACPage() {
-  const [selectedTab, setSelectedTab] = useState('roles');
+  const [selectedTab, setSelectedTab] = useState("roles");
 
   return (
     <div className="h-full overflow-y-auto p-3 lg:p-6">
@@ -36,8 +37,12 @@ export default function RBACPage() {
                   <ShieldIcon className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs lg:text-sm text-default-600">角色总数</p>
-                  <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">5</p>
+                  <p className="text-xs lg:text-sm text-default-600">
+                    角色总数
+                  </p>
+                  <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">
+                    5
+                  </p>
                 </div>
               </div>
             </CardBody>
@@ -50,8 +55,12 @@ export default function RBACPage() {
                   <KeyIcon className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs lg:text-sm text-default-600">权限总数</p>
-                  <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">24</p>
+                  <p className="text-xs lg:text-sm text-default-600">
+                    权限总数
+                  </p>
+                  <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">
+                    24
+                  </p>
                 </div>
               </div>
             </CardBody>
@@ -64,8 +73,12 @@ export default function RBACPage() {
                   <UsersIcon className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs lg:text-sm text-default-600">已分配用户</p>
-                  <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">12</p>
+                  <p className="text-xs lg:text-sm text-default-600">
+                    已分配用户
+                  </p>
+                  <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">
+                    12
+                  </p>
                 </div>
               </div>
             </CardBody>
@@ -78,8 +91,12 @@ export default function RBACPage() {
                   <ActivityIcon className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs lg:text-sm text-default-600">今日操作</p>
-                  <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">36</p>
+                  <p className="text-xs lg:text-sm text-default-600">
+                    今日操作
+                  </p>
+                  <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">
+                    36
+                  </p>
                 </div>
               </div>
             </CardBody>
@@ -90,15 +107,16 @@ export default function RBACPage() {
         <Card>
           <CardBody className="p-0">
             <Tabs
-              selectedKey={selectedTab}
-              onSelectionChange={(key) => setSelectedTab(key as string)}
               aria-label="RBAC管理选项"
               classNames={{
                 tabList: "w-full bg-default-50 p-2 rounded-t-xl",
                 cursor: "bg-white shadow-sm",
                 tab: "px-4 lg:px-6 h-10 lg:h-12",
-                tabContent: "group-data-[selected=true]:text-primary-600 font-medium"
+                tabContent:
+                  "group-data-[selected=true]:text-primary-600 font-medium",
               }}
+              selectedKey={selectedTab}
+              onSelectionChange={(key) => setSelectedTab(key as string)}
             >
               <Tab
                 key="roles"
@@ -144,10 +162,10 @@ export default function RBACPage() {
 
             {/* Tab 内容区域 */}
             <div className="p-4 lg:p-6">
-              {selectedTab === 'roles' && <RolesTab />}
-              {selectedTab === 'permissions' && <PermissionsTab />}
-              {selectedTab === 'assignments' && <AssignmentsTab />}
-              {selectedTab === 'logs' && <LogsTab />}
+              {selectedTab === "roles" && <RolesTab />}
+              {selectedTab === "permissions" && <PermissionsTab />}
+              {selectedTab === "assignments" && <AssignmentsTab />}
+              {selectedTab === "logs" && <LogsTab />}
             </div>
           </CardBody>
         </Card>
@@ -155,4 +173,3 @@ export default function RBACPage() {
     </div>
   );
 }
-

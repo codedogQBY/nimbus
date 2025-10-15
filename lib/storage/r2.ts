@@ -1,3 +1,5 @@
+import { Readable } from "stream";
+
 import {
   S3Client,
   PutObjectCommand,
@@ -6,8 +8,8 @@ import {
   HeadObjectCommand,
   CopyObjectCommand,
   ListObjectsV2Command,
-} from '@aws-sdk/client-s3';
-import { Readable } from 'stream';
+} from "@aws-sdk/client-s3";
+
 import {
   StorageSource,
   FileInfo,
@@ -16,7 +18,7 @@ import {
   UploadResult,
   QuotaInfo,
   StorageSourceConfig,
-} from './base';
+} from "./base";
 
 export interface R2Config extends StorageSourceConfig {
   accountId: string;
@@ -27,13 +29,13 @@ export interface R2Config extends StorageSourceConfig {
 }
 
 export class R2StorageSource extends StorageSource {
-  readonly type = 'r2';
+  readonly type = "r2";
   readonly name: string;
   private s3Client: S3Client | null = null;
   private bucket: string;
   private lastSync: Date = new Date();
 
-  constructor(config: R2Config, name: string = 'Cloudflare R2') {
+  constructor(config: R2Config, name: string = "Cloudflare R2") {
     super(config);
     this.name = name;
     this.bucket = config.bucket;
@@ -41,9 +43,9 @@ export class R2StorageSource extends StorageSource {
 
   async connect(): Promise<void> {
     const config = this.config as R2Config;
-    
+
     this.s3Client = new S3Client({
-      region: 'auto',
+      region: "auto",
       endpoint: config.endpoint,
       credentials: {
         accessKeyId: config.accessKeyId,
@@ -70,17 +72,21 @@ export class R2StorageSource extends StorageSource {
         new ListObjectsV2Command({
           Bucket: this.bucket,
           MaxKeys: 1,
-        })
+        }),
       );
 
       return true;
     } catch (error) {
-      console.error('R2 connection test failed:', error);
+      console.error("R2 connection test failed:", error);
+
       return false;
     }
   }
 
-  async uploadFile(path: string, file: Buffer | ReadableStream): Promise<UploadResult> {
+  async uploadFile(
+    path: string,
+    file: Buffer | ReadableStream,
+  ): Promise<UploadResult> {
     if (!this.s3Client) {
       await this.connect();
     }
@@ -116,7 +122,7 @@ export class R2StorageSource extends StorageSource {
     const result = await this.s3Client!.send(command);
 
     if (!result.Body) {
-      throw new Error('File not found');
+      throw new Error("File not found");
     }
 
     // 将 Node.js stream 转换为 Web ReadableStream
@@ -149,7 +155,7 @@ export class R2StorageSource extends StorageSource {
     const result = await this.s3Client!.send(command);
 
     return {
-      name: path.split('/').pop() || path,
+      name: path.split("/").pop() || path,
       path,
       size: result.ContentLength || 0,
       lastModified: result.LastModified || new Date(),
@@ -179,9 +185,9 @@ export class R2StorageSource extends StorageSource {
 
   async createFolder(path: string): Promise<void> {
     // S3/R2 使用空对象模拟文件夹
-    const folderPath = path.endsWith('/') ? path : path + '/';
-    
-    await this.uploadFile(folderPath, Buffer.from(''));
+    const folderPath = path.endsWith("/") ? path : path + "/";
+
+    await this.uploadFile(folderPath, Buffer.from(""));
   }
 
   async deleteFolder(path: string, recursive: boolean = false): Promise<void> {
@@ -189,7 +195,7 @@ export class R2StorageSource extends StorageSource {
       await this.connect();
     }
 
-    const folderPath = path.endsWith('/') ? path : path + '/';
+    const folderPath = path.endsWith("/") ? path : path + "/";
 
     if (recursive) {
       // 列出所有文件
@@ -223,8 +229,8 @@ export class R2StorageSource extends StorageSource {
       await this.connect();
     }
 
-    const oldFolderPath = oldPath.endsWith('/') ? oldPath : oldPath + '/';
-    const newFolderPath = newPath.endsWith('/') ? newPath : newPath + '/';
+    const oldFolderPath = oldPath.endsWith("/") ? oldPath : oldPath + "/";
+    const newFolderPath = newPath.endsWith("/") ? newPath : newPath + "/";
 
     // 列出所有文件
     const command = new ListObjectsV2Command({
@@ -240,6 +246,7 @@ export class R2StorageSource extends StorageSource {
         if (object.Key) {
           const relativePath = object.Key.substring(oldFolderPath.length);
           const newKey = newFolderPath + relativePath;
+
           await this.moveFile(object.Key, newKey);
         }
       }
@@ -251,12 +258,13 @@ export class R2StorageSource extends StorageSource {
       await this.connect();
     }
 
-    const folderPath = path === '/' || path === '' ? '' : (path.endsWith('/') ? path : path + '/');
+    const folderPath =
+      path === "/" || path === "" ? "" : path.endsWith("/") ? path : path + "/";
 
     const command = new ListObjectsV2Command({
       Bucket: this.bucket,
       Prefix: folderPath,
-      Delimiter: '/',
+      Delimiter: "/",
     });
 
     const result = await this.s3Client!.send(command);
@@ -270,7 +278,7 @@ export class R2StorageSource extends StorageSource {
       for (const object of result.Contents) {
         if (object.Key && object.Key !== folderPath) {
           files.push({
-            name: object.Key.split('/').pop() || object.Key,
+            name: object.Key.split("/").pop() || object.Key,
             path: object.Key,
             size: object.Size || 0,
             lastModified: object.LastModified || new Date(),
@@ -285,7 +293,11 @@ export class R2StorageSource extends StorageSource {
     if (result.CommonPrefixes) {
       for (const prefix of result.CommonPrefixes) {
         if (prefix.Prefix) {
-          const folderName = prefix.Prefix.replace(folderPath, '').replace('/', '');
+          const folderName = prefix.Prefix.replace(folderPath, "").replace(
+            "/",
+            "",
+          );
+
           folders.push({
             name: folderName,
             path: prefix.Prefix,
@@ -306,8 +318,9 @@ export class R2StorageSource extends StorageSource {
 
   async folderExists(path: string): Promise<boolean> {
     try {
-      const folderPath = path.endsWith('/') ? path : path + '/';
+      const folderPath = path.endsWith("/") ? path : path + "/";
       const contents = await this.listFolder(folderPath);
+
       return contents.files.length > 0 || contents.folders.length > 0;
     } catch (error) {
       return false;
@@ -335,4 +348,3 @@ export class R2StorageSource extends StorageSource {
     this.lastSync = time;
   }
 }
-

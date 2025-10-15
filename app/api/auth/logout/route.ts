@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
 export async function POST() {
   // JWT 是无状态的，登出主要在客户端清除 token
@@ -8,9 +8,8 @@ export async function POST() {
   return NextResponse.json(
     {
       success: true,
-      message: '退出登录成功',
+      message: "退出登录成功",
     },
-    { status: 200 }
+    { status: 200 },
   );
 }
-

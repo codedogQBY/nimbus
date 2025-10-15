@@ -1,27 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
-import { requirePermissions } from '@/lib/permissions';
+import { NextRequest, NextResponse } from "next/server";
+
+import prisma from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
+import { requirePermissions } from "@/lib/permissions";
 
 // POST /api/rbac/assign - 为用户分配角色
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser(request);
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // 检查权限
-    const { authorized } = await requirePermissions(request, ['users.manage']);
+    const { authorized } = await requirePermissions(request, ["users.manage"]);
+
     if (!authorized) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
     const { userId, roleName } = body;
 
     if (!userId || !roleName) {
-      return NextResponse.json({ error: '缺少必要参数' }, { status: 400 });
+      return NextResponse.json({ error: "缺少必要参数" }, { status: 400 });
     }
 
     // 检查目标用户是否存在
@@ -30,12 +33,15 @@ export async function POST(request: NextRequest) {
     });
 
     if (!targetUser) {
-      return NextResponse.json({ error: '用户不存在' }, { status: 404 });
+      return NextResponse.json({ error: "用户不存在" }, { status: 404 });
     }
 
     // 不能修改Owner用户的角色
     if (targetUser.isOwner) {
-      return NextResponse.json({ error: '不能修改Owner用户的角色' }, { status: 403 });
+      return NextResponse.json(
+        { error: "不能修改Owner用户的角色" },
+        { status: 403 },
+      );
     }
 
     // 获取角色
@@ -44,7 +50,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!role) {
-      return NextResponse.json({ error: '角色不存在' }, { status: 404 });
+      return NextResponse.json({ error: "角色不存在" }, { status: 404 });
     }
 
     // 检查用户是否已有此角色
@@ -56,7 +62,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingUserRole) {
-      return NextResponse.json({ error: '用户已拥有此角色' }, { status: 400 });
+      return NextResponse.json({ error: "用户已拥有此角色" }, { status: 400 });
     }
 
     // 分配角色
@@ -77,10 +83,14 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Assign role error:', error);
+    console.error("Assign role error:", error);
+
     return NextResponse.json(
-      { error: '角色分配失败', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
+      {
+        error: "角色分配失败",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
     );
   }
 }
@@ -89,21 +99,23 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const user = await getCurrentUser(request);
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // 检查权限
-    const { authorized } = await requirePermissions(request, ['users.manage']);
+    const { authorized } = await requirePermissions(request, ["users.manage"]);
+
     if (!authorized) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
     const { userId, roleName } = body;
 
     if (!userId || !roleName) {
-      return NextResponse.json({ error: '缺少必要参数' }, { status: 400 });
+      return NextResponse.json({ error: "缺少必要参数" }, { status: 400 });
     }
 
     // 检查目标用户是否存在
@@ -112,12 +124,15 @@ export async function DELETE(request: NextRequest) {
     });
 
     if (!targetUser) {
-      return NextResponse.json({ error: '用户不存在' }, { status: 404 });
+      return NextResponse.json({ error: "用户不存在" }, { status: 404 });
     }
 
     // 不能修改Owner用户的角色
     if (targetUser.isOwner) {
-      return NextResponse.json({ error: '不能修改Owner用户的角色' }, { status: 403 });
+      return NextResponse.json(
+        { error: "不能修改Owner用户的角色" },
+        { status: 403 },
+      );
     }
 
     // 获取角色
@@ -126,7 +141,7 @@ export async function DELETE(request: NextRequest) {
     });
 
     if (!role) {
-      return NextResponse.json({ error: '角色不存在' }, { status: 404 });
+      return NextResponse.json({ error: "角色不存在" }, { status: 404 });
     }
 
     // 删除用户角色关联
@@ -139,11 +154,14 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Revoke role error:', error);
+    console.error("Revoke role error:", error);
+
     return NextResponse.json(
-      { error: '移除角色失败', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
+      {
+        error: "移除角色失败",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
     );
   }
 }
-

@@ -1,22 +1,29 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Card, CardBody, CardHeader, Input, Button, Divider } from '@heroui/react';
-import { EyeIcon, EyeOffIcon, CheckCircle2Icon } from 'lucide-react';
-import ky from 'ky';
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  Input,
+  Button,
+  Divider,
+} from "@heroui/react";
+import { EyeIcon, EyeOffIcon, CheckCircle2Icon } from "lucide-react";
+import ky from "ky";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const email = searchParams.get('email') || '';
+  const email = searchParams.get("email") || "";
 
-  const [code, setCode] = useState(['', '', '', '', '', '']);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [code, setCode] = useState(["", "", "", "", "", ""]);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   // 密码强度检查
   const passwordChecks = {
@@ -27,58 +34,66 @@ export default function ResetPasswordPage() {
     match: Boolean(newPassword && newPassword === confirmPassword),
   };
 
-  const allChecksPassed = Object.values(passwordChecks).every(Boolean) && code.join('').length === 6;
+  const allChecksPassed =
+    Object.values(passwordChecks).every(Boolean) && code.join("").length === 6;
 
   const handleCodeChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
 
     const newCode = [...code];
+
     newCode[index] = value.slice(-1);
     setCode(newCode);
 
     if (value && index < 5) {
       const nextInput = document.getElementById(`code-${index + 1}`);
+
       nextInput?.focus();
     }
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !code[index] && index > 0) {
+    if (e.key === "Backspace" && !code[index] && index > 0) {
       const prevInput = document.getElementById(`code-${index - 1}`);
+
       prevInput?.focus();
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (!allChecksPassed) {
-      setError('请填写所有必填项并满足密码要求');
+      setError("请填写所有必填项并满足密码要求");
+
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await ky.post('/api/auth/reset-password', {
-        json: {
-          email,
-          code: code.join(''),
-          newPassword,
-        },
-      }).json<any>();
+      const response = await ky
+        .post("/api/auth/reset-password", {
+          json: {
+            email,
+            code: code.join(""),
+            newPassword,
+          },
+        })
+        .json<any>();
 
       if (response.success) {
         // 保存 token（自动登录）
-        localStorage.setItem('token', response.token);
-        
+        localStorage.setItem("token", response.token);
+
         // 跳转到文件管理页面
-        router.push('/files');
+        router.push("/files");
       }
     } catch (err: any) {
       const errorData = await err.response?.json();
-      setError(errorData?.error || '重置密码失败，请重试');
+
+      setError(errorData?.error || "重置密码失败，请重试");
     } finally {
       setLoading(false);
     }
@@ -96,7 +111,7 @@ export default function ResetPasswordPage() {
       </CardHeader>
 
       <CardBody className="p-6 pt-4">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
           {error && (
             <div className="bg-danger-50 border border-danger-200 text-danger-700 px-4 py-3 rounded-lg text-sm">
               {error}
@@ -105,20 +120,22 @@ export default function ResetPasswordPage() {
 
           {/* 验证码输入 */}
           <div>
-            <p className="text-sm font-medium text-dark-olive-800 mb-2">邮箱验证码</p>
+            <p className="text-sm font-medium text-dark-olive-800 mb-2">
+              邮箱验证码
+            </p>
             <div className="flex justify-center gap-2">
               {code.map((digit, index) => (
                 <input
                   key={index}
+                  className="w-12 h-14 text-center text-2xl font-bold border-2 border-default-200 rounded-lg focus:border-amber-brown-500 focus:outline-none transition-colors"
+                  disabled={loading}
                   id={`code-${index}`}
-                  type="text"
                   inputMode="numeric"
                   maxLength={1}
+                  type="text"
                   value={digit}
                   onChange={(e) => handleCodeChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
-                  className="w-12 h-14 text-center text-2xl font-bold border-2 border-default-200 rounded-lg focus:border-amber-brown-500 focus:outline-none transition-colors"
-                  disabled={loading}
                 />
               ))}
             </div>
@@ -128,12 +145,6 @@ export default function ResetPasswordPage() {
 
           {/* 新密码 */}
           <Input
-            label="新密码"
-            placeholder="至少8个字符"
-            type={showPassword ? 'text' : 'password'}
-            value={newPassword}
-            onValueChange={setNewPassword}
-            variant="bordered"
             isRequired
             autoComplete="new-password"
             endContent={
@@ -149,42 +160,65 @@ export default function ResetPasswordPage() {
                 )}
               </button>
             }
+            label="新密码"
+            placeholder="至少8个字符"
+            type={showPassword ? "text" : "password"}
+            value={newPassword}
+            variant="bordered"
+            onValueChange={setNewPassword}
           />
 
           <Input
-            label="确认新密码"
-            placeholder="再次输入新密码"
-            type={showPassword ? 'text' : 'password'}
-            value={confirmPassword}
-            onValueChange={setConfirmPassword}
-            variant="bordered"
             isRequired
             autoComplete="new-password"
+            label="确认新密码"
+            placeholder="再次输入新密码"
+            type={showPassword ? "text" : "password"}
+            value={confirmPassword}
+            variant="bordered"
+            onValueChange={setConfirmPassword}
           />
 
           {/* 密码强度指示器 */}
           {newPassword && (
             <div className="bg-secondary-100 p-3 rounded-lg space-y-2">
-              <p className="text-xs font-medium text-dark-olive-700">密码要求：</p>
+              <p className="text-xs font-medium text-dark-olive-700">
+                密码要求：
+              </p>
               <div className="space-y-1 text-xs">
-                <PasswordCheck checked={passwordChecks.length} text="至少8个字符" />
-                <PasswordCheck checked={passwordChecks.uppercase} text="包含大写字母" />
-                <PasswordCheck checked={passwordChecks.lowercase} text="包含小写字母" />
-                <PasswordCheck checked={passwordChecks.number} text="包含数字" />
+                <PasswordCheck
+                  checked={passwordChecks.length}
+                  text="至少8个字符"
+                />
+                <PasswordCheck
+                  checked={passwordChecks.uppercase}
+                  text="包含大写字母"
+                />
+                <PasswordCheck
+                  checked={passwordChecks.lowercase}
+                  text="包含小写字母"
+                />
+                <PasswordCheck
+                  checked={passwordChecks.number}
+                  text="包含数字"
+                />
                 {confirmPassword && (
-                  <PasswordCheck checked={passwordChecks.match} text="两次密码一致" />
+                  <PasswordCheck
+                    checked={passwordChecks.match}
+                    text="两次密码一致"
+                  />
                 )}
               </div>
             </div>
           )}
 
           <Button
-            type="submit"
-            color="primary"
-            size="lg"
-            isLoading={loading}
-            isDisabled={!allChecksPassed}
             className="w-full bg-amber-brown-500 hover:bg-amber-brown-600 text-white font-medium"
+            color="primary"
+            isDisabled={!allChecksPassed}
+            isLoading={loading}
+            size="lg"
+            type="submit"
           >
             重置密码
           </Button>
@@ -198,10 +232,11 @@ function PasswordCheck({ checked, text }: { checked: boolean; text: string }) {
   return (
     <div className="flex items-center gap-2">
       <CheckCircle2Icon
-        className={`w-3.5 h-3.5 ${checked ? 'text-success' : 'text-default-300'}`}
+        className={`w-3.5 h-3.5 ${checked ? "text-success" : "text-default-300"}`}
       />
-      <span className={checked ? 'text-success' : 'text-default-500'}>{text}</span>
+      <span className={checked ? "text-success" : "text-default-500"}>
+        {text}
+      </span>
     </div>
   );
 }
-

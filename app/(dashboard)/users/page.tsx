@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { 
-  Card, 
+import { useState, useEffect } from "react";
+import {
+  Card,
   CardBody,
   Avatar,
   Chip,
@@ -11,7 +11,6 @@ import {
   DropdownTrigger,
   DropdownMenu,
   DropdownItem,
-  Divider,
   Spinner,
   Modal,
   ModalContent,
@@ -19,11 +18,11 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure,
-  Checkbox
-} from '@heroui/react';
-import { 
-  UserPlusIcon, 
-  ShieldCheckIcon, 
+  Checkbox,
+} from "@heroui/react";
+import {
+  UserPlusIcon,
+  ShieldCheckIcon,
   UsersIcon,
   MailIcon,
   CalendarIcon,
@@ -31,10 +30,11 @@ import {
   UserCogIcon,
   TrashIcon,
   ClockIcon,
-  CheckCircle2Icon
-} from 'lucide-react';
-import ky from 'ky';
-import { useToast } from '@/components/toast-provider';
+  CheckCircle2Icon,
+} from "lucide-react";
+import ky from "ky";
+
+import { useToast } from "@/components/toast-provider";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -44,8 +44,16 @@ export default function UsersPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<Set<number>>(new Set());
   const [batchDeleteLoading, setBatchDeleteLoading] = useState(false);
-  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
-  const { isOpen: isBatchDeleteOpen, onOpen: onBatchDeleteOpen, onClose: onBatchDeleteClose } = useDisclosure();
+  const {
+    isOpen: isDeleteOpen,
+    onOpen: onDeleteOpen,
+    onClose: onDeleteClose,
+  } = useDisclosure();
+  const {
+    isOpen: isBatchDeleteOpen,
+    onOpen: onBatchDeleteOpen,
+    onClose: onBatchDeleteClose,
+  } = useDisclosure();
   const { showSuccess, showError, showWarning } = useToast();
 
   useEffect(() => {
@@ -54,25 +62,30 @@ export default function UsersPage() {
 
   const loadUsers = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await ky.get('/api/users', {
-        headers: { Authorization: `Bearer ${token}` },
-      }).json<any>();
+      const token = localStorage.getItem("token");
+      const response = await ky
+        .get("/api/users", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .json<any>();
 
       setUsers(response.users);
       setStats(response.stats);
     } catch (err) {
-      console.error('加载用户失败:', err);
+      console.error("加载用户失败:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const getRoleBadgeColor = (role: string): "success" | "primary" | "warning" | "default" => {
-    if (role.includes('所有者') || role.includes('Owner')) return 'success';
-    if (role.includes('管理员') || role.includes('Admin')) return 'primary';
-    if (role.includes('编辑') || role.includes('Editor')) return 'warning';
-    return 'default';
+  const getRoleBadgeColor = (
+    role: string,
+  ): "success" | "primary" | "warning" | "default" => {
+    if (role.includes("所有者") || role.includes("Owner")) return "success";
+    if (role.includes("管理员") || role.includes("Admin")) return "primary";
+    if (role.includes("编辑") || role.includes("Editor")) return "warning";
+
+    return "default";
   };
 
   const handleDeleteUser = (user: any) => {
@@ -85,14 +98,15 @@ export default function UsersPage() {
 
     setDeleteLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
+
       await ky.delete(`/api/users/${deletingUser.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       // 从列表中移除已删除的用户
-      setUsers(users.filter(u => u.id !== deletingUser.id));
-      
+      setUsers(users.filter((u) => u.id !== deletingUser.id));
+
       // 更新统计数据
       if (stats) {
         setStats({
@@ -106,8 +120,11 @@ export default function UsersPage() {
       onDeleteClose();
       setDeletingUser(null);
     } catch (err: any) {
-      console.error('删除用户失败:', err);
-      showError('删除失败', err.response?.json?.()?.error || '删除用户失败，请稍后重试');
+      console.error("删除用户失败:", err);
+      showError(
+        "删除失败",
+        err.response?.json?.()?.error || "删除用户失败，请稍后重试",
+      );
     } finally {
       setDeleteLoading(false);
     }
@@ -115,6 +132,7 @@ export default function UsersPage() {
 
   const handleUserSelection = (userId: number, selected: boolean) => {
     const newSelection = new Set(selectedUsers);
+
     if (selected) {
       newSelection.add(userId);
     } else {
@@ -126,8 +144,9 @@ export default function UsersPage() {
   const handleSelectAll = (selected: boolean) => {
     if (selected) {
       // 只选择非Owner用户
-      const selectableUsers = users.filter(user => !user.isOwner);
-      setSelectedUsers(new Set(selectableUsers.map(user => user.id)));
+      const selectableUsers = users.filter((user) => !user.isOwner);
+
+      setSelectedUsers(new Set(selectableUsers.map((user) => user.id)));
     } else {
       setSelectedUsers(new Set());
     }
@@ -135,7 +154,8 @@ export default function UsersPage() {
 
   const handleBatchDelete = () => {
     if (selectedUsers.size === 0) {
-      showWarning('提示', '请选择要删除的用户');
+      showWarning("提示", "请选择要删除的用户");
+
       return;
     }
     onBatchDeleteOpen();
@@ -146,21 +166,25 @@ export default function UsersPage() {
 
     setBatchDeleteLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await ky.post('/api/users/batch-delete', {
-        headers: { Authorization: `Bearer ${token}` },
-        json: { userIds: Array.from(selectedUsers) },
-      }).json<any>();
+      const token = localStorage.getItem("token");
+      const response = await ky
+        .post("/api/users/batch-delete", {
+          headers: { Authorization: `Bearer ${token}` },
+          json: { userIds: Array.from(selectedUsers) },
+        })
+        .json<any>();
 
       // 从列表中移除已删除的用户
-      setUsers(users.filter(u => !selectedUsers.has(u.id)));
-      
+      setUsers(users.filter((u) => !selectedUsers.has(u.id)));
+
       // 更新统计数据
       if (stats) {
-        const deletedUsers = users.filter(u => selectedUsers.has(u.id));
-        const deletedActiveCount = deletedUsers.filter(u => u.isActive).length;
-        const deletedOwnerCount = deletedUsers.filter(u => u.isOwner).length;
-        
+        const deletedUsers = users.filter((u) => selectedUsers.has(u.id));
+        const deletedActiveCount = deletedUsers.filter(
+          (u) => u.isActive,
+        ).length;
+        const deletedOwnerCount = deletedUsers.filter((u) => u.isOwner).length;
+
         setStats({
           ...stats,
           total: stats.total - selectedUsers.size,
@@ -171,10 +195,13 @@ export default function UsersPage() {
 
       setSelectedUsers(new Set());
       onBatchDeleteClose();
-      showSuccess('删除成功', `成功删除 ${response.deletedCount} 个用户`);
+      showSuccess("删除成功", `成功删除 ${response.deletedCount} 个用户`);
     } catch (err: any) {
-      console.error('批量删除用户失败:', err);
-      showError('删除失败', err.response?.json?.()?.error || '批量删除用户失败，请稍后重试');
+      console.error("批量删除用户失败:", err);
+      showError(
+        "删除失败",
+        err.response?.json?.()?.error || "批量删除用户失败，请稍后重试",
+      );
     } finally {
       setBatchDeleteLoading(false);
     }
@@ -183,7 +210,7 @@ export default function UsersPage() {
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <Spinner size="lg" color="primary" />
+        <Spinner color="primary" size="lg" />
       </div>
     );
   }
@@ -194,20 +221,24 @@ export default function UsersPage() {
         {/* 页面标题 */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl lg:text-2xl font-bold text-dark-olive-800">用户管理</h1>
-            <p className="text-xs lg:text-sm text-default-500 mt-1">管理系统用户和权限分配</p>
+            <h1 className="text-xl lg:text-2xl font-bold text-dark-olive-800">
+              用户管理
+            </h1>
+            <p className="text-xs lg:text-sm text-default-500 mt-1">
+              管理系统用户和权限分配
+            </p>
           </div>
           <Button
-            size="sm"
             isIconOnly
             className="lg:hidden bg-amber-brown-500 hover:bg-amber-brown-600 text-white"
+            size="sm"
           >
             <UserPlusIcon className="w-5 h-5" />
           </Button>
           <Button
+            className="hidden lg:flex bg-amber-brown-500 hover:bg-amber-brown-600 text-white"
             size="lg"
             startContent={<UserPlusIcon className="w-5 h-5" />}
-            className="hidden lg:flex bg-amber-brown-500 hover:bg-amber-brown-600 text-white"
           >
             邀请用户
           </Button>
@@ -224,7 +255,9 @@ export default function UsersPage() {
                   </div>
                   <div className="text-center lg:text-left">
                     <p className="text-xs text-default-500">总用户</p>
-                    <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">{stats.total}</p>
+                    <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">
+                      {stats.total}
+                    </p>
                   </div>
                 </div>
               </CardBody>
@@ -238,7 +271,9 @@ export default function UsersPage() {
                   </div>
                   <div className="text-center lg:text-left">
                     <p className="text-xs text-default-500">活跃</p>
-                    <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">{stats.active}</p>
+                    <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">
+                      {stats.active}
+                    </p>
                   </div>
                 </div>
               </CardBody>
@@ -252,7 +287,9 @@ export default function UsersPage() {
                   </div>
                   <div className="text-center lg:text-left">
                     <p className="text-xs text-default-500">管理员</p>
-                    <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">{stats.owners}</p>
+                    <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">
+                      {stats.owners}
+                    </p>
                   </div>
                 </div>
               </CardBody>
@@ -266,7 +303,9 @@ export default function UsersPage() {
                   </div>
                   <div className="text-center lg:text-left">
                     <p className="text-xs text-default-500">今日活跃</p>
-                    <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">{stats.lastDay}</p>
+                    <p className="text-xl lg:text-2xl font-bold text-dark-olive-800">
+                      {stats.lastDay}
+                    </p>
                   </div>
                 </div>
               </CardBody>
@@ -293,12 +332,12 @@ export default function UsersPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
-                    size="sm"
                     color="danger"
+                    isLoading={batchDeleteLoading}
+                    size="sm"
+                    startContent={<TrashIcon className="w-4 h-4" />}
                     variant="flat"
                     onPress={handleBatchDelete}
-                    isLoading={batchDeleteLoading}
-                    startContent={<TrashIcon className="w-4 h-4" />}
                   >
                     批量删除
                   </Button>
@@ -319,18 +358,20 @@ export default function UsersPage() {
                     {/* 选择框 */}
                     {!user.isOwner && (
                       <Checkbox
-                        isSelected={selectedUsers.has(user.id)}
-                        onValueChange={(selected) => handleUserSelection(user.id, selected)}
                         className="mt-1"
+                        isSelected={selectedUsers.has(user.id)}
+                        onValueChange={(selected) =>
+                          handleUserSelection(user.id, selected)
+                        }
                       />
                     )}
                     <Avatar
-                      src={user.avatarUrl || undefined}
+                      className="bg-primary-200 text-dark-olive-800 flex-shrink-0"
                       name={user.username}
                       size="lg"
-                      className="bg-primary-200 text-dark-olive-800 flex-shrink-0"
+                      src={user.avatarUrl || undefined}
                     />
-                    
+
                     <div className="flex-1 min-w-0">
                       {/* 用户名和Owner标识 */}
                       <div className="flex items-center gap-2 mb-2">
@@ -353,27 +394,39 @@ export default function UsersPage() {
                         {user.roles.map((role: string, index: number) => (
                           <Chip
                             key={index}
-                            size="sm"
                             color={getRoleBadgeColor(role)}
+                            size="sm"
                             variant="flat"
                           >
                             {role}
                           </Chip>
                         ))}
                         <Chip
+                          color={user.isActive ? "success" : "default"}
                           size="sm"
-                          color={user.isActive ? 'success' : 'default'}
                           variant="dot"
                         >
-                          {user.isActive ? '活跃' : '未激活'}
+                          {user.isActive ? "活跃" : "未激活"}
                         </Chip>
                       </div>
 
                       {/* 时间信息 */}
                       <div className="flex items-center gap-4 text-xs text-default-400">
-                        <span>注册 {new Date(user.createdAt).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })}</span>
+                        <span>
+                          注册{" "}
+                          {new Date(user.createdAt).toLocaleDateString(
+                            "zh-CN",
+                            { month: "2-digit", day: "2-digit" },
+                          )}
+                        </span>
                         {user.lastLoginAt && (
-                          <span>登录 {new Date(user.lastLoginAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span>
+                            登录{" "}
+                            {new Date(user.lastLoginAt).toLocaleTimeString(
+                              "zh-CN",
+                              { hour: "2-digit", minute: "2-digit" },
+                            )}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -381,16 +434,12 @@ export default function UsersPage() {
                     {/* 操作菜单 */}
                     <Dropdown>
                       <DropdownTrigger>
-                        <Button
-                          isIconOnly
-                          size="sm"
-                          variant="light"
-                        >
+                        <Button isIconOnly size="sm" variant="light">
                           <MoreVerticalIcon className="w-4 h-4" />
                         </Button>
                       </DropdownTrigger>
                       <DropdownMenu aria-label="用户操作">
-                        <DropdownItem 
+                        <DropdownItem
                           key="roles"
                           startContent={<UserCogIcon className="w-4 h-4" />}
                         >
@@ -419,19 +468,31 @@ export default function UsersPage() {
             <CardBody className="p-0">
               {/* 表头 */}
               <div className="px-6 py-4 bg-secondary-50/50 border-b border-divider">
-                <h3 className="text-base font-semibold text-dark-olive-800">用户列表</h3>
+                <h3 className="text-base font-semibold text-dark-olive-800">
+                  用户列表
+                </h3>
               </div>
 
               {/* 表头操作栏 */}
               <div className="px-6 py-3 bg-secondary-50/30 border-b border-divider">
                 <div className="flex items-center gap-4">
                   <Checkbox
-                    isSelected={selectedUsers.size > 0 && selectedUsers.size === users.filter(u => !u.isOwner).length}
-                    isIndeterminate={selectedUsers.size > 0 && selectedUsers.size < users.filter(u => !u.isOwner).length}
+                    isIndeterminate={
+                      selectedUsers.size > 0 &&
+                      selectedUsers.size <
+                        users.filter((u) => !u.isOwner).length
+                    }
+                    isSelected={
+                      selectedUsers.size > 0 &&
+                      selectedUsers.size ===
+                        users.filter((u) => !u.isOwner).length
+                    }
                     onValueChange={handleSelectAll}
                   />
                   <span className="text-sm text-default-500">
-                    {selectedUsers.size > 0 ? `已选择 ${selectedUsers.size} 个用户` : '全选'}
+                    {selectedUsers.size > 0
+                      ? `已选择 ${selectedUsers.size} 个用户`
+                      : "全选"}
                   </span>
                 </div>
               </div>
@@ -439,7 +500,7 @@ export default function UsersPage() {
               {/* 用户项 */}
               <div className="divide-y divide-divider">
                 {users.map((user) => (
-                  <div 
+                  <div
                     key={user.id}
                     className="px-6 py-4 hover:bg-secondary-50/50 transition-colors"
                   >
@@ -448,18 +509,20 @@ export default function UsersPage() {
                       {!user.isOwner && (
                         <Checkbox
                           isSelected={selectedUsers.has(user.id)}
-                          onValueChange={(selected) => handleUserSelection(user.id, selected)}
+                          onValueChange={(selected) =>
+                            handleUserSelection(user.id, selected)
+                          }
                         />
                       )}
                       {user.isOwner && <div className="w-5" />}
                       {/* 用户信息 */}
                       <Avatar
-                        src={user.avatarUrl || undefined}
+                        className="bg-primary-200 text-dark-olive-800"
                         name={user.username}
                         size="lg"
-                        className="bg-primary-200 text-dark-olive-800"
+                        src={user.avatarUrl || undefined}
                       />
-                      
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="text-base font-semibold text-dark-olive-800">
@@ -476,7 +539,9 @@ export default function UsersPage() {
                           </span>
                           <span className="flex items-center gap-1">
                             <CalendarIcon className="w-3.5 h-3.5" />
-                            {new Date(user.createdAt).toLocaleDateString('zh-CN')}
+                            {new Date(user.createdAt).toLocaleDateString(
+                              "zh-CN",
+                            )}
                           </span>
                         </div>
                       </div>
@@ -486,8 +551,8 @@ export default function UsersPage() {
                         {user.roles.map((role: string, index: number) => (
                           <Chip
                             key={index}
-                            size="sm"
                             color={getRoleBadgeColor(role)}
+                            size="sm"
                             variant="flat"
                           >
                             {role}
@@ -497,42 +562,40 @@ export default function UsersPage() {
 
                       {/* 状态 */}
                       <Chip
+                        color={user.isActive ? "success" : "default"}
                         size="sm"
-                        color={user.isActive ? 'success' : 'default'}
                         variant="dot"
                       >
-                        {user.isActive ? '已激活' : '未激活'}
+                        {user.isActive ? "已激活" : "未激活"}
                       </Chip>
 
                       {/* 最后登录 */}
                       <div className="text-sm text-default-500 w-32">
                         <p className="text-xs mb-0.5">最后登录</p>
                         <p className="text-xs font-medium">
-                          {user.lastLoginAt 
-                            ? new Date(user.lastLoginAt).toLocaleString('zh-CN', { 
-                                month: '2-digit', 
-                                day: '2-digit', 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              })
-                            : '从未登录'
-                          }
+                          {user.lastLoginAt
+                            ? new Date(user.lastLoginAt).toLocaleString(
+                                "zh-CN",
+                                {
+                                  month: "2-digit",
+                                  day: "2-digit",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                },
+                              )
+                            : "从未登录"}
                         </p>
                       </div>
 
                       {/* 操作菜单 */}
                       <Dropdown>
                         <DropdownTrigger>
-                          <Button
-                            isIconOnly
-                            size="sm"
-                            variant="light"
-                          >
+                          <Button isIconOnly size="sm" variant="light">
                             <MoreVerticalIcon className="w-4 h-4" />
                           </Button>
                         </DropdownTrigger>
                         <DropdownMenu aria-label="用户操作">
-                          <DropdownItem 
+                          <DropdownItem
                             key="roles"
                             startContent={<UserCogIcon className="w-4 h-4" />}
                           >
@@ -560,11 +623,7 @@ export default function UsersPage() {
       </div>
 
       {/* 删除确认模态框 */}
-      <Modal 
-        isOpen={isDeleteOpen} 
-        onClose={onDeleteClose}
-        placement="center"
-      >
+      <Modal isOpen={isDeleteOpen} placement="center" onClose={onDeleteClose}>
         <ModalContent>
           <ModalHeader className="flex flex-col gap-1">
             确认删除用户
@@ -578,18 +637,18 @@ export default function UsersPage() {
             </p>
           </ModalBody>
           <ModalFooter>
-            <Button 
-              color="default" 
-              variant="light" 
-              onPress={onDeleteClose}
+            <Button
+              color="default"
               disabled={deleteLoading}
+              variant="light"
+              onPress={onDeleteClose}
             >
               取消
             </Button>
-            <Button 
-              color="danger" 
-              onPress={confirmDeleteUser}
+            <Button
+              color="danger"
               isLoading={deleteLoading}
+              onPress={confirmDeleteUser}
             >
               确认删除
             </Button>
@@ -598,10 +657,10 @@ export default function UsersPage() {
       </Modal>
 
       {/* 批量删除确认模态框 */}
-      <Modal 
-        isOpen={isBatchDeleteOpen} 
-        onClose={onBatchDeleteClose}
+      <Modal
+        isOpen={isBatchDeleteOpen}
         placement="center"
+        onClose={onBatchDeleteClose}
       >
         <ModalContent>
           <ModalHeader className="flex flex-col gap-1">
@@ -609,25 +668,26 @@ export default function UsersPage() {
           </ModalHeader>
           <ModalBody>
             <p>
-              您确定要删除选中的 <strong>{selectedUsers.size}</strong> 个用户吗？
+              您确定要删除选中的 <strong>{selectedUsers.size}</strong>{" "}
+              个用户吗？
             </p>
             <p className="text-sm text-gray-500">
               此操作将永久删除这些用户及其所有相关数据（包括文件、文件夹、分享等），且无法撤销。
             </p>
           </ModalBody>
           <ModalFooter>
-            <Button 
-              color="default" 
-              variant="light" 
-              onPress={onBatchDeleteClose}
+            <Button
+              color="default"
               disabled={batchDeleteLoading}
+              variant="light"
+              onPress={onBatchDeleteClose}
             >
               取消
             </Button>
-            <Button 
-              color="danger" 
-              onPress={confirmBatchDelete}
+            <Button
+              color="danger"
               isLoading={batchDeleteLoading}
+              onPress={confirmBatchDelete}
             >
               确认删除
             </Button>

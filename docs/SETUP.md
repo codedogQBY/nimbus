@@ -3,6 +3,7 @@
 ## ✅ 已完成的工作
 
 ### 1. 依赖安装
+
 - ✅ 安装了所有核心依赖包
   - Prisma ORM (@prisma/client, prisma)
   - 认证相关 (bcryptjs, jsonwebtoken)
@@ -17,6 +18,7 @@
   - TypeScript 运行器 (tsx)
 
 ### 2. 数据库设计
+
 - ✅ 创建了完整的 Prisma Schema (`prisma/schema.prisma`)
   - 用户认证系统（User, EmailVerification, LoginHistory）
   - RBAC权限系统（Role, Permission, RolePermission, UserRole）
@@ -24,12 +26,14 @@
   - 审计日志（PermissionLog, EmailLog）
 
 ### 3. 种子数据
+
 - ✅ 创建了数据库种子脚本 (`prisma/seed.ts`)
   - 5个预设角色：Owner, Admin, Editor, Viewer, Guest
   - 21个细粒度权限
   - 角色权限自动分配
 
 ### 4. 核心服务
+
 - ✅ Prisma 客户端单例 (`lib/prisma.ts`)
 - ✅ 邮件服务 (`lib/email.ts`)
   - 验证码生成和发送
@@ -38,6 +42,7 @@
 - ✅ 邮件配置 (`config/email.ts`)
 
 ### 5. UI 配置
+
 - ✅ 更新了 Tailwind 配置 (`tailwind.config.ts`)
   - 温暖复古配色方案
   - 奶油绿主色系
@@ -46,6 +51,7 @@
   - 深橄榄绿文字色
 
 ### 6. 项目配置
+
 - ✅ 更新了 package.json 添加数据库脚本
   - `pnpm db:generate` - 生成 Prisma 客户端
   - `pnpm db:push` - 推送数据库结构
@@ -56,6 +62,7 @@
 ## 📋 下一步操作
 
 ### 1. 配置环境变量
+
 创建 `.env.local` 文件（参考 `.env.example`）：
 
 ```bash
@@ -85,6 +92,7 @@ INIT_OWNER_PASSWORD="Admin123456"  # 请修改为强密码！
 ```
 
 **重要提示**：
+
 - JWT_SECRET 建议使用随机生成的字符串（可用 `openssl rand -base64 32`）
 - SMTP配置必须正确，否则无法发送验证码
 - INIT_OWNER_PASSWORD 必须满足密码强度要求：
@@ -94,11 +102,13 @@ INIT_OWNER_PASSWORD="Admin123456"  # 请修改为强密码！
   - 包含数字
 
 **Gmail 配置说明**：
+
 1. 开启两步验证
 2. 生成应用专用密码
 3. 使用应用密码作为 SMTP_PASSWORD
 
 ### 2. 设置 PostgreSQL 数据库
+
 ```bash
 # 使用 Docker 快速启动（推荐）
 docker run --name nimbus-postgres \
@@ -115,16 +125,20 @@ docker run --name nimbus-postgres \
 ### 3. 初始化数据库
 
 #### 方式一：一键初始化（推荐）
+
 ```bash
 pnpm setup
 ```
+
 这个命令会自动执行：
+
 1. 生成 Prisma 客户端
 2. 推送数据库结构
 3. 运行种子数据（创建角色和权限）
 4. 创建 Owner 用户（基于环境变量配置）
 
 #### 方式二：分步执行
+
 ```bash
 # 1. 生成 Prisma 客户端
 pnpm db:generate
@@ -143,12 +157,14 @@ pnpm db:studio
 ```
 
 #### Owner 用户说明
+
 - 脚本会根据环境变量 `INIT_OWNER_*` 创建第一个 Owner 用户
 - 如果数据库中已有用户，则跳过创建
 - Owner 用户自动激活，无需邮箱验证
 - 创建后会显示登录信息，请妥善保管
 
 **初始登录信息**（基于 .env.local 配置）：
+
 - 用户名：`INIT_OWNER_USERNAME`
 - 邮箱：`INIT_OWNER_EMAIL`
 - 密码：`INIT_OWNER_PASSWORD`
@@ -158,6 +174,7 @@ pnpm db:studio
 ### 4. 开始使用
 
 #### 快速启动
+
 ```bash
 # 启动开发服务器
 pnpm dev
@@ -169,11 +186,14 @@ open http://localhost:3000
 应用会自动重定向到登录页面。
 
 #### 首次登录
+
 使用在 `.env.local` 中配置的 Owner 账号登录：
+
 - 用户名或邮箱：`INIT_OWNER_USERNAME` 或 `INIT_OWNER_EMAIL`
 - 密码：`INIT_OWNER_PASSWORD`
 
 #### 已实现的功能 ✅
+
 - ✅ 用户注册和邮箱验证
 - ✅ 用户登录（支持用户名/邮箱）
 - ✅ 密码重置
@@ -183,6 +203,7 @@ open http://localhost:3000
 - ✅ 用户管理页面框架
 
 #### 待实现的功能 🚧
+
 - 🚧 文件上传功能
 - 🚧 文件列表和预览
 - 🚧 文件分享
@@ -190,6 +211,7 @@ open http://localhost:3000
 - 🚧 在线解压缩
 
 ### 5. 开发流程
+
 ```bash
 # 1. 启动开发服务器
 pnpm dev
@@ -205,6 +227,7 @@ pnpm db:studio
 ```
 
 ## 🎨 设计系统
+
 已配置的颜色方案（60-30-10 法则）：
 
 - **主色 (60%)**: 奶油绿 `#D4E2D4`
@@ -217,6 +240,7 @@ pnpm db:studio
   - 用于：主要文字、图标
 
 ## 🔐 系统角色和权限
+
 预设的5个角色：
 
 1. **Owner（所有者）** - 所有权限
@@ -226,6 +250,7 @@ pnpm db:studio
 5. **Guest（访客）** - 最小权限
 
 ## 📚 技术栈
+
 - **前端**: Next.js 15 (App Router), React 18, TypeScript
 - **UI库**: HeroUI v2, Tailwind CSS
 - **状态管理**: Zustand
@@ -240,29 +265,34 @@ pnpm db:studio
 ## 🚀 接下来的开发优先级
 
 ### Phase 1: 认证系统（P0）
+
 1. 创建认证 API 路由
 2. 实现 JWT 工具和中间件
 3. 创建登录/注册页面
 4. 实现邮箱验证流程
 
 ### Phase 2: 权限系统（P0）
+
 1. 实现权限检查服务
 2. 创建权限中间件
 3. 创建用户管理界面
 
 ### Phase 3: 存储系统（P0）
+
 1. 实现存储源插件接口
 2. 创建 R2 存储源实现
 3. 创建文件上传 API
 4. 创建文件管理界面
 
 ### Phase 4: 文件管理（P1）
+
 1. 文件夹操作
 2. 文件预览
 3. 文件分享
 4. 在线解压缩
 
 ## 📝 注意事项
+
 - 首个注册用户自动成为 Owner
 - 所有文件统一存储，通过权限控制访问
 - 邮箱验证强制启用
@@ -271,9 +301,9 @@ pnpm db:studio
 - 重发验证码冷却时间 60 秒
 
 ## 🐛 调试工具
+
 - Prisma Studio: `pnpm db:studio`
 - 查看数据库日志: 设置 `DATABASE_URL` 并检查 Prisma 日志
 - 邮件测试: 使用 Mailtrap 或类似服务
 
 祝开发顺利！ 🎉
-

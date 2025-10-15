@@ -1,7 +1,7 @@
-import { StorageAdapter, UploadResult, StorageConfig } from './index';
+import { StorageAdapter, UploadResult, StorageConfig } from "./index";
 
 export class CustomAdapter implements StorageAdapter {
-  name = '自定义图床';
+  name = "自定义图床";
   private uploadUrl: string;
   private downloadUrl: string;
   private method: string;
@@ -12,9 +12,9 @@ export class CustomAdapter implements StorageAdapter {
   constructor(private config: StorageConfig) {
     this.uploadUrl = config.uploadUrl;
     this.downloadUrl = config.downloadUrl;
-    this.method = config.method || 'POST';
+    this.method = config.method || "POST";
     this.headers = config.headers || {};
-    this.bodyTemplate = config.body || '{}';
+    this.bodyTemplate = config.body || "{}";
     this.responsePath = config.responsePath;
   }
 
@@ -22,26 +22,28 @@ export class CustomAdapter implements StorageAdapter {
     try {
       // 构建请求体
       const body = this.buildRequestBody(file, path);
-      
+
       // 发送上传请求
       const response = await fetch(this.uploadUrl, {
         method: this.method,
         headers: {
           ...this.headers,
-          'Content-Type': this.headers['Content-Type'] || 'application/json',
+          "Content-Type": this.headers["Content-Type"] || "application/json",
         },
-        body: this.method === 'GET' ? undefined : body,
+        body: this.method === "GET" ? undefined : body,
       });
 
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Upload failed: ${response.status} ${response.statusText}`,
+        );
       }
 
       const result = await response.json();
-      
+
       // 从响应中提取文件 URL
       const fileUrl = this.extractUrlFromResponse(result);
-      
+
       return {
         success: true,
         url: fileUrl,
@@ -50,7 +52,7 @@ export class CustomAdapter implements StorageAdapter {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Upload failed',
+        error: error instanceof Error ? error.message : "Upload failed",
       };
     }
   }
@@ -59,23 +61,30 @@ export class CustomAdapter implements StorageAdapter {
     try {
       // 构建下载 URL
       const downloadUrl = this.buildDownloadUrl(url);
-      
+
       const response = await fetch(downloadUrl);
+
       if (!response.ok) {
-        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Download failed: ${response.status} ${response.statusText}`,
+        );
       }
-      
+
       const arrayBuffer = await response.arrayBuffer();
+
       return Buffer.from(arrayBuffer);
     } catch (error) {
-      throw new Error(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Download failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
   async delete(path: string): Promise<boolean> {
     // 自定义图床通常不支持删除操作
     // 这里可以扩展支持删除 API
-    console.warn('Delete operation not supported for custom storage');
+    console.warn("Delete operation not supported for custom storage");
+
     return false;
   }
 
@@ -87,10 +96,10 @@ export class CustomAdapter implements StorageAdapter {
     try {
       // 发送一个测试请求
       const response = await fetch(this.uploadUrl, {
-        method: 'HEAD', // 使用 HEAD 请求测试连接
+        method: "HEAD", // 使用 HEAD 请求测试连接
         headers: this.headers,
       });
-      
+
       // 即使返回 405 Method Not Allowed，也说明服务器可达
       return response.status < 500;
     } catch (error) {
@@ -100,7 +109,7 @@ export class CustomAdapter implements StorageAdapter {
 
   private buildRequestBody(file: File, path: string): string {
     const timestamp = Date.now().toString();
-    
+
     // 替换模板变量
     let body = this.bodyTemplate
       .replace(/\{\{filename\}\}/g, file.name)
@@ -111,6 +120,7 @@ export class CustomAdapter implements StorageAdapter {
     try {
       // 如果是 JSON 格式，解析并验证
       const parsed = JSON.parse(body);
+
       return JSON.stringify(parsed);
     } catch {
       // 如果不是 JSON，直接返回
@@ -121,32 +131,34 @@ export class CustomAdapter implements StorageAdapter {
   private extractUrlFromResponse(response: any): string {
     try {
       // 根据配置的路径提取 URL
-      const pathParts = this.responsePath.split('.');
+      const pathParts = this.responsePath.split(".");
       let result = response;
-      
+
       for (const part of pathParts) {
-        if (result && typeof result === 'object' && part in result) {
+        if (result && typeof result === "object" && part in result) {
           result = result[part];
         } else {
           throw new Error(`Invalid response path: ${this.responsePath}`);
         }
       }
-      
-      if (typeof result === 'string') {
+
+      if (typeof result === "string") {
         return result;
       }
-      
-      throw new Error('Invalid URL in response');
+
+      throw new Error("Invalid URL in response");
     } catch (error) {
-      throw new Error(`Failed to extract URL from response: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to extract URL from response: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
   private buildDownloadUrl(path: string): string {
     // 从路径中提取文件名或 ID
-    const filename = path.split('/').pop() || path;
-    const id = filename.split('.')[0]; // 假设文件名格式为 id.extension
-    
+    const filename = path.split("/").pop() || path;
+    const id = filename.split(".")[0]; // 假设文件名格式为 id.extension
+
     return this.downloadUrl
       .replace(/\{filename\}/g, filename)
       .replace(/\{id\}/g, id)
