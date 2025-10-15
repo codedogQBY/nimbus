@@ -89,23 +89,38 @@ export async function POST(request: NextRequest) {
     // 8. 加密密码
     const passwordHash = await hashPassword(password);
 
-    // 9. 创建未激活的用户账号
-    const user = await prisma.user.create({
-      data: {
-        username,
-        email,
-        passwordHash,
-        isActive: false,
-      },
-    });
-
-    // 10. 发送验证邮件
+    // 9. 使用事务创建用户并发送验证邮件
     const emailService = new EmailService();
+    let user;
+    
     try {
+      user = await prisma.$transaction(async (tx: typeof prisma) => {
+        // 创建未激活的用户账号
+        const newUser = await tx.user.create({
+          data: {
+            username,
+            email,
+            passwordHash,
+            isActive: false,
+          },
+        });
+
+        // 发送验证邮件（在事务外处理）
+        return newUser;
+      });
+
+      // 在事务外发送邮件，如果失败则删除用户
       await emailService.sendVerificationEmail(email, 'register', user.id);
+      
     } catch (error) {
-      // 如果邮件发送失败，删除用户并返回错误
-      await prisma.user.delete({ where: { id: user.id } });
+      // 如果用户已创建但邮件发送失败，删除用户
+      if (user) {
+        try {
+          await prisma.user.delete({ where: { id: user.id } });
+        } catch (deleteError) {
+          console.error('Failed to delete user after email failure:', deleteError);
+        }
+      }
       
       return NextResponse.json(
         { 

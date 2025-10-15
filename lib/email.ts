@@ -31,28 +31,28 @@ export class EmailService {
     const code = this.generateVerificationCode();
     const expiresAt = new Date(Date.now() + emailConfig.templates.verification.expiresIn);
 
-    // 保存验证码到数据库
-    await prisma.emailVerification.create({
-      data: {
-        email,
-        code,
-        type,
-        userId,
-        expiresAt,
-      },
-    });
-
     // 准备邮件内容
     const emailContent = this.buildEmailContent(type, code, expiresAt);
 
     try {
-      // 发送邮件
+      // 先发送邮件
       await this.transporter.sendMail({
         from: `"${emailConfig.from.name}" <${emailConfig.from.email}>`,
         to: email,
         subject: emailContent.subject,
         html: emailContent.html,
         text: emailContent.text,
+      });
+
+      // 邮件发送成功后，保存验证码到数据库
+      await prisma.emailVerification.create({
+        data: {
+          email,
+          code,
+          type,
+          userId,
+          expiresAt,
+        },
       });
 
       // 记录发送日志
