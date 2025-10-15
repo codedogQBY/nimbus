@@ -12,7 +12,14 @@ import {
   DropdownMenu,
   DropdownItem,
   Divider,
-  Spinner
+  Spinner,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  useDisclosure,
+  Checkbox
 } from '@heroui/react';
 import { 
   UserPlusIcon, 
@@ -27,11 +34,19 @@ import {
   CheckCircle2Icon
 } from 'lucide-react';
 import ky from 'ky';
+import { useToast } from '@/components/toast-provider';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [deletingUser, setDeletingUser] = useState<any>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState<Set<number>>(new Set());
+  const [batchDeleteLoading, setBatchDeleteLoading] = useState(false);
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
+  const { isOpen: isBatchDeleteOpen, onOpen: onBatchDeleteOpen, onClose: onBatchDeleteClose } = useDisclosure();
+  const { showSuccess, showError, showWarning } = useToast();
 
   useEffect(() => {
     loadUsers();
@@ -58,6 +73,111 @@ export default function UsersPage() {
     if (role.includes('管理员') || role.includes('Admin')) return 'primary';
     if (role.includes('编辑') || role.includes('Editor')) return 'warning';
     return 'default';
+  };
+
+  const handleDeleteUser = (user: any) => {
+    setDeletingUser(user);
+    onDeleteOpen();
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!deletingUser) return;
+
+    setDeleteLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      await ky.delete(`/api/users/${deletingUser.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // 从列表中移除已删除的用户
+      setUsers(users.filter(u => u.id !== deletingUser.id));
+      
+      // 更新统计数据
+      if (stats) {
+        setStats({
+          ...stats,
+          total: stats.total - 1,
+          active: deletingUser.isActive ? stats.active - 1 : stats.active,
+          owners: deletingUser.isOwner ? stats.owners - 1 : stats.owners,
+        });
+      }
+
+      onDeleteClose();
+      setDeletingUser(null);
+    } catch (err: any) {
+      console.error('删除用户失败:', err);
+      showError('删除失败', err.response?.json?.()?.error || '删除用户失败，请稍后重试');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleUserSelection = (userId: number, selected: boolean) => {
+    const newSelection = new Set(selectedUsers);
+    if (selected) {
+      newSelection.add(userId);
+    } else {
+      newSelection.delete(userId);
+    }
+    setSelectedUsers(newSelection);
+  };
+
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      // 只选择非Owner用户
+      const selectableUsers = users.filter(user => !user.isOwner);
+      setSelectedUsers(new Set(selectableUsers.map(user => user.id)));
+    } else {
+      setSelectedUsers(new Set());
+    }
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedUsers.size === 0) {
+      showWarning('提示', '请选择要删除的用户');
+      return;
+    }
+    onBatchDeleteOpen();
+  };
+
+  const confirmBatchDelete = async () => {
+    if (selectedUsers.size === 0) return;
+
+    setBatchDeleteLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await ky.post('/api/users/batch-delete', {
+        headers: { Authorization: `Bearer ${token}` },
+        json: { userIds: Array.from(selectedUsers) },
+      }).json<any>();
+
+      // 从列表中移除已删除的用户
+      setUsers(users.filter(u => !selectedUsers.has(u.id)));
+      
+      // 更新统计数据
+      if (stats) {
+        const deletedUsers = users.filter(u => selectedUsers.has(u.id));
+        const deletedActiveCount = deletedUsers.filter(u => u.isActive).length;
+        const deletedOwnerCount = deletedUsers.filter(u => u.isOwner).length;
+        
+        setStats({
+          ...stats,
+          total: stats.total - selectedUsers.size,
+          active: stats.active - deletedActiveCount,
+          owners: stats.owners - deletedOwnerCount,
+        });
+      }
+
+      setSelectedUsers(new Set());
+      onBatchDeleteClose();
+      showSuccess('删除成功', `成功删除 ${response.deletedCount} 个用户`);
+    } catch (err: any) {
+      console.error('批量删除用户失败:', err);
+      showError('删除失败', err.response?.json?.()?.error || '批量删除用户失败，请稍后重试');
+    } finally {
+      setBatchDeleteLoading(false);
+    }
   };
 
   if (loading) {
@@ -154,6 +274,40 @@ export default function UsersPage() {
           </div>
         )}
 
+        {/* 批量操作工具栏 */}
+        {selectedUsers.size > 0 && (
+          <Card className="bg-white">
+            <CardBody>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-gray-600">
+                    已选择 {selectedUsers.size} 个用户
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="light"
+                    onPress={() => setSelectedUsers(new Set())}
+                  >
+                    取消选择
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    color="danger"
+                    variant="flat"
+                    onPress={handleBatchDelete}
+                    isLoading={batchDeleteLoading}
+                    startContent={<TrashIcon className="w-4 h-4" />}
+                  >
+                    批量删除
+                  </Button>
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+        )}
+
         {/* 用户列表 */}
         <div className="space-y-3 lg:space-y-0">
           {/* 移动端：卡片布局 */}
@@ -162,6 +316,14 @@ export default function UsersPage() {
               <Card key={user.id} className="bg-white">
                 <CardBody className="p-4">
                   <div className="flex items-start gap-3">
+                    {/* 选择框 */}
+                    {!user.isOwner && (
+                      <Checkbox
+                        isSelected={selectedUsers.has(user.id)}
+                        onValueChange={(selected) => handleUserSelection(user.id, selected)}
+                        className="mt-1"
+                      />
+                    )}
                     <Avatar
                       src={user.avatarUrl || undefined}
                       name={user.username}
@@ -239,6 +401,7 @@ export default function UsersPage() {
                             key="delete"
                             color="danger"
                             startContent={<TrashIcon className="w-4 h-4" />}
+                            onPress={() => handleDeleteUser(user)}
                           >
                             删除用户
                           </DropdownItem>
@@ -259,6 +422,20 @@ export default function UsersPage() {
                 <h3 className="text-base font-semibold text-dark-olive-800">用户列表</h3>
               </div>
 
+              {/* 表头操作栏 */}
+              <div className="px-6 py-3 bg-secondary-50/30 border-b border-divider">
+                <div className="flex items-center gap-4">
+                  <Checkbox
+                    isSelected={selectedUsers.size > 0 && selectedUsers.size === users.filter(u => !u.isOwner).length}
+                    isIndeterminate={selectedUsers.size > 0 && selectedUsers.size < users.filter(u => !u.isOwner).length}
+                    onValueChange={handleSelectAll}
+                  />
+                  <span className="text-sm text-default-500">
+                    {selectedUsers.size > 0 ? `已选择 ${selectedUsers.size} 个用户` : '全选'}
+                  </span>
+                </div>
+              </div>
+
               {/* 用户项 */}
               <div className="divide-y divide-divider">
                 {users.map((user) => (
@@ -267,6 +444,14 @@ export default function UsersPage() {
                     className="px-6 py-4 hover:bg-secondary-50/50 transition-colors"
                   >
                     <div className="flex items-center gap-4">
+                      {/* 选择框 */}
+                      {!user.isOwner && (
+                        <Checkbox
+                          isSelected={selectedUsers.has(user.id)}
+                          onValueChange={(selected) => handleUserSelection(user.id, selected)}
+                        />
+                      )}
+                      {user.isOwner && <div className="w-5" />}
                       {/* 用户信息 */}
                       <Avatar
                         src={user.avatarUrl || undefined}
@@ -358,6 +543,7 @@ export default function UsersPage() {
                               key="delete"
                               color="danger"
                               startContent={<TrashIcon className="w-4 h-4" />}
+                              onPress={() => handleDeleteUser(user)}
                             >
                               删除用户
                             </DropdownItem>
@@ -372,6 +558,82 @@ export default function UsersPage() {
           </Card>
         </div>
       </div>
+
+      {/* 删除确认模态框 */}
+      <Modal 
+        isOpen={isDeleteOpen} 
+        onClose={onDeleteClose}
+        placement="center"
+      >
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            确认删除用户
+          </ModalHeader>
+          <ModalBody>
+            <p>
+              您确定要删除用户 <strong>{deletingUser?.username}</strong> 吗？
+            </p>
+            <p className="text-sm text-gray-500">
+              此操作将永久删除该用户及其所有相关数据（包括文件、文件夹、分享等），且无法撤销。
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button 
+              color="default" 
+              variant="light" 
+              onPress={onDeleteClose}
+              disabled={deleteLoading}
+            >
+              取消
+            </Button>
+            <Button 
+              color="danger" 
+              onPress={confirmDeleteUser}
+              isLoading={deleteLoading}
+            >
+              确认删除
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* 批量删除确认模态框 */}
+      <Modal 
+        isOpen={isBatchDeleteOpen} 
+        onClose={onBatchDeleteClose}
+        placement="center"
+      >
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            确认批量删除用户
+          </ModalHeader>
+          <ModalBody>
+            <p>
+              您确定要删除选中的 <strong>{selectedUsers.size}</strong> 个用户吗？
+            </p>
+            <p className="text-sm text-gray-500">
+              此操作将永久删除这些用户及其所有相关数据（包括文件、文件夹、分享等），且无法撤销。
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button 
+              color="default" 
+              variant="light" 
+              onPress={onBatchDeleteClose}
+              disabled={batchDeleteLoading}
+            >
+              取消
+            </Button>
+            <Button 
+              color="danger" 
+              onPress={confirmBatchDelete}
+              isLoading={batchDeleteLoading}
+            >
+              确认删除
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }
