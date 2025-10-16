@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useLazyLoading } from "@/hooks/use-lazy-loading";
+import { shouldUseDirectUrl, getDirectUrl } from "@/lib/direct-url";
 
 interface AuthenticatedImageProps {
   src: string;
@@ -28,6 +29,10 @@ interface AuthenticatedImageProps {
    * 懒加载占位符内容
    */
   placeholder?: React.ReactNode;
+  /**
+   * 是否使用直接URL访问，绕过服务器代理，默认为false
+   */
+  useDirectUrl?: boolean;
 }
 
 export function AuthenticatedImage({
@@ -46,6 +51,7 @@ export function AuthenticatedImage({
   lazy = true,
   rootMargin = "50px",
   placeholder,
+  useDirectUrl = true, // 默认启用，由shouldUseDirectUrl函数控制实际行为
 }: AuthenticatedImageProps) {
   const [imageSrc, setImageSrc] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -64,21 +70,78 @@ export function AuthenticatedImage({
         setLoading(true);
         setError(false);
 
-        const token = localStorage.getItem("token");
-        const response = await fetch(src, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        // 检查是否应该使用直接URL
+        const shouldUseDirect = useDirectUrl && await shouldUseDirectUrl();
+        console.log('AuthenticatedImage Debug:', {
+          src,
+          useDirectUrl,
+          shouldUseDirect
         });
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+        if (shouldUseDirect) {
+          // 如果src是API路径，需要获取直接URL
+          if (src.startsWith('/api/files/')) {
+            // 从API URL中提取文件ID (支持 /serve 和 /download 格式)
+            const fileIdMatch = src.match(/\/api\/files\/([^\/]+)\/(?:serve|download)/);
+            if (fileIdMatch) {
+              const fileId = fileIdMatch[1];
+              console.log('Attempting to get direct URL for fileId:', fileId);
+              const directUrl = await getDirectUrl(fileId);
+              if (directUrl) {
+                console.log('Got direct URL:', directUrl);
+                setImageSrc(directUrl);
+                setLoading(false);
+                onLoad?.();
+              } else {
+                console.warn('Failed to get direct URL, falling back to authenticated loading');
+                // 如果获取直接URL失败，强制使用认证加载模式
+                const token = localStorage.getItem("token");
+                const response = await fetch(src, {
+                  headers: token ? { Authorization: `Bearer ${token}` } : {},
+                });
+
+                if (!response.ok) {
+                  throw new Error(`HTTP ${response.status}`);
+                }
+
+                const blob = await response.blob();
+                const imageUrl = URL.createObjectURL(blob);
+
+                setImageSrc(imageUrl);
+                setLoading(false);
+                onLoad?.();
+              }
+            } else {
+              console.log('No fileId match found in src:', src);
+              setImageSrc(src);
+              setLoading(false);
+              onLoad?.();
+            }
+          } else {
+            // 直接使用提供的URL
+            console.log('Using direct URL (not API path):', src);
+            setImageSrc(src);
+            setLoading(false);
+            onLoad?.();
+          }
+        } else {
+          // 使用认证加载
+          const token = localStorage.getItem("token");
+          const response = await fetch(src, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const blob = await response.blob();
+          const imageUrl = URL.createObjectURL(blob);
+
+          setImageSrc(imageUrl);
+          setLoading(false);
+          onLoad?.();
         }
-
-        const blob = await response.blob();
-        const imageUrl = URL.createObjectURL(blob);
-
-        setImageSrc(imageUrl);
-        setLoading(false);
-        onLoad?.();
       } catch (err) {
         console.error("Failed to load authenticated image:", err);
         setError(true);
@@ -94,11 +157,12 @@ export function AuthenticatedImage({
 
     // 清理函数
     return () => {
-      if (imageSrc) {
+      if (imageSrc && imageSrc.startsWith('blob:')) {
+        // 只有blob URL才需要清理
         URL.revokeObjectURL(imageSrc);
       }
     };
-  }, [src, shouldLoad]);
+  }, [src, shouldLoad, useDirectUrl]);
 
   // 如果还没有开始加载，显示占位符
   if (!shouldLoad) {

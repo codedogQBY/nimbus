@@ -92,6 +92,11 @@ export class CustomAdapter implements StorageAdapter {
     return this.buildDownloadUrl(path);
   }
 
+  getDirectUrl(path: string): string {
+    // 自定义图床可以直接通过配置的下载URL访问文件
+    return this.buildDownloadUrl(path);
+  }
+
   async testConnection(): Promise<boolean> {
     try {
       // 发送一个测试请求

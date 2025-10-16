@@ -193,6 +193,11 @@ export class UpyunAdapter implements StorageAdapter {
     return `${normalizedDomain}${normalizedPath}`;
   }
 
+  getDirectUrl(path: string): string {
+    // 对于又拍云，直接URL就是CDN URL，与getUrl相同
+    return this.getUrl(path);
+  }
+
   async testConnection(): Promise<boolean> {
     try {
       console.log("Testing Upyun connection with config:", {

@@ -62,6 +62,14 @@ export default function SharePage({ params }: SharePageProps) {
   const [_currentFolderId, setCurrentFolderId] = useState<number | null>(null);
   const [loadingContents, setLoadingContents] = useState(false);
 
+  // 清理文件名中的路径信息，只保留文件名部分
+  const getCleanFileName = (fileName: string): string => {
+    if (!fileName) return "";
+    // 分割路径并取最后一部分作为文件名
+    const parts = fileName.split(/[/\\]/);
+    return parts[parts.length - 1] || fileName;
+  };
+
   useEffect(() => {
     // 获取token
     params.then((p) => {
@@ -634,7 +642,7 @@ export default function SharePage({ params }: SharePageProps) {
                                     {thumbnailUrl ? (
                                       <>
                                         <ShareAuthenticatedImage
-                                          alt={file.originalName || file.name}
+                                          alt={getCleanFileName(file.originalName || file.name)}
                                           className="w-full h-full object-cover"
                                           shareToken={token}
                                           src={thumbnailUrl}
@@ -669,14 +677,14 @@ export default function SharePage({ params }: SharePageProps) {
                                     <div className="flex items-start justify-between gap-2 mb-1">
                                       <h5
                                         className="text-xs lg:text-sm font-semibold text-dark-olive-800 truncate flex-1"
-                                        title={file.originalName || file.name}
+                                        title={getCleanFileName(file.originalName || file.name)}
                                       >
-                                        {file.originalName || file.name}
+                                        {getCleanFileName(file.originalName || file.name)}
                                       </h5>
                                       {/* 预览/下载按钮 */}
                                       <div className="flex-shrink-0">
                                         {canPreview(
-                                          file.originalName || file.name,
+                                          getCleanFileName(file.originalName || file.name),
                                           file.mimeType,
                                           file.size,
                                         ) ? (

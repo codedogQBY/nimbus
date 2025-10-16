@@ -170,28 +170,48 @@ export async function GET(
       headers.set("Content-Type", file.mimeType);
     }
 
-    // RFC 5987 编码文件名
-    const encodedFilename = encodeURIComponent(file.originalName || file.name)
-      .replace(/['()]/g, escape)
-      .replace(/\\*/g, "%2A");
+    // 正确的文件名编码处理
+    // 优先使用 originalName，并确保只使用文件名部分（不包含路径）
+    let filename = file.originalName || file.name;
+    
+    // 确保文件名不包含路径信息（对所有访问类型都适用）
+    if (filename) {
+      // 提取文件名部分，移除可能的路径前缀
+      const pathSeparators = ['/', '\\'];
+      for (const separator of pathSeparators) {
+        if (filename.includes(separator)) {
+          const parts = filename.split(separator);
+          filename = parts[parts.length - 1]; // 取最后一部分作为文件名
+        }
+      }
+    }
+    
+    const hasNonAscii = /[^\x00-\x7F]/.test(filename);
+    
+    const getContentDisposition = (isAttachment: boolean) => {
+      if (hasNonAscii) {
+        const encodedFilename = encodeURIComponent(filename);
+        return isAttachment 
+          ? `attachment; filename*=UTF-8''${encodedFilename}`
+          : `inline; filename*=UTF-8''${encodedFilename}`;
+      } else {
+        return isAttachment 
+          ? `attachment; filename="${filename}"`
+          : `inline; filename="${filename}"`;
+      }
+    };
 
     if (download) {
-      headers.set(
-        "Content-Disposition",
-        `attachment; filename*=UTF-8''${encodedFilename}`,
-      );
+      headers.set("Content-Disposition", getContentDisposition(true));
     } else {
       // 对于图片和PDF，默认内联显示
       if (
         file.mimeType?.startsWith("image/") ||
         file.mimeType === "application/pdf"
       ) {
-        headers.set("Content-Disposition", "inline");
+        headers.set("Content-Disposition", getContentDisposition(false));
       } else {
-        headers.set(
-          "Content-Disposition",
-          `attachment; filename*=UTF-8''${encodedFilename}`,
-        );
+        headers.set("Content-Disposition", getContentDisposition(true));
       }
     }
 

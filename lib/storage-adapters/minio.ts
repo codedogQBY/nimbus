@@ -57,6 +57,11 @@ export class MinIOAdapter implements StorageAdapter {
     return `${protocol}://${this.endpoint}/${this.bucket}/${path}`;
   }
 
+  getDirectUrl(path: string): string {
+    // MinIO可以直接通过公开URL访问文件
+    return this.getUrl(path);
+  }
+
   async testConnection(): Promise<boolean> {
     try {
       // TODO: 实现 MinIO 连接测试

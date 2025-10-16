@@ -15,6 +15,7 @@ export interface StorageAdapter {
   download(url: string): Promise<Buffer>;
   delete(path: string): Promise<boolean>;
   getUrl(path: string): string;
+  getDirectUrl?(path: string): string | Promise<string | null>; // 生成直接访问URL，绕过服务器代理
   testConnection(): Promise<boolean>;
 
   // 扩展功能（可选）

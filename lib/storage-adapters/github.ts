@@ -225,6 +225,23 @@ export class GitHubAdapter implements StorageAdapter {
     return `https://raw.githubusercontent.com/${this.repo}/${this.branch}/${this.path}${filePath}`;
   }
 
+  async getDirectUrl(filePath: string): Promise<string | null> {
+    // GitHub 需要验证文件是否真实存在于仓库中
+    try {
+      const fileInfo = await this.getFileInfo(`${this.path}${filePath}`);
+      if (fileInfo && fileInfo.download_url) {
+        // 使用 GitHub API 返回的 download_url，这是可靠的直接访问链接
+        return fileInfo.download_url;
+      }
+      // 文件不存在或无法访问，返回 null 触发代理模式
+      return null;
+    } catch (error) {
+      console.warn(`GitHub getDirectUrl failed for ${filePath}:`, error);
+      // 发生错误时返回 null，触发代理模式
+      return null;
+    }
+  }
+
   async testConnection(): Promise<boolean> {
     try {
       // 测试仓库访问权限

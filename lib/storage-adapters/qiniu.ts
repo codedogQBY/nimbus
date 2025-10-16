@@ -184,6 +184,15 @@ export class QiniuAdapter implements StorageAdapter {
   }
 
   getUrl(path: string): string {
+    return this.getDownloadUrl(path);
+  }
+
+  getDirectUrl(path: string): string {
+    // 七牛云可以直接通过CDN域名访问文件
+    return this.getDownloadUrl(path);
+  }
+
+  private getBaseUrl(path: string): string {
     // 确保domain包含协议
     let domain = this.domain;
 
@@ -199,7 +208,7 @@ export class QiniuAdapter implements StorageAdapter {
 
   // 获取文件的下载URL（支持私有空间）
   getDownloadUrl(path: string, _expires: number = 3600): string {
-    const url = this.getUrl(path);
+    const url = this.getBaseUrl(path);
 
     // 如果需要签名（私有空间），生成带签名的URL
     // 这里可以根据配置决定是否需要签名，暂时默认为公开空间

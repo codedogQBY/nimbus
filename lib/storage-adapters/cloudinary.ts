@@ -51,6 +51,11 @@ export class CloudinaryAdapter implements StorageAdapter {
     return `https://res.cloudinary.com/${this.cloudName}/image/upload/${path}`;
   }
 
+  getDirectUrl(path: string): string {
+    // Cloudinary可以直接通过CDN访问文件
+    return this.getUrl(path);
+  }
+
   async testConnection(): Promise<boolean> {
     try {
       // TODO: 实现 Cloudinary 连接测试

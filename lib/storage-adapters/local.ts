@@ -110,7 +110,16 @@ export class LocalStorageAdapter implements StorageAdapter {
   }
 
   getUrl(filePath: string): string {
-    return `/api/files/local/${encodeURIComponent(filePath)}`;
+    // 本地存储通过服务器代理提供访问，但这里我们不能直接返回文件ID的URL
+    // 因为这个方法只接收文件路径，不知道文件ID
+    // 这个方法主要用于上传后返回URL，实际访问应该通过文件ID
+    return `/storage/${encodeURIComponent(filePath)}`;
+  }
+
+  getDirectUrl(path: string): string {
+    // 本地存储无法提供真正的直接URL，返回null表示不支持
+    // 这将导致系统回退到代理模式
+    return null as any;
   }
 
   async testConnection(): Promise<boolean> {

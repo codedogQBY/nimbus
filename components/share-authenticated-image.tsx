@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useLazyLoading } from "@/hooks/use-lazy-loading";
+import { shouldUseDirectUrl, getDirectUrl } from "@/lib/direct-url";
 
 interface ShareAuthenticatedImageProps {
   src: string;
@@ -29,6 +30,10 @@ interface ShareAuthenticatedImageProps {
    * 懒加载占位符内容
    */
   placeholder?: React.ReactNode;
+  /**
+   * 是否使用直接URL访问，绕过服务器代理，默认为false
+   */
+  useDirectUrl?: boolean;
 }
 
 export function ShareAuthenticatedImage({
@@ -48,6 +53,7 @@ export function ShareAuthenticatedImage({
   lazy = true,
   rootMargin = "50px",
   placeholder,
+  useDirectUrl = true, // 默认启用，由shouldUseDirectUrl函数控制实际行为
 }: ShareAuthenticatedImageProps) {
   const [imageSrc, setImageSrc] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -66,7 +72,46 @@ export function ShareAuthenticatedImage({
         setLoading(true);
         setError(false);
 
-        // 使用分享token访问图片
+        // 检查是否应该使用直接URL
+        const shouldUseDirect = useDirectUrl && await shouldUseDirectUrl();
+        console.log('ShareAuthenticatedImage Debug:', {
+          src,
+          useDirectUrl,
+          shouldUseDirect,
+          shareToken
+        });
+
+        if (shouldUseDirect) {
+          // 如果src是API路径，需要获取直接URL
+          if (src.startsWith('/api/files/')) {
+            // 从API URL中提取文件ID (支持 /serve 和 /download 格式)
+            const fileIdMatch = src.match(/\/api\/files\/([^\/]+)\/(?:serve|download)/);
+            if (fileIdMatch) {
+              const fileId = fileIdMatch[1];
+              console.log('Attempting to get direct URL for fileId:', fileId);
+              const directUrl = await getDirectUrl(fileId);
+              if (directUrl) {
+                console.log('Got direct URL:', directUrl);
+                setImageSrc(directUrl);
+                setLoading(false);
+                onLoad?.();
+                return;
+              } else {
+                console.warn('Failed to get direct URL, falling back to share authenticated loading');
+              }
+            } else {
+              console.log('No fileId match found in src:', src);
+            }
+          } else {
+            // 如果不是API路径，直接使用
+            setImageSrc(src);
+            setLoading(false);
+            onLoad?.();
+            return;
+          }
+        }
+
+        // 回退到使用分享token访问图片
         const imageUrl = `${src}${src.includes("?") ? "&" : "?"}share=${shareToken}`;
         const response = await fetch(imageUrl);
 

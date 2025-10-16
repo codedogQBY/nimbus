@@ -509,6 +509,14 @@ export class R2Adapter implements StorageAdapter {
   }
 
   /**
+   * 生成直接访问URL，绕过服务器代理
+   */
+  getDirectUrl(path: string): string {
+    // 对于R2，直接URL就是公开访问URL，与getUrl相同
+    return this.getUrl(path);
+  }
+
+  /**
    * 测试连接 - 改进的连接测试
    */
   async testConnection(): Promise<boolean> {

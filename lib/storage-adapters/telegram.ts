@@ -49,6 +49,11 @@ export class TelegramAdapter implements StorageAdapter {
     return `https://api.telegram.org/file/bot${this.botToken}/${path}`;
   }
 
+  getDirectUrl(path: string): string {
+    // Telegram可以直接通过API访问文件
+    return this.getUrl(path);
+  }
+
   async testConnection(): Promise<boolean> {
     try {
       // TODO: 实现 Telegram 连接测试
