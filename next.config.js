@@ -20,7 +20,9 @@ const withPWA = require("next-pwa")({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 其他Next.js配置
+    images: {
+        unoptimized: true,
+    },
 };
 
 module.exports = withPWA(nextConfig);
